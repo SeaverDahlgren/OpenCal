@@ -5,6 +5,19 @@ import { GoogleGmailService } from "../integrations/google/gmail.js";
 import type { ConsoleIO } from "../cli/io.js";
 import type { ToolDefinition } from "./types.js";
 
+const calendarIdSchema = z.preprocess(
+  (value) => {
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+    if (typeof value === "string" && value.trim() === "") {
+      return undefined;
+    }
+    return value;
+  },
+  z.string().default("primary"),
+);
+
 export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
   const calendarService = new GoogleCalendarService(clients.calendar);
   const gmailService = new GoogleGmailService(clients.gmail);
@@ -57,7 +70,7 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
       description: "Search calendar events in a time range or by query.",
       protected: false,
       inputSchema: z.object({
-        calendarId: z.string().optional(),
+        calendarId: calendarIdSchema,
         query: z.string().optional(),
         timeMin: z.string().optional(),
         timeMax: z.string().optional(),
@@ -94,7 +107,7 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
       description: "Fetch full details for a specific event ID.",
       protected: false,
       inputSchema: z.object({
-        calendarId: z.string().default("primary"),
+        calendarId: calendarIdSchema,
         eventId: z.string().min(1),
       }),
       inputShape: '{calendarId?: string, eventId: string}',
@@ -152,7 +165,7 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
       description: "Create a calendar event.",
       protected: true,
       inputSchema: z.object({
-        calendarId: z.string().optional(),
+        calendarId: calendarIdSchema,
         summary: z.string().min(1),
         description: z.string().optional(),
         location: z.string().optional(),
@@ -176,7 +189,7 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
       description: "Update a calendar event.",
       protected: true,
       inputSchema: z.object({
-        calendarId: z.string().optional(),
+        calendarId: calendarIdSchema,
         eventId: z.string().min(1),
         summary: z.string().optional(),
         description: z.string().optional(),
@@ -200,7 +213,7 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
       description: "Delete a calendar event.",
       protected: true,
       inputSchema: z.object({
-        calendarId: z.string().optional(),
+        calendarId: calendarIdSchema,
         eventId: z.string().min(1),
       }),
       inputShape: '{calendarId?: string, eventId: string}',
