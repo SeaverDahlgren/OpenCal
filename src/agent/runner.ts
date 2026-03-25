@@ -7,6 +7,7 @@ import { appendLogEntry, appendMemory } from "../memory/logs.js";
 import { ensureWorkspace, loadWorkspaceFiles } from "../memory/workspace.js";
 import { estimateMessagesTokens } from "./tokenizer.js";
 import type { LlmProvider } from "../llm/provider.js";
+import { toUserFacingLlmErrorMessage } from "../llm/errors.js";
 import type { ConsoleIO } from "../cli/io.js";
 import type { ToolDefinition, ToolResult } from "../tools/types.js";
 import { renderToolsMarkdown } from "../tools/registry.js";
@@ -48,10 +49,15 @@ export class AgentRunner {
       this.messages.push(userMessage);
       await appendLogEntry(workspace.dailyLogPath, userMessage);
 
-      const finalReply = await this.processTurn({
-        timezone,
-        workspace,
-      });
+      let finalReply: string;
+      try {
+        finalReply = await this.processTurn({
+          timezone,
+          workspace,
+        });
+      } catch (error) {
+        finalReply = toUserFacingLlmErrorMessage(error);
+      }
 
       const assistantMessage = createMessage("assistant", finalReply);
       this.messages.push(assistantMessage);
@@ -59,10 +65,14 @@ export class AgentRunner {
       this.io.print(`\n${finalReply}\n`);
     }
 
-    const summary = await this.provider.summarizeConversation(
-      this.messages.filter((message) => message.role === "user" || message.role === "assistant"),
-    );
-    await appendMemory(path.join(this.config.rootDir, "Memory.md"), summary);
+    try {
+      const summary = await this.provider.summarizeConversation(
+        this.messages.filter((message) => message.role === "user" || message.role === "assistant"),
+      );
+      await appendMemory(path.join(this.config.rootDir, "Memory.md"), summary);
+    } catch {
+      // Session shutdown should not fail if the summarizer is temporarily unavailable.
+    }
   }
 
   private async processTurn(args: {
