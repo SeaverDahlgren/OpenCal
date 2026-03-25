@@ -120,6 +120,7 @@ Skill body.`,
           body: "calendar body",
         },
       ]),
+      taskStateSummary: "task_id: task-1\ntask_summary: Find my meetings",
       memory: "memory",
       runtime: {
         nowIso: "2026-03-25T00:00:00.000Z",

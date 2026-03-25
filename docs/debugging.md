@@ -22,6 +22,12 @@ Two log streams exist:
 Common events in `.opencal/logs/*.log`:
 
 - `turn.user_input`
+- `task.created`
+- `task.updated`
+- `task.awaiting_user_response`
+- `task.bound_followup`
+- `task.completed`
+- `task.replaced`
 - `skill.catalog`
 - `skill.selected`
 - `llm.decision`
@@ -77,7 +83,8 @@ If rescheduling/editing loops or stalls:
 2. Confirm the returned event includes the correct `id` and `calendarId`.
 3. Check whether `get_event` / `update_event` received `calendarId: "primary"` or another value.
 4. Look for `tool.invalid_input` or `tool.error` entries.
-5. If the assistant says `Working through the tool results.`, inspect recent `llm.decision` entries to see whether the turn hit repeated tool calls without a final `stop`.
+5. Check the latest `task.*` entries to see which subgoals are still pending and whether the runner bound a terse follow-up like `yes` to the current task.
+6. If the assistant says `Working through the tool results.`, inspect recent `llm.decision` entries to see whether the turn hit repeated tool calls without a final `stop`.
 
 ## What To Capture In A Bug Report
 

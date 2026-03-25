@@ -7,6 +7,7 @@ export function buildSystemPrompt(args: {
   tools: ToolPromptShape[];
   skillsCatalog: string;
   selectedSkillDetails: string[];
+  taskStateSummary: string;
   memory: string;
   runtime: RuntimeContext;
   tokenUsage: {
@@ -16,7 +17,8 @@ export function buildSystemPrompt(args: {
     compactionThreshold: number;
   };
 }): string {
-  const { soul, user, tools, skillsCatalog, selectedSkillDetails, memory, runtime, tokenUsage } = args;
+  const { soul, user, tools, skillsCatalog, selectedSkillDetails, taskStateSummary, memory, runtime, tokenUsage } =
+    args;
   const toolBlock = tools
     .map(
       (tool) =>
@@ -34,6 +36,7 @@ export function buildSystemPrompt(args: {
     "- If timing or entity selection is ambiguous, ask for clarification instead of guessing.",
     "- Protected actions must be previewed and confirmed by the human before execution.",
     "- Offer time-management advice only when directly relevant to the request.",
+    "- Use the current task state to finish all pending subgoals before returning stop.",
     "- Final responses should be user-facing and short.",
     "",
     "Return only valid JSON matching one of these shapes:",
@@ -50,6 +53,9 @@ export function buildSystemPrompt(args: {
     "",
     "Selected skill details:",
     selectedSkillDetails.length > 0 ? selectedSkillDetails.join("\n\n---\n\n") : "No detailed skills selected for this turn.",
+    "",
+    "Current task state:",
+    taskStateSummary,
     "",
     "SOUL.md:",
     soul,
