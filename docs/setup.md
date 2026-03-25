@@ -49,6 +49,11 @@ read_when:
 - Approve Gmail + Calendar scopes.
 - The CLI waits for the callback on `127.0.0.1:42813`.
 - Tokens are stored under secure storage when available, else encrypted under `.opencal/`.
+- After workspace bootstrap, the CLI offers 4 optional personalization questions.
+- Skipped answers are ignored.
+- Work hours and meeting preferences are written into `USER.md`.
+- Interests and broader assistant context are appended into `Memory.md`.
+- Personalization setup completion is tracked in `.opencal/setup-state.json`.
 
 ## Auth Refresh
 

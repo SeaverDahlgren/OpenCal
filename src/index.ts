@@ -4,6 +4,7 @@ import { loadConfig } from "./config/env.js";
 import { createLlmProvider } from "./llm/factory.js";
 import { buildToolRegistry } from "./tools/registry.js";
 import { createGoogleClients, ensureGoogleAuthorization } from "./integrations/google/auth.js";
+import { maybeRunPersonalizationSetup } from "./setup/personalization.js";
 
 async function main() {
   const command = process.argv[2] ?? "chat";
@@ -23,6 +24,7 @@ async function main() {
       return;
     }
 
+    await maybeRunPersonalizationSetup(config.rootDir, io);
     await runner.runChatLoop();
   } finally {
     io.close();
