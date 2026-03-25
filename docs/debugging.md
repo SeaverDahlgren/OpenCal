@@ -88,6 +88,12 @@ If rescheduling/editing loops or stalls:
 5. Check the latest `task.*` entries to see which subgoals are still pending and whether the runner bound a terse follow-up like `yes` to the current task.
 6. If the assistant says `Working through the tool results.`, inspect recent `llm.decision` entries to see whether the turn hit repeated tool calls without a final `stop`.
 
+With the active-subgoal executor, the most useful fields inside `task.updated` entries are:
+- `mode`
+- `activeSubgoalId`
+- active subgoal `status`
+- active subgoal `artifacts`
+
 ## What To Capture In A Bug Report
 
 - user prompt

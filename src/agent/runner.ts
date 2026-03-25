@@ -4,14 +4,17 @@ import { buildSystemPrompt } from "./prompts.js";
 import { formatToolResultMessage } from "./tool-result-format.js";
 import type { AgentDecision, ConversationMessage, RuntimeContext } from "./types.js";
 import {
-  applyToolOutcome,
+  activateNextSubgoal,
+  applyToolResultToTaskState,
+  beginExecution,
   bindUserReplyToTaskState,
   buildIncompleteTaskMessage,
   buildTaskSkillSelectionInput,
   completeResponseSubgoals,
   createTaskState,
+  getActiveSubgoal,
+  getAwaitingPrompt,
   hasPendingSubgoals,
-  markSubgoalsInProgress,
   mergeUserInputIntoTaskState,
   registerAwaitingUserResponse,
   shouldStartNewTask,
@@ -120,6 +123,7 @@ export class AgentRunner {
     let finalReply = "I could not complete that request.";
     let runtimeSummary: string | undefined;
     await this.updateTaskStateForLatestUserInput(args.workspace.debugLogPath);
+    this.currentTaskState = activateNextSubgoal(this.currentTaskState);
 
     while (stepCount < 8) {
       stepCount += 1;
@@ -202,45 +206,41 @@ export class AgentRunner {
   ): Promise<{ reply: string; continueLoop: boolean }> {
     if (decision.type === "message") {
       this.currentTaskState = completeResponseSubgoals(this.currentTaskState, decision.message);
+      if (hasPendingSubgoals(this.currentTaskState)) {
+        this.currentTaskState = activateNextSubgoal(this.currentTaskState);
+        return { reply: decision.message, continueLoop: true };
+      }
       await this.completeTaskIfDone(debugLogPath);
       return { reply: decision.message, continueLoop: false };
     }
 
     if (decision.type === "clarify") {
+      const active = getActiveSubgoal(this.currentTaskState);
       this.currentTaskState = registerAwaitingUserResponse(
         this.currentTaskState ?? createTaskState(findLatestUserInput(this.messages)),
         decision.message,
         "clarification",
-        activeSubgoalIds(this.currentTaskState),
+        active?.id ?? "general-1",
       );
       await appendDebugLog(debugLogPath, "task.awaiting_user_response", {
         taskId: this.currentTaskState.taskId,
         prompt: decision.message,
-        appliesToSubgoalIds: this.currentTaskState.awaitingUserResponse?.appliesToSubgoalIds,
+        subgoalId: this.currentTaskState.awaitingUserResponse?.subgoalId,
       });
       return { reply: decision.message, continueLoop: false };
     }
 
     if (decision.type === "stop") {
-      this.currentTaskState = completeResponseSubgoals(
-        this.currentTaskState,
-        decision.message.replace(/^<STOP>\s*/i, "").trim(),
-      );
       if (hasPendingSubgoals(this.currentTaskState)) {
-        const taskStateMessage = buildIncompleteTaskMessage(this.currentTaskState);
-        this.messages.push(
-          createMessage(
-            "tool",
-            `task_state: stop blocked because pending subgoals remain.\n${summarizeTaskStateForPrompt(this.currentTaskState)}`,
-            "task_state",
-          ),
-        );
         await appendDebugLog(debugLogPath, "task.updated", {
           taskId: this.currentTaskState?.taskId,
           reason: "stop_blocked_pending_subgoals",
           state: this.currentTaskState,
         });
-        return { reply: taskStateMessage, continueLoop: true };
+        return {
+          reply: getAwaitingPrompt(this.currentTaskState) ?? buildIncompleteTaskMessage(this.currentTaskState),
+          continueLoop: false,
+        };
       }
 
       const reply = decision.message.replace(/^<STOP>\s*/i, "").trim();
@@ -248,8 +248,8 @@ export class AgentRunner {
       return { reply, continueLoop: false };
     }
 
-    this.currentTaskState = markSubgoalsInProgress(
-      this.currentTaskState ?? createTaskState(findLatestUserInput(this.messages)),
+    this.currentTaskState = beginExecution(
+      activateNextSubgoal(this.currentTaskState ?? createTaskState(findLatestUserInput(this.messages)))!,
       decision.toolCalls.map((toolCall) => toolCall.name),
     );
     await appendDebugLog(debugLogPath, "task.updated", {
@@ -268,9 +268,10 @@ export class AgentRunner {
         this.messages.push(
           createMessage("tool", `Tool ${toolCall.name} is not registered.`, toolCall.name),
         );
-        this.currentTaskState = applyToolOutcome(
+        this.currentTaskState = applyToolResultToTaskState(
           this.currentTaskState,
           toolCall.name,
+          null,
           "error",
           `Tool ${toolCall.name} is not registered.`,
         );
@@ -286,9 +287,10 @@ export class AgentRunner {
         });
         const content = `Invalid input for ${tool.name}: ${parsedInput.error.message}`;
         this.messages.push(createMessage("tool", content, tool.name));
-        this.currentTaskState = applyToolOutcome(
+        this.currentTaskState = applyToolResultToTaskState(
           this.currentTaskState,
           tool.name,
+          null,
           "error",
           content,
         );
@@ -312,9 +314,10 @@ export class AgentRunner {
         });
         if (!confirmed) {
           this.messages.push(createMessage("tool", `${tool.name} cancelled by user.`, tool.name));
-          this.currentTaskState = applyToolOutcome(
+          this.currentTaskState = applyToolResultToTaskState(
             this.currentTaskState,
             tool.name,
+            null,
             "cancelled",
             `${tool.name} cancelled by user.`,
           );
@@ -335,9 +338,10 @@ export class AgentRunner {
           result: sanitizeForLog(result),
         });
         toolMessage = await this.handleToolResult(tool.name, result);
-        this.currentTaskState = applyToolOutcome(
+        this.currentTaskState = applyToolResultToTaskState(
           this.currentTaskState,
           tool.name,
+          result,
           result.ok ? "success" : "error",
           result.ok ? result.summary : result.error,
         );
@@ -350,9 +354,10 @@ export class AgentRunner {
         toolMessage = `${tool.name}: ${
           error instanceof Error ? error.message : "Unknown tool execution failure."
         }`;
-        this.currentTaskState = applyToolOutcome(
+        this.currentTaskState = applyToolResultToTaskState(
           this.currentTaskState,
           tool.name,
+          null,
           "error",
           toolMessage,
         );
@@ -364,8 +369,13 @@ export class AgentRunner {
         reason: "tool_result",
         state: this.currentTaskState,
       });
+
+      if (this.currentTaskState?.awaitingUserResponse) {
+        return { reply: this.currentTaskState.awaitingUserResponse.prompt, continueLoop: false };
+      }
     }
 
+    this.currentTaskState = activateNextSubgoal(this.currentTaskState);
     return { reply: "Working through the tool results.", continueLoop: true };
   }
 
@@ -388,6 +398,7 @@ export class AgentRunner {
       }
 
       this.currentTaskState = createTaskState(latestUserInput);
+      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
       await appendDebugLog(debugLogPath, "task.created", {
         taskId: this.currentTaskState.taskId,
         taskSummary: this.currentTaskState.taskSummary,
@@ -398,6 +409,7 @@ export class AgentRunner {
 
     if (!this.currentTaskState) {
       this.currentTaskState = createTaskState(latestUserInput);
+      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
       await appendDebugLog(debugLogPath, "task.created", {
         taskId: this.currentTaskState.taskId,
         taskSummary: this.currentTaskState.taskSummary,
@@ -408,6 +420,7 @@ export class AgentRunner {
 
     if (this.currentTaskState.awaitingUserResponse) {
       this.currentTaskState = bindUserReplyToTaskState(this.currentTaskState, latestUserInput);
+      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
       await appendDebugLog(debugLogPath, "task.bound_followup", {
         taskId: this.currentTaskState.taskId,
         previousTaskId: priorTaskId,
@@ -418,6 +431,7 @@ export class AgentRunner {
     }
 
     this.currentTaskState = mergeUserInputIntoTaskState(this.currentTaskState, latestUserInput);
+    this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
     if (hadOpenTask) {
       await appendDebugLog(debugLogPath, "task.updated", {
         taskId: this.currentTaskState.taskId,
@@ -527,14 +541,4 @@ function sanitizeForLog(value: unknown): unknown {
 
 function findLatestUserInput(messages: ConversationMessage[]) {
   return [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
-}
-
-function activeSubgoalIds(taskState: TaskState | null) {
-  if (!taskState) {
-    return [];
-  }
-
-  return taskState.subgoals
-    .filter((subgoal) => subgoal.status === "pending" || subgoal.status === "in_progress")
-    .map((subgoal) => subgoal.id);
 }
