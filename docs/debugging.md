@@ -17,6 +17,8 @@ Two log streams exist:
 - `.opencal/logs/YYYY-MM-DD.log`
   Structured JSON debug log for LLM decisions and tool execution.
 
+When `TOOL_RESULT_VERBOSITY=compact`, the agent still logs full raw tool payloads here even though model-facing tool messages are shortened.
+
 ## Debug Log Events
 
 Common events in `.opencal/logs/*.log`:

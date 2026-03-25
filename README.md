@@ -6,8 +6,9 @@ CLI Calendar/Gmail agent with Google OAuth, provider-agnostic LLM orchestration,
 
 1. Copy `.env.example` to `.env`
 2. Fill Google OAuth and model API credentials
-3. Install deps with `npm install`
-4. Run `npm run dev`
+3. Optional: set `TOOL_RESULT_VERBOSITY=verbose` if you want full tool payloads kept in model-facing conversation state
+4. Install deps with `npm install`
+5. Run `npm run dev`
 
 ## Docs
 

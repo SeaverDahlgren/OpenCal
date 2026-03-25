@@ -4,6 +4,7 @@ import type { AppConfig } from "../src/config/env.js";
 
 const baseConfig: AppConfig = {
   llmProvider: "gemini",
+  toolResultVerbosity: "compact",
   geminiApiKey: "gemini-key",
   groqApiKey: "groq-key",
   openAiApiKey: undefined,

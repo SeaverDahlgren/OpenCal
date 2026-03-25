@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { AppConfig } from "../config/env.js";
 import { buildSystemPrompt } from "./prompts.js";
+import { formatToolResultMessage } from "./tool-result-format.js";
 import type { AgentDecision, ConversationMessage, RuntimeContext } from "./types.js";
 import {
   applyToolOutcome,
@@ -441,7 +442,7 @@ export class AgentRunner {
 
   private async handleToolResult(toolName: string, result: ToolResult<unknown>): Promise<string> {
     if (result.ok) {
-      return `${toolName}: ${result.summary}\n${JSON.stringify(result.data, null, 2)}`;
+      return formatToolResultMessage(toolName, result, this.config.toolResultVerbosity);
     }
 
     if (result.ambiguous) {

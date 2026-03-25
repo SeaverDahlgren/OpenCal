@@ -6,6 +6,7 @@ loadDotEnv();
 
 const envSchema = z.object({
   LLM_PROVIDER: z.string().default("gemini"),
+  TOOL_RESULT_VERBOSITY: z.enum(["compact", "verbose"]).default("compact"),
   GEMINI_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
@@ -24,6 +25,7 @@ const envSchema = z.object({
 
 export type AppConfig = {
   llmProvider: string;
+  toolResultVerbosity: "compact" | "verbose";
   geminiApiKey?: string;
   groqApiKey?: string;
   openAiApiKey?: string;
@@ -53,6 +55,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
 
   return {
     llmProvider: env.LLM_PROVIDER,
+    toolResultVerbosity: env.TOOL_RESULT_VERBOSITY,
     geminiApiKey: env.GEMINI_API_KEY,
     groqApiKey: env.GROQ_API_KEY,
     openAiApiKey: env.OPENAI_API_KEY,
