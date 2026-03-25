@@ -9,6 +9,25 @@ CLI Calendar/Gmail agent with Google OAuth, provider-agnostic LLM orchestration,
 3. Install deps with `npm install`
 4. Run `npm run dev`
 
+## LLM Provider Setup
+
+Set `LLM_PROVIDER` in `.env` to choose the active adapter.
+
+- `gemini`
+  - set `GEMINI_API_KEY`
+  - optional model override via `GEMINI_MODEL`
+- `groq`
+  - set `GROQ_API_KEY`
+  - optional model override via `GROQ_MODEL`
+
+Example:
+
+```env
+LLM_PROVIDER=groq
+GROQ_API_KEY=your-key
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
 ## Google OAuth Setup
 
 1. Go to the Google Cloud Console and create or select a project.
