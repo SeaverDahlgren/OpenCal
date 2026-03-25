@@ -21,8 +21,9 @@ export class GoogleCalendarService {
     timeMax?: string;
     maxResults: number;
   }) {
+    const calendarId = args.calendarId ?? "primary";
     const response = await this.client.events.list({
-      calendarId: args.calendarId ?? "primary",
+      calendarId,
       q: args.query,
       timeMin: args.timeMin,
       timeMax: args.timeMax,
@@ -31,7 +32,7 @@ export class GoogleCalendarService {
       maxResults: args.maxResults,
     });
 
-    return (response.data.items ?? []).map((event) => this.mapEventSummary(event));
+    return (response.data.items ?? []).map((event) => this.mapEventSummary(event, calendarId));
   }
 
   async getEvent(calendarId: string, eventId: string) {
@@ -138,9 +139,10 @@ export class GoogleCalendarService {
     return { deleted: true, eventId: args.eventId };
   }
 
-  private mapEventSummary(event: calendar_v3.Schema$Event) {
+  private mapEventSummary(event: calendar_v3.Schema$Event, calendarId?: string) {
     return {
       id: event.id ?? "",
+      calendarId: calendarId ?? "",
       summary: event.summary ?? "(untitled event)",
       status: event.status ?? "unknown",
       start: event.start?.dateTime ?? event.start?.date ?? "",
