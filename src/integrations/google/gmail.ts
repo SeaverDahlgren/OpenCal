@@ -130,14 +130,22 @@ function createMimeMessage(args: {
     args.cc?.length ? `Cc: ${args.cc.join(", ")}` : null,
     args.bcc?.length ? `Bcc: ${args.bcc.join(", ")}` : null,
     `Subject: ${args.subject}`,
+    "MIME-Version: 1.0",
     "Content-Type: text/plain; charset=utf-8",
+    "Content-Transfer-Encoding: 7bit",
     "",
     args.body,
-  ].filter(Boolean);
+  ].filter((line): line is string => line !== null);
 
   return Buffer.from(lines.join("\r\n"))
     .toString("base64")
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/g, "");
+}
+
+export function decodeMimeMessage(raw: string) {
+  const normalized = raw.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return Buffer.from(padded, "base64").toString("utf8");
 }
