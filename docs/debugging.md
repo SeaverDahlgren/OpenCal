@@ -22,6 +22,8 @@ Two log streams exist:
 Common events in `.opencal/logs/*.log`:
 
 - `turn.user_input`
+- `skill.catalog`
+- `skill.selected`
 - `llm.decision`
 - `tool.start`
 - `tool.confirmation`

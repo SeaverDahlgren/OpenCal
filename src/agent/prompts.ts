@@ -5,6 +5,8 @@ export function buildSystemPrompt(args: {
   soul: string;
   user: string;
   tools: ToolPromptShape[];
+  skillsCatalog: string;
+  selectedSkillDetails: string[];
   memory: string;
   runtime: RuntimeContext;
   tokenUsage: {
@@ -14,7 +16,7 @@ export function buildSystemPrompt(args: {
     compactionThreshold: number;
   };
 }): string {
-  const { soul, user, tools, memory, runtime, tokenUsage } = args;
+  const { soul, user, tools, skillsCatalog, selectedSkillDetails, memory, runtime, tokenUsage } = args;
   const toolBlock = tools
     .map(
       (tool) =>
@@ -28,6 +30,7 @@ export function buildSystemPrompt(args: {
     "Operating rules:",
     "- Be concise and candid.",
     "- Use tools when needed; do not hallucinate Gmail or Calendar state.",
+    "- Use semantic skills to generalize intent before choosing literal tool arguments.",
     "- If timing or entity selection is ambiguous, ask for clarification instead of guessing.",
     "- Protected actions must be previewed and confirmed by the human before execution.",
     "- Offer time-management advice only when directly relevant to the request.",
@@ -41,6 +44,12 @@ export function buildSystemPrompt(args: {
     "",
     "Available tools:",
     toolBlock,
+    "",
+    "Available semantic skills:",
+    skillsCatalog,
+    "",
+    "Selected skill details:",
+    selectedSkillDetails.length > 0 ? selectedSkillDetails.join("\n\n---\n\n") : "No detailed skills selected for this turn.",
     "",
     "SOUL.md:",
     soul,

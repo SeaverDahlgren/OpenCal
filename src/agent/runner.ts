@@ -11,11 +11,20 @@ import { toUserFacingLlmErrorMessage } from "../llm/errors.js";
 import type { ConsoleIO } from "../cli/io.js";
 import type { ToolDefinition, ToolResult } from "../tools/types.js";
 import { renderToolsMarkdown } from "../tools/registry.js";
+import {
+  buildSelectedSkillDetails,
+  buildSkillsCatalog,
+  loadSkillManifests,
+  selectRelevantSkills,
+  type SkillManifest,
+} from "../skills/manifests.js";
 
 type ToolRegistry = Map<string, ToolDefinition<any, unknown>>;
 
 export class AgentRunner {
   private readonly messages: ConversationMessage[] = [];
+  private skillsCatalog = "No semantic skills are configured.";
+  private skillManifests: SkillManifest[] = [];
 
   constructor(
     private readonly config: AppConfig,
@@ -27,6 +36,8 @@ export class AgentRunner {
   async initialize() {
     await ensureWorkspace(this.config.rootDir);
     await updateToolsIndex(this.config.rootDir, renderToolsMarkdown(this.tools));
+    this.skillManifests = await loadSkillManifests(this.config.rootDir);
+    this.skillsCatalog = buildSkillsCatalog(this.skillManifests);
   }
 
   async runChatLoop(): Promise<void> {
@@ -107,10 +118,22 @@ export class AgentRunner {
       }
 
       const runtimeContext = buildRuntimeContext(args.timezone, runtimeSummary);
+      const latestUserInput = findLatestUserInput(this.messages);
+      const selectedSkills = selectRelevantSkills(this.skillManifests, latestUserInput);
+      await appendDebugLog(args.workspace.debugLogPath, "skill.catalog", {
+        catalog: this.skillsCatalog,
+      });
+      await appendDebugLog(args.workspace.debugLogPath, "skill.selected", {
+        input: latestUserInput,
+        selectedSkillIds: selectedSkills.map((skill) => skill.id),
+        selectedSkillPaths: selectedSkills.map((skill) => skill.path),
+      });
       const systemPrompt = buildSystemPrompt({
         soul: args.workspace.soul,
         user: args.workspace.user,
         tools: [...this.tools.values()].map((tool) => tool.promptShape),
+        skillsCatalog: this.skillsCatalog,
+        selectedSkillDetails: buildSelectedSkillDetails(selectedSkills),
         memory: args.workspace.memory,
         runtime: runtimeContext,
         tokenUsage: {
@@ -320,4 +343,8 @@ function sanitizeForLog(value: unknown): unknown {
       return innerValue;
     }),
   );
+}
+
+function findLatestUserInput(messages: ConversationMessage[]) {
+  return [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
 }
