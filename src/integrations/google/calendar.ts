@@ -17,6 +17,7 @@ export class GoogleCalendarService {
   async searchEvents(args: {
     calendarId?: string;
     query?: string;
+    queryPatterns?: string[];
     timeMin?: string;
     timeMax?: string;
     maxResults: number;
@@ -32,7 +33,27 @@ export class GoogleCalendarService {
       maxResults: args.maxResults,
     });
 
-    return (response.data.items ?? []).map((event) => this.mapEventSummary(event, calendarId));
+    const initialItems = response.data.items ?? [];
+    if (!args.query) {
+      return initialItems.map((event) => this.mapEventSummary(event, calendarId));
+    }
+
+    const fallbackNeeded = initialItems.length < args.maxResults;
+    const fallbackItems = fallbackNeeded
+      ? await this.fetchBroadMatchCandidates({
+          calendarId,
+          timeMin: args.timeMin,
+          timeMax: args.timeMax,
+          maxResults: Math.min(Math.max(args.maxResults * 10, 50), 250),
+        })
+      : [];
+
+    const broadMatches = fallbackItems.filter((event) =>
+      matchesEventQuery(event, args.query ?? "", args.queryPatterns ?? []),
+    );
+
+    const combined = dedupeEventsById([...initialItems, ...broadMatches]).slice(0, args.maxResults);
+    return combined.map((event) => this.mapEventSummary(event, calendarId));
   }
 
   async getEvent(calendarId: string, eventId: string) {
@@ -152,4 +173,98 @@ export class GoogleCalendarService {
         event.attendees?.map((attendee) => attendee.email).filter(Boolean) ?? [],
     };
   }
+
+  private async fetchBroadMatchCandidates(args: {
+    calendarId: string;
+    timeMin?: string;
+    timeMax?: string;
+    maxResults: number;
+  }) {
+    const response = await this.client.events.list({
+      calendarId: args.calendarId,
+      timeMin: args.timeMin,
+      timeMax: args.timeMax,
+      singleEvents: true,
+      orderBy: "startTime",
+      maxResults: args.maxResults,
+    });
+
+    return response.data.items ?? [];
+  }
+}
+
+function dedupeEventsById(events: calendar_v3.Schema$Event[]) {
+  const seen = new Set<string>();
+  const next: calendar_v3.Schema$Event[] = [];
+
+  for (const event of events) {
+    const id = event.id ?? "";
+    if (seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    next.push(event);
+  }
+
+  return next;
+}
+
+function matchesEventQuery(
+  event: calendar_v3.Schema$Event,
+  query: string,
+  queryPatterns: string[],
+) {
+  const haystack = [
+    event.summary ?? "",
+    event.description ?? "",
+    event.location ?? "",
+    ...(event.attendees?.map((attendee) => attendee.email ?? "") ?? []),
+  ].join(" ");
+
+  const regexes = buildBroadQueryRegexes(query, queryPatterns);
+  return regexes.some((regex) => regex.test(haystack));
+}
+
+function buildBroadQueryRegexes(query: string, queryPatterns: string[]) {
+  const regexes: RegExp[] = [];
+
+  for (const pattern of queryPatterns) {
+    try {
+      regexes.push(new RegExp(pattern, "i"));
+    } catch {
+      // Ignore invalid regex input and continue with broader query fallbacks.
+    }
+  }
+
+  const normalizedTokens = tokenize(query);
+  for (const token of normalizedTokens) {
+    const variants = new Set([token, stemToken(token)]);
+    for (const variant of variants) {
+      if (variant.length < 3) {
+        continue;
+      }
+      regexes.push(new RegExp(`\\b${escapeRegex(variant)}\\w*\\b`, "i"));
+    }
+  }
+
+  return regexes;
+}
+
+function tokenize(value: string) {
+  return value
+    .toLowerCase()
+    .match(/[a-z0-9]+/g)
+    ?.filter((token) => token.length >= 3) ?? [];
+}
+
+function stemToken(token: string) {
+  let stem = token.replace(/(ing|ers|er|ed|es|s)$/i, "");
+  if (/([bcdfghjklmnpqrstvwxyz])\1$/i.test(stem)) {
+    stem = stem.slice(0, -1);
+  }
+  return stem || token;
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

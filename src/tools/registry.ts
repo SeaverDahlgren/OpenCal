@@ -67,18 +67,19 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
     }),
     defineTool({
       name: "search_events",
-      description: "Search calendar events in a time range or by query.",
+      description: "Search calendar events in a time range or by query, with optional broader regex matching.",
       protected: false,
       inputSchema: z.object({
         calendarId: calendarIdSchema,
         query: z.string().optional(),
+        queryPatterns: z.array(z.string().min(1)).optional(),
         timeMin: z.string().optional(),
         timeMax: z.string().optional(),
         maxResults: z.number().int().min(1).max(25).default(10),
         expectSingle: z.boolean().default(false),
       }),
       inputShape:
-        '{calendarId?: string, query?: string, timeMin?: ISOString, timeMax?: ISOString, maxResults?: number, expectSingle?: boolean}',
+        '{calendarId?: string, query?: string, queryPatterns?: string[], timeMin?: ISOString, timeMax?: ISOString, maxResults?: number, expectSingle?: boolean}',
       execute: async (input) => {
         const events = await calendarService.searchEvents(input);
         if (input.expectSingle && events.length > 1) {
