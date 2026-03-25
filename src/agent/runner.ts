@@ -3,7 +3,7 @@ import type { AppConfig } from "../config/env.js";
 import { buildSystemPrompt } from "./prompts.js";
 import type { AgentDecision, ConversationMessage, RuntimeContext } from "./types.js";
 import { compactConversation, updateToolsIndex } from "../memory/context.js";
-import { appendLogEntry, appendMemory } from "../memory/logs.js";
+import { appendDebugLog, appendLogEntry, appendMemory } from "../memory/logs.js";
 import { ensureWorkspace, loadWorkspaceFiles } from "../memory/workspace.js";
 import { estimateMessagesTokens } from "./tokenizer.js";
 import type { LlmProvider } from "../llm/provider.js";
@@ -48,6 +48,9 @@ export class AgentRunner {
       const userMessage = createMessage("user", input);
       this.messages.push(userMessage);
       await appendLogEntry(workspace.dailyLogPath, userMessage);
+      await appendDebugLog(workspace.debugLogPath, "turn.user_input", {
+        content: input,
+      });
 
       let finalReply: string;
       try {
@@ -56,12 +59,18 @@ export class AgentRunner {
           workspace,
         });
       } catch (error) {
+        await appendDebugLog(workspace.debugLogPath, "turn.error", {
+          error: serializeError(error),
+        });
         finalReply = toUserFacingLlmErrorMessage(error);
       }
 
       const assistantMessage = createMessage("assistant", finalReply);
       this.messages.push(assistantMessage);
       await appendLogEntry(workspace.dailyLogPath, assistantMessage);
+      await appendDebugLog(workspace.debugLogPath, "turn.assistant_reply", {
+        content: finalReply,
+      });
       this.io.print(`\n${finalReply}\n`);
     }
 
@@ -118,8 +127,18 @@ export class AgentRunner {
         tools: [...this.tools.values()].map((tool) => tool.promptShape),
         maxOutputTokens: this.config.maxOutputTokens,
       });
+      await appendDebugLog(args.workspace.debugLogPath, "llm.decision", {
+        type: decision.type,
+        toolCalls:
+          decision.type === "tool"
+            ? decision.toolCalls.map((toolCall) => ({
+                name: toolCall.name,
+                arguments: toolCall.arguments,
+              }))
+            : undefined,
+      });
 
-      finalReply = await this.handleDecision(decision, args.timezone);
+      finalReply = await this.handleDecision(decision, args.timezone, args.workspace.debugLogPath);
       if (decision.type === "message" || decision.type === "stop") {
         return finalReply;
       }
@@ -128,7 +147,11 @@ export class AgentRunner {
     return finalReply;
   }
 
-  private async handleDecision(decision: AgentDecision, timezone: string): Promise<string> {
+  private async handleDecision(
+    decision: AgentDecision,
+    timezone: string,
+    debugLogPath: string,
+  ): Promise<string> {
     if (decision.type === "message") {
       return decision.message;
     }
@@ -146,6 +169,10 @@ export class AgentRunner {
     for (const toolCall of decision.toolCalls) {
       const tool = this.tools.get(toolCall.name);
       if (!tool) {
+        await appendDebugLog(debugLogPath, "tool.missing", {
+          name: toolCall.name,
+          arguments: toolCall.arguments,
+        });
         this.messages.push(
           createMessage("tool", `Tool ${toolCall.name} is not registered.`, toolCall.name),
         );
@@ -154,16 +181,31 @@ export class AgentRunner {
 
       const parsedInput = tool.inputSchema.safeParse(toolCall.arguments);
       if (!parsedInput.success) {
+        await appendDebugLog(debugLogPath, "tool.invalid_input", {
+          name: tool.name,
+          arguments: toolCall.arguments,
+          issues: parsedInput.error.issues,
+        });
         const content = `Invalid input for ${tool.name}: ${parsedInput.error.message}`;
         this.messages.push(createMessage("tool", content, tool.name));
         continue;
       }
+
+      await appendDebugLog(debugLogPath, "tool.start", {
+        name: tool.name,
+        arguments: parsedInput.data,
+        protected: tool.protected,
+      });
 
       if (tool.protected) {
         const preview = JSON.stringify(parsedInput.data, null, 2);
         const confirmed = await this.io.confirm(
           `Protected action: ${tool.name}\n${preview}\nExecute this action?`,
         );
+        await appendDebugLog(debugLogPath, "tool.confirmation", {
+          name: tool.name,
+          confirmed,
+        });
         if (!confirmed) {
           this.messages.push(createMessage("tool", `${tool.name} cancelled by user.`, tool.name));
           return `${tool.name} cancelled.`;
@@ -173,8 +215,17 @@ export class AgentRunner {
       let toolMessage: string;
       try {
         const result = await tool.execute(parsedInput.data, { timezone });
+        await appendDebugLog(debugLogPath, "tool.result", {
+          name: tool.name,
+          result: sanitizeForLog(result),
+        });
         toolMessage = await this.handleToolResult(tool.name, result);
       } catch (error) {
+        await appendDebugLog(debugLogPath, "tool.error", {
+          name: tool.name,
+          arguments: parsedInput.data,
+          error: serializeError(error),
+        });
         toolMessage = `${tool.name}: ${
           error instanceof Error ? error.message : "Unknown tool execution failure."
         }`;
@@ -235,4 +286,38 @@ function createMessage(role: ConversationMessage["role"], content: string, name?
     name,
     timestamp: new Date().toISOString(),
   };
+}
+
+function serializeError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+
+  if (typeof error === "object" && error !== null) {
+    return sanitizeForLog(error);
+  }
+
+  return { value: String(error) };
+}
+
+function sanitizeForLog(value: unknown): unknown {
+  return JSON.parse(
+    JSON.stringify(value, (_key, innerValue) => {
+      if (innerValue instanceof Error) {
+        return {
+          name: innerValue.name,
+          message: innerValue.message,
+          stack: innerValue.stack,
+        };
+      }
+      if (typeof innerValue === "bigint") {
+        return innerValue.toString();
+      }
+      return innerValue;
+    }),
+  );
 }

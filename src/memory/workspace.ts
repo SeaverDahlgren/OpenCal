@@ -9,11 +9,13 @@ export type WorkspaceFiles = {
   tools: string;
   memory: string;
   dailyLogPath: string;
+  debugLogPath: string;
 };
 
 export async function ensureWorkspace(rootDir: string): Promise<void> {
   await fs.mkdir(path.join(rootDir, "memory"), { recursive: true });
   await fs.mkdir(path.join(rootDir, ".opencal"), { recursive: true });
+  await fs.mkdir(path.join(rootDir, ".opencal", "logs"), { recursive: true });
 
   for (const file of REQUIRED_FILES) {
     const absolutePath = path.join(rootDir, file);
@@ -36,5 +38,6 @@ export async function loadWorkspaceFiles(rootDir: string, currentDate: string): 
     tools,
     memory,
     dailyLogPath: path.join(rootDir, "memory", `${currentDate}.md`),
+    debugLogPath: path.join(rootDir, ".opencal", "logs", `${currentDate}.log`),
   };
 }

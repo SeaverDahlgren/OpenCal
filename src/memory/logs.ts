@@ -6,6 +6,19 @@ export async function appendLogEntry(logPath: string, message: ConversationMessa
   await fs.appendFile(logPath, line, "utf8");
 }
 
+export async function appendDebugLog(
+  logPath: string,
+  event: string,
+  payload: Record<string, unknown> = {},
+) {
+  const line = JSON.stringify({
+    ts: new Date().toISOString(),
+    event,
+    ...payload,
+  });
+  await fs.appendFile(logPath, `${line}\n`, "utf8");
+}
+
 export async function appendMemory(memoryPath: string, content: string) {
   if (!content.trim()) {
     return;
