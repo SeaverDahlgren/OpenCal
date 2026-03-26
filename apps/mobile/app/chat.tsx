@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../src/api/client";
 import type { AgentTurnDto } from "../src/api/types";
+import { EditorialHeader } from "../src/components/EditorialHeader";
+import { ScreenShell } from "../src/components/ScreenShell";
 import { useSession } from "../src/state/session";
-import { colors, radii, spacing } from "../src/theme/tokens";
+import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 type ChatMessage = {
   id: string;
@@ -60,50 +62,55 @@ export default function ChatScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={96}
     >
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={[styles.bubble, item.role === "user" ? styles.userBubble : styles.assistantBubble]}>
-            <Text style={styles.message}>{item.content}</Text>
-          </View>
-        )}
-        ListFooterComponent={
-          <View style={{ gap: spacing.md }}>
-            {response?.clarification ? (
-              <View style={styles.inlineCard}>
-                <Text style={styles.inlineTitle}>{response.clarification.prompt}</Text>
-                {response.clarification.options.map((option) => (
-                  <TouchableOpacity
-                    key={option.id}
-                    style={styles.option}
-                    onPress={() => void submit({ optionValue: option.value })}
-                  >
-                    <Text style={styles.optionText}>{option.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-            {response?.confirmation ? (
-              <View style={styles.inlineCard}>
-                <Text style={styles.inlineTitle}>{response.confirmation.prompt}</Text>
-                <Text style={styles.inlineBody}>
-                  {response.confirmation.payloadPreview.summary ?? response.confirmation.payloadPreview.kind}
-                </Text>
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.confirm} onPress={() => void submit({ action: "confirm" })}>
-                    <Text style={styles.confirmText}>{response.confirmation.actionLabel}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.cancel} onPress={() => void submit({ action: "cancel" })}>
-                    <Text style={styles.cancelText}>{response.confirmation.cancelLabel}</Text>
-                  </TouchableOpacity>
+      <ScreenShell scroll={false}>
+        <EditorialHeader eyebrow="AI CHANNEL" title="OpenCal" subtitle="Clarifications and confirmations stay inline while the text composer remains available." />
+        <FlatList
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <View style={[styles.bubble, item.role === "user" ? styles.userBubble : styles.assistantBubble]}>
+              <Text style={[styles.message, item.role === "user" && styles.userMessage]}>{item.content}</Text>
+            </View>
+          )}
+          ListFooterComponent={
+            <View style={{ gap: spacing.md }}>
+              {response?.clarification ? (
+                <View style={styles.inlineCard}>
+                  <Text style={styles.inlineEyebrow}>ACTION NEEDED</Text>
+                  <Text style={styles.inlineTitle}>{response.clarification.prompt}</Text>
+                  {response.clarification.options.map((option) => (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={styles.option}
+                      onPress={() => void submit({ optionValue: option.value })}
+                    >
+                      <Text style={styles.optionText}>{option.label}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              </View>
-            ) : null}
-          </View>
-        }
-      />
+              ) : null}
+              {response?.confirmation ? (
+                <View style={styles.inlineCard}>
+                  <Text style={styles.inlineEyebrow}>CONFIRMATION</Text>
+                  <Text style={styles.inlineTitle}>{response.confirmation.prompt}</Text>
+                  <Text style={styles.inlineBody}>
+                    {response.confirmation.payloadPreview.summary ?? response.confirmation.payloadPreview.kind}
+                  </Text>
+                  <View style={styles.actions}>
+                    <TouchableOpacity style={styles.confirm} onPress={() => void submit({ action: "confirm" })}>
+                      <Text style={styles.confirmText}>{response.confirmation.actionLabel}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.cancel} onPress={() => void submit({ action: "cancel" })}>
+                      <Text style={styles.cancelText}>{response.confirmation.cancelLabel}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          }
+        />
+      </ScreenShell>
 
       <View style={styles.composer}>
         <TextInput
@@ -127,12 +134,14 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, gap: spacing.md, paddingBottom: 24 },
+  list: { gap: spacing.md, paddingBottom: 24 },
   bubble: { borderRadius: radii.lg, padding: spacing.md, maxWidth: "88%" },
   userBubble: { backgroundColor: colors.primary, alignSelf: "flex-end" },
   assistantBubble: { backgroundColor: colors.surfaceHigh, alignSelf: "flex-start" },
   message: { color: colors.text, fontSize: 15, lineHeight: 22 },
+  userMessage: { color: colors.background },
   inlineCard: { backgroundColor: colors.surfaceHigh, borderRadius: radii.lg, padding: spacing.md, gap: spacing.sm },
+  inlineEyebrow: { color: colors.tertiary, ...typography.eyebrow },
   inlineTitle: { color: colors.text, fontWeight: "700", fontSize: 16 },
   inlineBody: { color: colors.textMuted },
   option: { backgroundColor: colors.surfaceHighest, borderRadius: radii.md, padding: spacing.md },

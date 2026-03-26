@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
 import type { SettingsDto } from "../../src/api/types";
+import { EditorialHeader } from "../../src/components/EditorialHeader";
+import { InlineNotice } from "../../src/components/InlineNotice";
+import { SurfaceCard } from "../../src/components/SurfaceCard";
 import { useSession } from "../../src/state/session";
-import { colors, radii, spacing } from "../../src/theme/tokens";
+import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 export default function SettingsScreen() {
   const { token, clearSession } = useSession();
@@ -44,16 +47,16 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Settings</Text>
-      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+      <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Control profile preferences, planning defaults, and advanced beta configuration." />
+      {notice ? <InlineNotice tone="success" message={notice} /> : null}
 
-      <View style={styles.card}>
+      <SurfaceCard elevated>
         <Text style={styles.sectionTitle}>Profile</Text>
         <Text style={styles.value}>{data.profile.name}</Text>
         <Text style={styles.muted}>{data.profile.email}</Text>
-      </View>
+      </SurfaceCard>
 
-      <View style={styles.card}>
+      <SurfaceCard elevated>
         <Text style={styles.sectionTitle}>Preferences</Text>
         <Field
           label="Timezone"
@@ -83,9 +86,9 @@ export default function SettingsScreen() {
           multiline
           onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, assistantNotes: value } })}
         />
-      </View>
+      </SurfaceCard>
 
-      <View style={styles.card}>
+      <SurfaceCard>
         <View style={styles.row}>
           <Text style={styles.sectionTitle}>Advanced</Text>
           <Switch value={showAdvanced} onValueChange={setShowAdvanced} />
@@ -121,7 +124,7 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
         ) : null}
-      </View>
+      </SurfaceCard>
 
       <TouchableOpacity style={styles.primaryButton} onPress={() => void save()} disabled={saving}>
         <Text style={styles.primaryText}>{saving ? "Saving..." : "Save Settings"}</Text>
@@ -154,13 +157,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 },
   loader: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
-  title: { color: colors.text, fontSize: 34, fontWeight: "800" },
-  notice: { color: colors.tertiary, fontWeight: "700" },
-  card: { backgroundColor: colors.surfaceHigh, borderRadius: radii.lg, padding: spacing.lg, gap: spacing.md },
-  sectionTitle: { color: colors.text, fontSize: 20, fontWeight: "700" },
+  sectionTitle: { color: colors.text, ...typography.section },
   value: { color: colors.text, fontSize: 18, fontWeight: "600" },
   muted: { color: colors.textMuted },
-  label: { color: colors.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 1 },
+  label: { color: colors.textMuted, ...typography.label },
   input: {
     backgroundColor: colors.surfaceHighest,
     borderRadius: radii.md,
