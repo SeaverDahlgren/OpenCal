@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
 import type { CalendarDayDto, CalendarMonthDto } from "../../src/api/types";
 import { EditorialHeader } from "../../src/components/EditorialHeader";
@@ -14,51 +14,108 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState<CalendarMonthDto | null>(null);
   const [day, setDay] = useState<CalendarDayDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [monthAnimating, setMonthAnimating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
-  const today = useMemo(() => new Date(), []);
+  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() => toDateOnly(new Date()));
   const router = useRouter();
+  const monthTranslate = useRef(new Animated.Value(0)).current;
+  const monthOpacity = useRef(new Animated.Value(1)).current;
+  const hasLoadedRef = useRef(false);
 
-  const loadMonth = useCallback(async () => {
+  const fetchCalendar = useCallback(async (targetMonth: Date, focusDate: string) => {
+    const client = createApiClient(token);
+    const [nextMonth, nextDay] = await Promise.all([
+      client.getCalendarMonth(targetMonth.getFullYear(), targetMonth.getMonth() + 1),
+      client.getCalendarDay(focusDate),
+    ]);
+    return { nextMonth, nextDay };
+  }, [token]);
+
+  const loadCalendar = useCallback(async (options?: {
+    targetMonth?: Date;
+    targetDate?: string;
+    initial?: boolean;
+    refreshing?: boolean;
+    direction?: number;
+  }) => {
     if (!token) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+
+    const targetMonth = options?.targetMonth ?? visibleMonth;
+    const focusDate = options?.targetDate ?? (isDateInMonth(selectedDate, targetMonth) ? selectedDate : toDateOnly(startOfMonth(targetMonth)));
+    const isInitial = options?.initial ?? !month;
+    const isRefreshing = options?.refreshing ?? false;
+    const direction = options?.direction ?? 0;
+
+    if (isInitial) {
+      setLoading(true);
+    }
+    if (isRefreshing) {
+      setRefreshing(true);
+    }
     setError(null);
+
     try {
-      const client = createApiClient(token);
-      const focusDate = selectedDate || new Date().toISOString().slice(0, 10);
-      const [nextMonth, nextDay] = await Promise.all([
-        client.getCalendarMonth(today.getFullYear(), today.getMonth() + 1),
-        client.getCalendarDay(focusDate),
-      ]);
+      if (direction && month) {
+        setMonthAnimating(true);
+        await runMonthExitAnimation(monthTranslate, monthOpacity, direction);
+      }
+
+      const { nextMonth, nextDay } = await fetchCalendar(targetMonth, focusDate);
+
+      setVisibleMonth(targetMonth);
+      setSelectedDate(focusDate);
       setMonth(nextMonth);
       setDay(nextDay);
+
+      if (direction && month) {
+        monthTranslate.setValue(direction > 0 ? 22 : -22);
+        monthOpacity.setValue(0.35);
+        await runMonthEnterAnimation(monthTranslate, monthOpacity);
+      }
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to load calendar.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
+      setMonthAnimating(false);
     }
-  }, [selectedDate, today, token]);
+  }, [fetchCalendar, month, monthOpacity, monthTranslate, selectedDate, token, visibleMonth]);
 
   async function selectDay(date: string) {
     if (!token) {
       return;
     }
-    setSelectedDate(date);
-    setError(null);
-    try {
-      setDay(await createApiClient(token).getCalendarDay(date));
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Failed to load day details.");
+    const nextMonth = startOfMonth(new Date(`${date}T12:00:00`));
+    const direction = nextMonth.getTime() === visibleMonth.getTime() ? 0 : nextMonth > visibleMonth ? 1 : -1;
+    await loadCalendar({ targetMonth: nextMonth, targetDate: date, direction });
+  }
+
+  function moveMonth(offset: number) {
+    if (monthAnimating) {
+      return;
     }
+    const nextMonth = startOfMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + offset, 1));
+    const nextSelectedDate = toDateOnly(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1, 12));
+    void loadCalendar({ targetMonth: nextMonth, targetDate: nextSelectedDate, direction: offset });
   }
 
   useFocusEffect(
     useCallback(() => {
-      void loadMonth();
-    }, [loadMonth]),
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+      if (hasLoadedRef.current) {
+        return;
+      }
+      hasLoadedRef.current = true;
+      void loadCalendar({ initial: true });
+    }, [loadCalendar, token]),
   );
 
   if (loading || !month) {
@@ -73,47 +130,59 @@ export default function CalendarScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void loadMonth()} tintColor={colors.primary} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadCalendar({ refreshing: true })} tintColor={colors.primary} />}
     >
       <EditorialHeader eyebrow="STRATEGIC OVERVIEW" title={month.monthLabel} subtitle="Primary calendar with AI-assisted rescheduling." />
-      {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void loadMonth()} /> : null}
+      {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void loadCalendar({ refreshing: true })} /> : null}
+      <Animated.View style={{ transform: [{ translateX: monthTranslate }], opacity: monthOpacity }}>
       <SurfaceCard style={styles.monthCard}>
+        <View style={styles.monthNav}>
+          <TouchableOpacity style={[styles.monthButton, monthAnimating && styles.monthButtonDisabled]} onPress={() => moveMonth(-1)} disabled={monthAnimating}>
+            <Text style={styles.monthButtonText}>Prev</Text>
+          </TouchableOpacity>
+          <Text style={styles.monthLabel}>{month.monthLabel}</Text>
+          <TouchableOpacity style={[styles.monthButton, monthAnimating && styles.monthButtonDisabled]} onPress={() => moveMonth(1)} disabled={monthAnimating}>
+            <Text style={styles.monthButtonText}>Next</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.weekdays}>
-          {["M", "T", "W", "T", "F", "S", "S"].map((label, index) => (
-            <Text key={`${label}-${index}`} style={styles.weekday}>
+          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
+            <Text key={label} style={styles.weekday}>
               {label}
             </Text>
           ))}
         </View>
         <View style={styles.grid}>
-        {month.days.map((item) => (
-          <Pressable
-            key={item.date}
-            style={[
-              styles.cell,
-              !item.inMonth && styles.cellMuted,
-              item.isToday && styles.cellToday,
-              item.date === selectedDate && styles.cellSelected,
-            ]}
-            onPress={() => void selectDay(item.date)}
-          >
-            <Text style={[styles.cellText, item.isToday && styles.cellTextToday]}>{item.date.slice(-2)}</Text>
-            <View style={styles.dots}>
-              {item.highlights.map((highlight, index) => (
-                <View
-                  key={`${item.date}-${index}`}
-                  style={[
-                    styles.dot,
-                    { backgroundColor: highlight.tone === "tertiary" ? colors.tertiary : colors.primary },
-                  ]}
-                />
-              ))}
+          {month.days.map((item) => (
+            <View key={item.date} style={styles.cellWrap}>
+              <Pressable
+                style={[
+                  styles.cell,
+                  !item.inMonth && styles.cellMuted,
+                  item.isToday && styles.cellToday,
+                  item.date === selectedDate && styles.cellSelected,
+                ]}
+                onPress={() => void selectDay(item.date)}
+              >
+                <Text style={[styles.cellText, item.isToday && styles.cellTextToday]}>{item.date.slice(-2)}</Text>
+                <View style={styles.dots}>
+                  {item.highlights.map((highlight, index) => (
+                    <View
+                      key={`${item.date}-${index}`}
+                      style={[
+                        styles.dot,
+                        { backgroundColor: highlight.tone === "tertiary" ? colors.tertiary : colors.primary },
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.count}>{item.eventCount > 0 ? item.eventCount : ""}</Text>
+              </Pressable>
             </View>
-            <Text style={styles.count}>{item.eventCount > 0 ? item.eventCount : ""}</Text>
-          </Pressable>
-        ))}
+          ))}
         </View>
       </SurfaceCard>
+      </Animated.View>
 
       <SurfaceCard elevated style={styles.timeline}>
         <Text style={styles.sectionTitle}>{day?.dateLabel ?? "Day Details"}</Text>
@@ -152,11 +221,21 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 },
   loader: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
   monthCard: { gap: spacing.md },
-  weekdays: { flexDirection: "row", justifyContent: "space-between", paddingHorizontal: 2 },
-  weekday: { width: "13.5%", textAlign: "center", color: colors.textMuted, ...typography.label },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  monthNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  monthLabel: { flex: 1, textAlign: "center", color: colors.text, ...typography.section },
+  monthButton: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  monthButtonDisabled: { opacity: 0.5 },
+  monthButtonText: { color: colors.primary, fontWeight: "700" },
+  weekdays: { flexDirection: "row", marginHorizontal: -2 },
+  weekday: { width: `${100 / 7}%`, paddingHorizontal: 2, textAlign: "center", color: colors.textMuted, ...typography.label },
+  grid: { flexDirection: "row", flexWrap: "wrap", marginHorizontal: -2, rowGap: 4 },
+  cellWrap: { width: `${100 / 7}%`, paddingHorizontal: 2, paddingTop: 4 },
   cell: {
-    width: "13.5%",
     aspectRatio: 1,
     backgroundColor: colors.surface,
     borderRadius: radii.md,
@@ -181,3 +260,49 @@ const styles = StyleSheet.create({
   eventAction: { color: colors.primary, fontSize: 14, fontWeight: "800" },
   muted: { color: colors.textMuted },
 });
+
+function startOfMonth(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), 1, 12);
+}
+
+function toDateOnly(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function isDateInMonth(date: string, month: Date) {
+  return date.startsWith(`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`);
+}
+
+function runMonthExitAnimation(translate: Animated.Value, opacity: Animated.Value, direction: number) {
+  return new Promise<void>((resolve) => {
+    Animated.parallel([
+      Animated.timing(translate, {
+        toValue: direction > 0 ? -22 : 22,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0.35,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start(() => resolve());
+  });
+}
+
+function runMonthEnterAnimation(translate: Animated.Value, opacity: Animated.Value) {
+  return new Promise<void>((resolve) => {
+    Animated.parallel([
+      Animated.timing(translate, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => resolve());
+  });
+}
