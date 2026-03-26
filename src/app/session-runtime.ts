@@ -70,6 +70,11 @@ export async function runAgentSessionTurn(
 
   if (action.type === "confirm" || action.type === "cancel") {
     const result = await resolvePendingConfirmation(deps, session, action.type, debugBase);
+    session.messages.push(createConversationMessage("assistant", result.assistant.message));
+    await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
+      ...debugBase,
+      content: result.assistant.message,
+    });
     return {
       session: persistSession(storedSession, session),
       response: result,
@@ -169,9 +174,10 @@ async function resolvePendingConfirmation(
 
   const pending = session.pendingConfirmation;
   session.pendingConfirmation = null;
+  const actionSummary = summarizeConfirmationAction(pending.toolName, pending.arguments);
 
   if (action === "cancel") {
-    const cancelled = `${pending.toolName} cancelled.`;
+    const cancelled = `Understood. I won't ${actionSummary}.`;
     session.taskState = applyToolResultToTaskState(
       session.taskState ?? createTaskState(findLatestUserInput(session.messages)),
       pending.toolName,
@@ -207,6 +213,7 @@ async function resolvePendingConfirmation(
 
   const result = await executeToolCall(deps, session, tool, pending.arguments, debugBase);
   if (result.response) {
+    result.response.assistant.message = `Confirmed. ${result.response.assistant.message}`;
     return result.response;
   }
 
@@ -215,7 +222,7 @@ async function resolvePendingConfirmation(
   }
 
   session.taskState = activateNextSubgoal(session.taskState);
-  return buildTurnResponse(session, "Confirmed. Continuing the request.");
+  return buildTurnResponse(session, `Confirmed. I'll ${actionSummary}.`);
 }
 
 async function handleDecision(
@@ -291,12 +298,13 @@ async function handleDecision(
         toolName: tool.name,
         arguments: parsedInput.data,
       };
+      const actionSummary = summarizeConfirmationAction(tool.name, parsedInput.data);
       return {
-        reply: `I’m ready to ${tool.name.replace(/_/g, " ")} once you confirm.`,
+        reply: `Please confirm: should I ${actionSummary}?`,
         continueLoop: false,
         response: buildTurnResponse(
           session,
-          `I’m ready to ${tool.name.replace(/_/g, " ")} once you confirm.`,
+          `Please confirm: should I ${actionSummary}?`,
           buildConfirmationPrompt(tool.name, parsedInput.data),
         ),
       };
@@ -439,15 +447,16 @@ function buildClarificationPrompt(prompt: string, options: AppChoiceOption[]) {
 }
 
 function buildConfirmationPrompt(toolName: string, input: Record<string, unknown>): ConfirmationPrompt {
+  const actionSummary = summarizeConfirmationAction(toolName, input);
   return {
     type: "protected_action",
-    prompt: `Confirm ${toolName.replace(/_/g, " ")}.`,
+    prompt: `Please confirm: should I ${actionSummary}?`,
     actionLabel: "Confirm",
     cancelLabel: "Cancel",
     payloadPreview: {
       kind: toolName,
       title: asString(input.summary),
-      summary: asString(input.summary),
+      summary: actionSummary,
       oldTime: undefined,
       newTime: asString(input.start),
       calendarId: asString(input.calendarId),
@@ -456,6 +465,62 @@ function buildConfirmationPrompt(toolName: string, input: Record<string, unknown
       raw: input,
     },
   };
+}
+
+function summarizeConfirmationAction(toolName: string, input: Record<string, unknown>) {
+  const summary = asString(input.summary);
+  const subject = asString(input.subject);
+  const title = summary || asString(input.title);
+  const start = asString(input.start);
+  const end = asString(input.end);
+
+  if (toolName === "write_draft") {
+    if (subject) {
+      return `create the draft "${subject}"`;
+    }
+    return "create this email draft";
+  }
+
+  if (toolName === "create_event") {
+    if (title && start) {
+      return `create "${title}" starting at ${start}`;
+    }
+    if (title) {
+      return `create "${title}"`;
+    }
+    return "create this event";
+  }
+
+  if (toolName === "update_event") {
+    if (title && start) {
+      return `update "${title}" to ${start}`;
+    }
+    if (title) {
+      return `update "${title}"`;
+    }
+    return "update this event";
+  }
+
+  if (toolName === "delete_event") {
+    if (title) {
+      return `delete "${title}"`;
+    }
+    return "delete this event";
+  }
+
+  if (title && start && end) {
+    return `${toolName.replace(/_/g, " ")} "${title}" from ${start} to ${end}`;
+  }
+
+  if (title && start) {
+    return `${toolName.replace(/_/g, " ")} "${title}" at ${start}`;
+  }
+
+  if (title || subject) {
+    return `${toolName.replace(/_/g, " ")} ${JSON.stringify(title || subject)}`;
+  }
+
+  return toolName.replace(/_/g, " ");
 }
 
 function persistSession(stored: StoredSessionState, session: MutableSession): StoredSessionState {
