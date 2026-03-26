@@ -9,7 +9,7 @@ import { useSession } from "../../src/state/session";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 export default function SettingsScreen() {
-  const { token, clearSession } = useSession();
+  const { token, clearSession, resetAgentSession } = useSession();
   const [data, setData] = useState<SettingsDto | null>(null);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -119,6 +119,9 @@ export default function SettingsScreen() {
               }
             />
             <Text style={styles.muted}>Session ID: {data.advanced.sessionId}</Text>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => void resetAgentSession()}>
+              <Text style={styles.secondaryText}>Reset Agent Session</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryButton} onPress={() => void clearSession()}>
               <Text style={styles.secondaryText}>Reconnect / Clear Token</Text>
             </TouchableOpacity>

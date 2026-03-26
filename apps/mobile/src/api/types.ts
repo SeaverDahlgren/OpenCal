@@ -105,6 +105,18 @@ export type AgentTurnDto = {
   };
 };
 
+export type TaskStateDto = {
+  taskState: {
+    taskId: string;
+    summary: string;
+    status: string;
+    activeSubgoal?: string;
+    hasBlockedPrompt: boolean;
+  } | null;
+  clarification: AgentTurnDto["clarification"];
+  confirmation: AgentTurnDto["confirmation"];
+};
+
 export type ApiErrorDto = {
   error: {
     code: string;

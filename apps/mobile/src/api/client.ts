@@ -5,6 +5,7 @@ import type {
   CalendarMonthDto,
   SessionDto,
   SettingsDto,
+  TaskStateDto,
   TodayDto,
 } from "./types";
 
@@ -55,16 +56,7 @@ export class ApiClient {
   }
 
   async getTaskState() {
-    return this.request<{
-      taskState: {
-        taskId: string;
-        summary: string;
-        status: string;
-        hasBlockedPrompt: boolean;
-      } | null;
-      clarification: AgentTurnDto["clarification"];
-      confirmation: AgentTurnDto["confirmation"];
-    }>("/agent/task-state");
+    return this.request<TaskStateDto>("/agent/task-state");
   }
 
   async resetSession() {

@@ -14,27 +14,34 @@ type ChatMessage = {
 };
 
 export default function ChatScreen() {
-  const { token, refreshSession } = useSession();
+  const { token, taskState, refreshSession, refreshTaskState } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [response, setResponse] = useState<AgentTurnDto | null>(null);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!token) {
+    if (!taskState) {
+      setResponse(null);
       return;
     }
-    void createApiClient(token).getTaskState().then((taskState) => {
-      if (taskState.clarification) {
-        setResponse({
-          assistant: { message: taskState.clarification.prompt },
-          clarification: taskState.clarification,
-          confirmation: taskState.confirmation,
-          session: { hasBlockedTask: Boolean(taskState.taskState?.hasBlockedPrompt) },
-        });
-      }
-    });
-  }, [token]);
+    if (taskState.clarification || taskState.confirmation) {
+      setResponse({
+        assistant: {
+          message:
+            taskState.clarification?.prompt ??
+            taskState.confirmation?.prompt ??
+            taskState.taskState?.summary ??
+            "Resume your task.",
+        },
+        clarification: taskState.clarification,
+        confirmation: taskState.confirmation,
+        session: { hasBlockedTask: Boolean(taskState.taskState?.hasBlockedPrompt || taskState.confirmation) },
+      });
+      return;
+    }
+    setResponse(null);
+  }, [taskState]);
 
   async function submit(body: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) {
     if (!token) {
@@ -53,7 +60,7 @@ export default function ChatScreen() {
     setResponse(next);
     setDraft("");
     setSending(false);
-    await refreshSession();
+    await Promise.all([refreshSession(), refreshTaskState()]);
   }
 
   return (
