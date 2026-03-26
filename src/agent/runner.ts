@@ -1,44 +1,41 @@
 import path from "node:path";
 import type { AppConfig } from "../config/env.js";
-import { buildSystemPrompt } from "./prompts.js";
 import { formatToolResultMessage } from "./tool-result-format.js";
-import type { AgentDecision, ConversationMessage, RuntimeContext } from "./types.js";
+import type { AgentDecision, ConversationMessage } from "./types.js";
 import {
   activateNextSubgoal,
   applyToolResultToTaskState,
   beginExecution,
   buildIncompleteTaskMessage,
-  buildTaskSkillSelectionInput,
   completeResponseSubgoals,
   createTaskState,
   getActiveSubgoal,
   getAwaitingPrompt,
   hasPendingSubgoals,
-  mergeUserInputIntoTaskState,
   registerAwaitingUserResponse,
-  shouldStartNewTask,
-  summarizeTaskStateForPrompt,
-  tryResolveBlockedReply,
   type TaskState,
 } from "./task-state.js";
-import { compactConversation, updateToolsIndex } from "../memory/context.js";
+import { updateToolsIndex } from "../memory/context.js";
 import { appendDebugLog, appendLogEntry, appendMemory } from "../memory/logs.js";
 import { ensureWorkspace, loadWorkspaceFiles } from "../memory/workspace.js";
-import { estimateMessagesTokens } from "./tokenizer.js";
 import type { LlmProvider } from "../llm/provider.js";
 import { toUserFacingLlmErrorMessage } from "../llm/errors.js";
 import type { ConsoleIO } from "../cli/io.js";
-import type { ToolDefinition, ToolResult } from "../tools/types.js";
+import type { ToolResult } from "../tools/types.js";
 import { renderToolsMarkdown } from "../tools/registry.js";
 import {
-  buildSelectedSkillDetails,
   buildSkillsCatalog,
   loadSkillManifests,
-  selectRelevantSkills,
   type SkillManifest,
 } from "../skills/manifests.js";
-
-type ToolRegistry = Map<string, ToolDefinition<any, unknown>>;
+import {
+  advanceTaskStateForUserInput,
+  buildDecisionContext,
+  clearCompletedTask,
+  createConversationMessage,
+  findLatestUserInput,
+  type ToolRegistry,
+} from "../app/turn-engine-shared.js";
 
 export class AgentRunner {
   private readonly messages: ConversationMessage[] = [];
@@ -76,7 +73,7 @@ export class AgentRunner {
         break;
       }
 
-      const userMessage = createMessage("user", input);
+      const userMessage = createConversationMessage("user", input);
       this.messages.push(userMessage);
       await appendLogEntry(workspace.dailyLogPath, userMessage);
       await appendDebugLog(workspace.debugLogPath, "turn.user_input", {
@@ -96,7 +93,7 @@ export class AgentRunner {
         finalReply = toUserFacingLlmErrorMessage(error);
       }
 
-      const assistantMessage = createMessage("assistant", finalReply);
+      const assistantMessage = createConversationMessage("assistant", finalReply);
       this.messages.push(assistantMessage);
       await appendLogEntry(workspace.dailyLogPath, assistantMessage);
       await appendDebugLog(workspace.debugLogPath, "turn.assistant_reply", {
@@ -122,55 +119,52 @@ export class AgentRunner {
     let stepCount = 0;
     let finalReply = "I could not complete that request.";
     let runtimeSummary: string | undefined;
-    await this.updateTaskStateForLatestUserInput(args.workspace.debugLogPath);
+    const turnState = {
+      messages: this.messages,
+      taskState: this.currentTaskState,
+    };
+    await advanceTaskStateForUserInput({
+      state: turnState,
+      latestUserInput: findLatestUserInput(this.messages),
+      log: async (event, payload) => {
+        await appendDebugLog(args.workspace.debugLogPath, event, payload);
+      },
+    });
+    this.currentTaskState = turnState.taskState;
     this.currentTaskState = activateNextSubgoal(this.currentTaskState);
 
     while (stepCount < 8) {
       stepCount += 1;
 
-      const compacted = await compactConversation({
-        messages: this.messages,
-        contextWindowLimit: this.config.contextWindowLimit,
-        compactionThreshold: this.config.compactionThreshold,
-        provider: this.provider,
-      });
-
-      if (compacted.summary) {
-        runtimeSummary = compacted.summary;
-      }
-
-      const runtimeContext = buildRuntimeContext(args.timezone, runtimeSummary);
-      const latestUserInput = findLatestUserInput(this.messages);
-      const skillSelectionInput = buildTaskSkillSelectionInput(this.currentTaskState, latestUserInput);
-      const selectedSkills = selectRelevantSkills(this.skillManifests, skillSelectionInput);
+      const decisionContext = await buildDecisionContext(
+        {
+          config: this.config,
+          provider: this.provider,
+          tools: this.tools,
+          workspace: args.workspace,
+          skillManifests: this.skillManifests,
+          skillsCatalog: this.skillsCatalog,
+          timezone: args.timezone,
+        },
+        {
+          messages: this.messages,
+          taskState: this.currentTaskState,
+        },
+        runtimeSummary,
+      );
+      runtimeSummary = decisionContext.runtimeSummary;
       await appendDebugLog(args.workspace.debugLogPath, "skill.catalog", {
         catalog: this.skillsCatalog,
       });
       await appendDebugLog(args.workspace.debugLogPath, "skill.selected", {
-        input: skillSelectionInput,
-        selectedSkillIds: selectedSkills.map((skill) => skill.id),
-        selectedSkillPaths: selectedSkills.map((skill) => skill.path),
-      });
-      const systemPrompt = buildSystemPrompt({
-        soul: args.workspace.soul,
-        user: args.workspace.user,
-        tools: [...this.tools.values()].map((tool) => tool.promptShape),
-        skillsCatalog: this.skillsCatalog,
-        selectedSkillDetails: buildSelectedSkillDetails(selectedSkills),
-        taskStateSummary: summarizeTaskStateForPrompt(this.currentTaskState),
-        memory: args.workspace.memory,
-        runtime: runtimeContext,
-        tokenUsage: {
-          estimatedInputTokens: estimateMessagesTokens(compacted.messages),
-          contextWindowLimit: this.config.contextWindowLimit,
-          maxOutputTokens: this.config.maxOutputTokens,
-          compactionThreshold: this.config.compactionThreshold,
-        },
+        input: decisionContext.skillSelectionInput,
+        selectedSkillIds: decisionContext.selectedSkills.map((skill) => skill.id),
+        selectedSkillPaths: decisionContext.selectedSkills.map((skill) => skill.path),
       });
 
       const decision = await this.provider.generateDecision({
-        systemPrompt,
-        messages: compacted.messages,
+        systemPrompt: decisionContext.systemPrompt,
+        messages: decisionContext.compactedMessages,
         tools: [...this.tools.values()].map((tool) => tool.promptShape),
         maxOutputTokens: this.config.maxOutputTokens,
       });
@@ -210,7 +204,11 @@ export class AgentRunner {
         this.currentTaskState = activateNextSubgoal(this.currentTaskState);
         return { reply: decision.message, continueLoop: true };
       }
-      await this.completeTaskIfDone(debugLogPath);
+      const state = { messages: this.messages, taskState: this.currentTaskState };
+      await clearCompletedTask(state, async (event, payload) => {
+        await appendDebugLog(debugLogPath, event, payload);
+      });
+      this.currentTaskState = state.taskState;
       return { reply: decision.message, continueLoop: false };
     }
 
@@ -244,7 +242,11 @@ export class AgentRunner {
       }
 
       const reply = decision.message.replace(/^<STOP>\s*/i, "").trim();
-      await this.completeTaskIfDone(debugLogPath);
+      const state = { messages: this.messages, taskState: this.currentTaskState };
+      await clearCompletedTask(state, async (event, payload) => {
+        await appendDebugLog(debugLogPath, event, payload);
+      });
+      this.currentTaskState = state.taskState;
       return { reply, continueLoop: false };
     }
 
@@ -266,7 +268,7 @@ export class AgentRunner {
           arguments: toolCall.arguments,
         });
         this.messages.push(
-          createMessage("tool", `Tool ${toolCall.name} is not registered.`, toolCall.name),
+          createConversationMessage("tool", `Tool ${toolCall.name} is not registered.`, toolCall.name),
         );
         this.currentTaskState = applyToolResultToTaskState(
           this.currentTaskState,
@@ -286,7 +288,7 @@ export class AgentRunner {
           issues: parsedInput.error.issues,
         });
         const content = `Invalid input for ${tool.name}: ${parsedInput.error.message}`;
-        this.messages.push(createMessage("tool", content, tool.name));
+        this.messages.push(createConversationMessage("tool", content, tool.name));
         this.currentTaskState = applyToolResultToTaskState(
           this.currentTaskState,
           tool.name,
@@ -313,7 +315,7 @@ export class AgentRunner {
           confirmed,
         });
         if (!confirmed) {
-          this.messages.push(createMessage("tool", `${tool.name} cancelled by user.`, tool.name));
+          this.messages.push(createConversationMessage("tool", `${tool.name} cancelled by user.`, tool.name));
           this.currentTaskState = applyToolResultToTaskState(
             this.currentTaskState,
             tool.name,
@@ -363,7 +365,7 @@ export class AgentRunner {
         );
       }
 
-      this.messages.push(createMessage("tool", toolMessage, tool.name));
+      this.messages.push(createConversationMessage("tool", toolMessage, tool.name));
       await appendDebugLog(debugLogPath, "task.updated", {
         taskId: this.currentTaskState?.taskId,
         reason: "tool_result",
@@ -377,107 +379,6 @@ export class AgentRunner {
 
     this.currentTaskState = activateNextSubgoal(this.currentTaskState);
     return { reply: "Working through the tool results.", continueLoop: true };
-  }
-
-  private async updateTaskStateForLatestUserInput(debugLogPath: string) {
-    const latestUserInput = findLatestUserInput(this.messages);
-    if (!latestUserInput) {
-      return;
-    }
-
-    const priorTaskId = this.currentTaskState?.taskId;
-    const hadOpenTask = this.currentTaskState !== null;
-
-    if (!this.currentTaskState) {
-      this.currentTaskState = createTaskState(latestUserInput);
-      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
-      await appendDebugLog(debugLogPath, "task.created", {
-        taskId: this.currentTaskState.taskId,
-        taskSummary: this.currentTaskState.taskSummary,
-        subgoals: this.currentTaskState.subgoals,
-      });
-      return;
-    }
-
-    if (this.currentTaskState.awaitingUserResponse) {
-      const blockedTaskId = this.currentTaskState.taskId;
-      const blockedTaskSummary = this.currentTaskState.taskSummary;
-      const resolution = tryResolveBlockedReply(this.currentTaskState, latestUserInput);
-      if (resolution.matched) {
-        this.currentTaskState = activateNextSubgoal(resolution.taskState)!;
-        await appendDebugLog(debugLogPath, "task.bound_followup", {
-          taskId: this.currentTaskState.taskId,
-          previousTaskId: priorTaskId,
-          reply: latestUserInput,
-          matchedValue: resolution.matchedValue,
-          state: this.currentTaskState,
-        });
-        return;
-      }
-
-      await appendDebugLog(debugLogPath, "task.updated", {
-        taskId: blockedTaskId,
-        reason: "blocked_reply_unmatched",
-        reply: latestUserInput,
-        state: this.currentTaskState,
-      });
-
-      this.currentTaskState = createTaskState(latestUserInput);
-      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
-      await appendDebugLog(debugLogPath, "task.replaced", {
-        previousTaskId: blockedTaskId,
-        previousTaskSummary: blockedTaskSummary,
-        newInput: latestUserInput,
-      });
-      await appendDebugLog(debugLogPath, "task.created", {
-        taskId: this.currentTaskState.taskId,
-        taskSummary: this.currentTaskState.taskSummary,
-        subgoals: this.currentTaskState.subgoals,
-      });
-      return;
-    }
-
-    if (shouldStartNewTask(this.currentTaskState, latestUserInput)) {
-      if (this.currentTaskState) {
-        await appendDebugLog(debugLogPath, "task.replaced", {
-          previousTaskId: this.currentTaskState.taskId,
-          previousTaskSummary: this.currentTaskState.taskSummary,
-          newInput: latestUserInput,
-        });
-      }
-
-      this.currentTaskState = createTaskState(latestUserInput);
-      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
-      await appendDebugLog(debugLogPath, "task.created", {
-        taskId: this.currentTaskState.taskId,
-        taskSummary: this.currentTaskState.taskSummary,
-        subgoals: this.currentTaskState.subgoals,
-      });
-      return;
-    }
-
-    this.currentTaskState = mergeUserInputIntoTaskState(this.currentTaskState, latestUserInput);
-    this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
-    if (hadOpenTask) {
-      await appendDebugLog(debugLogPath, "task.updated", {
-        taskId: this.currentTaskState.taskId,
-        reason: "user_followup",
-        state: this.currentTaskState,
-      });
-    }
-  }
-
-  private async completeTaskIfDone(debugLogPath: string) {
-    if (!this.currentTaskState || hasPendingSubgoals(this.currentTaskState)) {
-      return;
-    }
-
-    await appendDebugLog(debugLogPath, "task.completed", {
-      taskId: this.currentTaskState.taskId,
-      taskSummary: this.currentTaskState.taskSummary,
-      subgoals: this.currentTaskState.subgoals,
-    });
-    this.currentTaskState = null;
   }
 
   private async handleToolResult(toolName: string, result: ToolResult<unknown>): Promise<string> {
@@ -499,7 +400,7 @@ export class AgentRunner {
       }
 
       const clarification = `User selected ${selection.value} for ambiguous ${result.ambiguous.kind}.`;
-      this.messages.push(createMessage("user", clarification));
+      this.messages.push(createConversationMessage("user", clarification));
       return `${toolName}: ${clarification}`;
     }
 
@@ -507,28 +408,9 @@ export class AgentRunner {
   }
 }
 
-function buildRuntimeContext(timezone: string, compactedSummary?: string): RuntimeContext {
-  const now = new Date();
-  return {
-    nowIso: now.toISOString(),
-    dayOfWeek: now.toLocaleDateString("en-US", { weekday: "long", timeZone: timezone }),
-    timezone,
-    compactedSummary,
-  };
-}
-
 function extractTimezone(userMarkdown: string): string | undefined {
   const match = userMarkdown.match(/timezone:\s*([A-Za-z_\/]+)/i);
   return match?.[1];
-}
-
-function createMessage(role: ConversationMessage["role"], content: string, name?: string): ConversationMessage {
-  return {
-    role,
-    content,
-    name,
-    timestamp: new Date().toISOString(),
-  };
 }
 
 function serializeError(error: unknown) {
@@ -563,8 +445,4 @@ function sanitizeForLog(value: unknown): unknown {
       return innerValue;
     }),
   );
-}
-
-function findLatestUserInput(messages: ConversationMessage[]) {
-  return [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
 }

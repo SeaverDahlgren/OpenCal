@@ -1,35 +1,23 @@
-import { buildSystemPrompt } from "../agent/prompts.js";
 import { formatToolResultMessage } from "../agent/tool-result-format.js";
-import type { ConversationMessage, RuntimeContext, AgentDecision } from "../agent/types.js";
+import type { ConversationMessage, AgentDecision } from "../agent/types.js";
 import {
   activateNextSubgoal,
   applyToolResultToTaskState,
   beginExecution,
   buildIncompleteTaskMessage,
-  buildTaskSkillSelectionInput,
   completeResponseSubgoals,
   createTaskState,
   getActiveSubgoal,
   getAwaitingPrompt,
   hasPendingSubgoals,
-  mergeUserInputIntoTaskState,
   registerAwaitingUserResponse,
-  shouldStartNewTask,
-  summarizeTaskStateForPrompt,
-  tryResolveBlockedReply,
   type TaskState,
 } from "../agent/task-state.js";
-import { estimateMessagesTokens } from "../agent/tokenizer.js";
-import { compactConversation } from "../memory/context.js";
 import { appendDebugLog } from "../memory/logs.js";
 import type { WorkspaceFiles } from "../memory/workspace.js";
 import type { LlmProvider } from "../llm/provider.js";
 import type { ToolDefinition, ToolResult } from "../tools/types.js";
-import {
-  buildSelectedSkillDetails,
-  selectRelevantSkills,
-  type SkillManifest,
-} from "../skills/manifests.js";
+import { type SkillManifest } from "../skills/manifests.js";
 import type {
   AgentActionRequest,
   AppChoiceOption,
@@ -40,8 +28,13 @@ import type {
 } from "./session-types.js";
 import type { AppConfig } from "../config/env.js";
 import { summarizeArtifacts } from "./session-types.js";
-
-type ToolRegistry = Map<string, ToolDefinition<any, unknown>>;
+import {
+  advanceTaskStateForUserInput,
+  buildDecisionContext,
+  createConversationMessage,
+  findLatestUserInput,
+  type ToolRegistry,
+} from "./turn-engine-shared.js";
 
 type RuntimeDeps = {
   config: AppConfig;
@@ -84,54 +77,34 @@ export async function runAgentSessionTurn(
   }
 
   const userInput = action.type === "select_option" ? action.value : action.message;
-  session.messages.push(createMessage("user", userInput));
+  session.messages.push(createConversationMessage("user", userInput));
   await appendDebugLog(deps.workspace.debugLogPath, "turn.user_input", {
     ...debugBase,
     content: userInput,
   });
 
-  await updateTaskStateForLatestUserInput(session, userInput, deps.workspace.debugLogPath, debugBase);
+  await advanceTaskStateForUserInput({
+    state: session,
+    latestUserInput: userInput,
+    log: async (event, payload) => {
+      await appendDebugLog(deps.workspace.debugLogPath, event, {
+        ...debugBase,
+        ...payload,
+      });
+    },
+  });
   session.taskState = activateNextSubgoal(session.taskState);
 
   let finalReply = "I could not complete that request.";
   let runtimeSummary: string | undefined;
 
   for (let step = 0; step < 8; step += 1) {
-    const compacted = await compactConversation({
-      messages: session.messages,
-      contextWindowLimit: deps.config.contextWindowLimit,
-      compactionThreshold: deps.config.compactionThreshold,
-      provider: deps.provider,
-    });
-    if (compacted.summary) {
-      runtimeSummary = compacted.summary;
-    }
-
-    const latestUserInput = findLatestUserInput(session.messages);
-    const selectedSkills = selectRelevantSkills(
-      deps.skillManifests,
-      buildTaskSkillSelectionInput(session.taskState, latestUserInput),
-    );
-    const systemPrompt = buildSystemPrompt({
-      soul: deps.workspace.soul,
-      user: deps.workspace.user,
-      tools: [...deps.tools.values()].map((tool) => tool.promptShape),
-      skillsCatalog: deps.skillsCatalog,
-      selectedSkillDetails: buildSelectedSkillDetails(selectedSkills),
-      taskStateSummary: summarizeTaskStateForPrompt(session.taskState),
-      memory: deps.workspace.memory,
-      runtime: buildRuntimeContext(deps.timezone, runtimeSummary),
-      tokenUsage: {
-        estimatedInputTokens: estimateMessagesTokens(compacted.messages),
-        contextWindowLimit: deps.config.contextWindowLimit,
-        maxOutputTokens: deps.config.maxOutputTokens,
-        compactionThreshold: deps.config.compactionThreshold,
-      },
-    });
+    const decisionContext = await buildDecisionContext(deps, session, runtimeSummary);
+    runtimeSummary = decisionContext.runtimeSummary;
 
     const decision = await deps.provider.generateDecision({
-      systemPrompt,
-      messages: compacted.messages,
+      systemPrompt: decisionContext.systemPrompt,
+      messages: decisionContext.compactedMessages,
       tools: [...deps.tools.values()].map((tool) => tool.promptShape),
       maxOutputTokens: deps.config.maxOutputTokens,
     });
@@ -151,7 +124,7 @@ export async function runAgentSessionTurn(
     finalReply = outcome.reply;
 
     if (outcome.response) {
-      session.messages.push(createMessage("assistant", outcome.response.assistant.message));
+      session.messages.push(createConversationMessage("assistant", outcome.response.assistant.message));
       await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
         ...debugBase,
         content: outcome.response.assistant.message,
@@ -172,7 +145,7 @@ export async function runAgentSessionTurn(
   }
 
   const response = buildTurnResponse(session, finalReply);
-  session.messages.push(createMessage("assistant", response.assistant.message));
+  session.messages.push(createConversationMessage("assistant", response.assistant.message));
   await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
     ...debugBase,
     content: response.assistant.message,
@@ -238,7 +211,7 @@ async function resolvePendingConfirmation(
   }
 
   if (result.toolMessage) {
-    session.messages.push(createMessage("tool", result.toolMessage, tool.name));
+    session.messages.push(createConversationMessage("tool", result.toolMessage, tool.name));
   }
 
   session.taskState = activateNextSubgoal(session.taskState);
@@ -300,7 +273,7 @@ async function handleDecision(
     const tool = deps.tools.get(toolCall.name);
     if (!tool) {
       const reply = `Tool ${toolCall.name} is not registered.`;
-      session.messages.push(createMessage("tool", reply, toolCall.name));
+      session.messages.push(createConversationMessage("tool", reply, toolCall.name));
       session.taskState = applyToolResultToTaskState(session.taskState, toolCall.name, null, "error", reply);
       continue;
     }
@@ -308,7 +281,7 @@ async function handleDecision(
     const parsedInput = tool.inputSchema.safeParse(toolCall.arguments);
     if (!parsedInput.success) {
       const reply = `Invalid input for ${tool.name}: ${parsedInput.error.message}`;
-      session.messages.push(createMessage("tool", reply, tool.name));
+      session.messages.push(createConversationMessage("tool", reply, tool.name));
       session.taskState = applyToolResultToTaskState(session.taskState, tool.name, null, "error", reply);
       continue;
     }
@@ -334,7 +307,7 @@ async function handleDecision(
       return { reply: result.response.assistant.message, continueLoop: false, response: result.response };
     }
     if (result.toolMessage) {
-      session.messages.push(createMessage("tool", result.toolMessage, tool.name));
+      session.messages.push(createConversationMessage("tool", result.toolMessage, tool.name));
     }
   }
 
@@ -423,54 +396,6 @@ async function executeToolCall(
   }
 }
 
-async function updateTaskStateForLatestUserInput(
-  session: MutableSession,
-  latestUserInput: string,
-  debugLogPath: string,
-  debugBase: Record<string, unknown>,
-) {
-  if (!session.taskState) {
-    session.taskState = activateNextSubgoal(createTaskState(latestUserInput))!;
-    await appendDebugLog(debugLogPath, "task.created", {
-      ...debugBase,
-      taskId: session.taskState.taskId,
-      taskSummary: session.taskState.taskSummary,
-    });
-    return;
-  }
-
-  if (session.taskState.awaitingUserResponse) {
-    const resolution = tryResolveBlockedReply(session.taskState, latestUserInput);
-    if (resolution.matched) {
-      session.taskState = activateNextSubgoal(resolution.taskState)!;
-      await appendDebugLog(debugLogPath, "task.bound_followup", {
-        ...debugBase,
-        taskId: session.taskState.taskId,
-        reply: latestUserInput,
-        matchedValue: resolution.matchedValue,
-      });
-      return;
-    }
-  }
-
-  if (shouldStartNewTask(session.taskState, latestUserInput)) {
-    session.taskState = activateNextSubgoal(createTaskState(latestUserInput))!;
-    await appendDebugLog(debugLogPath, "task.created", {
-      ...debugBase,
-      taskId: session.taskState.taskId,
-      taskSummary: session.taskState.taskSummary,
-    });
-    return;
-  }
-
-  session.taskState = activateNextSubgoal(mergeUserInputIntoTaskState(session.taskState, latestUserInput))!;
-  await appendDebugLog(debugLogPath, "task.updated", {
-    ...debugBase,
-    taskId: session.taskState.taskId,
-    reason: "user_followup",
-  });
-}
-
 function buildTurnResponse(
   session: MutableSession,
   reply: string,
@@ -541,29 +466,6 @@ function persistSession(stored: StoredSessionState, session: MutableSession): St
     taskState: session.taskState,
     pendingConfirmation: session.pendingConfirmation,
   };
-}
-
-function buildRuntimeContext(timezone: string, compactedSummary?: string): RuntimeContext {
-  const now = new Date();
-  return {
-    nowIso: now.toISOString(),
-    dayOfWeek: now.toLocaleDateString("en-US", { weekday: "long", timeZone: timezone }),
-    timezone,
-    compactedSummary,
-  };
-}
-
-function createMessage(role: ConversationMessage["role"], content: string, name?: string): ConversationMessage {
-  return {
-    role,
-    content,
-    name,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-function findLatestUserInput(messages: ConversationMessage[]) {
-  return [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
 }
 
 function asString(value: unknown) {
