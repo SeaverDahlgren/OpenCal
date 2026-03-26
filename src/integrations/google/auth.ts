@@ -11,6 +11,9 @@ import type { AppConfig } from "../../config/env.js";
 import type { ConsoleIO } from "../../cli/io.js";
 
 const SCOPES = [
+  "openid",
+  "email",
+  "profile",
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/gmail.compose",

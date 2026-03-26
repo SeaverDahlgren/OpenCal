@@ -50,7 +50,7 @@ read_when:
 
 - The CLI prints an OAuth URL.
 - Open it in the browser.
-- Approve Gmail + Calendar scopes.
+- Approve Google identity, Gmail, and Calendar scopes.
 - The CLI waits for the callback on `127.0.0.1:42813`.
 - Tokens are stored under secure storage when available, else encrypted under `.opencal/`.
 - After workspace bootstrap, the CLI offers 4 optional personalization questions.
@@ -62,6 +62,7 @@ read_when:
 ## Auth Refresh
 
 - Run `npm run dev -- auth` to force OAuth again after rotating credentials.
+- Run `npm run dev -- auth` after scope changes too. Existing stored tokens will not pick up newly added scopes automatically.
 
 ## Mobile / API Auth
 
@@ -72,6 +73,8 @@ read_when:
 - Google should redirect to:
   - `http://127.0.0.1:8787/api/v1/auth/google/callback`
 - The backend callback then creates the session and redirects back into Expo with `sessionToken` and `sessionId`.
+
+If the backend callback fails with an identity/authentication error after Google approval, the usual cause is that the stored token was granted before the app requested basic identity scopes. Re-run OAuth so Google grants the updated scope set.
 
 If mobile sign-in lands on `connection refused`, the usual cause is that Google is still redirecting to the old CLI callback instead of the backend callback above.
 
