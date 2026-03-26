@@ -4,6 +4,11 @@ export type TaskMode = "planning" | "executing" | "blocked";
 export type TaskSubgoalStatus = "pending" | "active" | "blocked" | "completed" | "cancelled";
 export type TaskSubgoalKind = "calendar" | "email" | "clarification" | "general";
 export type AwaitingUserResponseKind = "clarification" | "followup";
+export type AwaitingUserResponseOption = {
+  value: string;
+  labels: string[];
+  summary: string;
+};
 
 export type TaskArtifact = {
   key: string;
@@ -29,6 +34,7 @@ export type AwaitingUserResponse = {
   prompt: string;
   subgoalId: string;
   responseKind: AwaitingUserResponseKind;
+  options?: AwaitingUserResponseOption[];
 };
 
 export type TaskState = {
@@ -141,11 +147,42 @@ export function bindUserReplyToTaskState(
   return next;
 }
 
+export function tryResolveBlockedReply(
+  taskState: TaskState,
+  userInput: string,
+  now = new Date(),
+): { matched: boolean; matchedValue?: string; taskState: TaskState } {
+  if (!taskState.awaitingUserResponse) {
+    return { matched: false, taskState };
+  }
+
+  const options = taskState.awaitingUserResponse.options ?? [];
+  if (options.length === 0) {
+    return {
+      matched: true,
+      matchedValue: userInput.trim(),
+      taskState: bindUserReplyToTaskState(taskState, userInput, now),
+    };
+  }
+
+  const matched = resolveAwaitingOption(options, userInput);
+  if (!matched) {
+    return { matched: false, taskState };
+  }
+
+  return {
+    matched: true,
+    matchedValue: matched.value,
+    taskState: bindUserReplyToTaskState(taskState, matched.value, now),
+  };
+}
+
 export function registerAwaitingUserResponse(
   taskState: TaskState,
   prompt: string,
   responseKind: AwaitingUserResponseKind,
   subgoalId: string,
+  options: AwaitingUserResponseOption[] = [],
   now = new Date(),
 ): TaskState {
   const next = cloneTaskState(taskState);
@@ -155,6 +192,7 @@ export function registerAwaitingUserResponse(
     prompt,
     subgoalId,
     responseKind,
+    options,
   };
   next.mode = "blocked";
 
@@ -279,6 +317,7 @@ export function applyToolResultToTaskState(
           prompt,
           subgoalId: active.id,
           responseKind: "clarification",
+          options: buildSlotOptions(slots),
         };
         next.mode = "blocked";
         return next;
@@ -291,6 +330,7 @@ export function applyToolResultToTaskState(
         prompt,
         subgoalId: active.id,
         responseKind: "clarification",
+        options: [],
       };
       next.mode = "blocked";
       return next;
@@ -589,6 +629,55 @@ function buildSlotPrompt(description: string, slots: Record<string, unknown>[]) 
   ].join("\n");
 }
 
+function buildSlotOptions(slots: Record<string, unknown>[]): AwaitingUserResponseOption[] {
+  return slots.map((slot, index) => {
+    const start = stringField(slot, "start");
+    const end = stringField(slot, "end");
+    const labels = buildSlotLabels(start, end);
+    return {
+      value: String(index + 1),
+      labels: [...new Set([String(index + 1), `${index + 1}.`, ...labels])],
+      summary: `${index + 1}. ${start} -> ${end}`,
+    };
+  });
+}
+
+function resolveAwaitingOption(
+  options: AwaitingUserResponseOption[],
+  userInput: string,
+): AwaitingUserResponseOption | null {
+  const normalized = normalizeReply(userInput);
+  if (!normalized) {
+    return null;
+  }
+
+  const directIndex = Number(normalized);
+  if (Number.isInteger(directIndex) && directIndex >= 1 && directIndex <= options.length) {
+    return options[directIndex - 1] ?? null;
+  }
+
+  const ordinalMatch = normalized.match(/\b(first|second|third|fourth|fifth|option\s+1|option\s+2|option\s+3|option\s+4|option\s+5)\b/);
+  if (ordinalMatch) {
+    const ordinalIndex = ordinalToIndex(ordinalMatch[1] ?? "");
+    if (ordinalIndex >= 0 && ordinalIndex < options.length) {
+      return options[ordinalIndex] ?? null;
+    }
+  }
+
+  for (const option of options) {
+    if (
+      option.labels.some((label) => {
+        const normalizedLabel = normalizeReply(label);
+        return normalized.includes(normalizedLabel) || normalizedLabel.includes(normalized);
+      })
+    ) {
+      return option;
+    }
+  }
+
+  return null;
+}
+
 function completesSubgoal(toolName: string, subgoal: TaskSubgoal) {
   if (subgoal.kind === "email") {
     return toolName === "write_draft";
@@ -711,4 +800,55 @@ function truncate(value: string, maxLength: number) {
     return value;
   }
   return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function normalizeReply(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function ordinalToIndex(value: string) {
+  switch (value.replace(/\s+/g, " ").trim()) {
+    case "first":
+    case "option 1":
+      return 0;
+    case "second":
+    case "option 2":
+      return 1;
+    case "third":
+    case "option 3":
+      return 2;
+    case "fourth":
+    case "option 4":
+      return 3;
+    case "fifth":
+    case "option 5":
+      return 4;
+    default:
+      return -1;
+  }
+}
+
+function buildSlotLabels(start: string, end: string) {
+  const labels = [start, end, `${start} -> ${end}`];
+  const startDate = new Date(start);
+  if (Number.isNaN(startDate.getTime())) {
+    return labels;
+  }
+
+  labels.push(startDate.toLocaleDateString("en-US", { weekday: "long" }));
+  labels.push(
+    `${startDate.toLocaleDateString("en-US", { weekday: "long" })} at ${startDate.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    })}`,
+  );
+  labels.push(startDate.toLocaleDateString("en-US", { month: "numeric", day: "numeric" }));
+  labels.push(
+    `${startDate.toLocaleDateString("en-US", { month: "numeric", day: "numeric" })} ${startDate.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    })}`,
+  );
+
+  return labels;
 }

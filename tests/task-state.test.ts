@@ -13,6 +13,7 @@ import {
   registerAwaitingUserResponse,
   shouldStartNewTask,
   summarizeTaskStateForPrompt,
+  tryResolveBlockedReply,
 } from "../src/agent/task-state.js";
 
 describe("task state", () => {
@@ -84,6 +85,65 @@ describe("task state", () => {
     const rebound = bindUserReplyToTaskState(taskState, "2");
     expect(rebound.awaitingUserResponse).toBeUndefined();
     expect(getActiveSubgoal(rebound)?.artifacts.some((artifact) => artifact.key === "selected_slot")).toBe(true);
+  });
+
+  it("resolves semantic slot replies before new-task detection", () => {
+    let taskState = activateNextSubgoal(createTaskState("Schedule a meeting with Joe next week."))!;
+    taskState = applyToolResultToTaskState(
+      taskState,
+      "find_time_slots",
+      {
+        ok: true,
+        summary: "Found 2 free time slots.",
+        data: [
+          {
+            start: "2026-03-30T13:00:00-07:00",
+            end: "2026-03-30T13:30:00-07:00",
+          },
+          {
+            start: "2026-03-31T15:00:00-07:00",
+            end: "2026-03-31T15:30:00-07:00",
+          },
+        ],
+      },
+      "success",
+      "Found 2 free time slots.",
+    );
+
+    const resolved = tryResolveBlockedReply(taskState, "the first one");
+    expect(resolved.matched).toBe(true);
+    expect(resolved.matchedValue).toBe("1");
+    expect(getActiveSubgoal(resolved.taskState)?.artifacts.some((artifact) => artifact.key === "selected_slot")).toBe(
+      true,
+    );
+  });
+
+  it("lets unmatched blocked replies fall through instead of pretending they matched", () => {
+    let taskState = activateNextSubgoal(createTaskState("Schedule a meeting with Joe next week."))!;
+    taskState = applyToolResultToTaskState(
+      taskState,
+      "find_time_slots",
+      {
+        ok: true,
+        summary: "Found 2 free time slots.",
+        data: [
+          {
+            start: "2026-03-30T13:00:00-07:00",
+            end: "2026-03-30T13:30:00-07:00",
+          },
+          {
+            start: "2026-03-31T15:00:00-07:00",
+            end: "2026-03-31T15:30:00-07:00",
+          },
+        ],
+      },
+      "success",
+      "Found 2 free time slots.",
+    );
+
+    const unresolved = tryResolveBlockedReply(taskState, "Actually can you summarize my inbox?");
+    expect(unresolved.matched).toBe(false);
+    expect(unresolved.taskState.awaitingUserResponse).toBeDefined();
   });
 
   it("completes only the active subgoal when a completion tool succeeds", () => {

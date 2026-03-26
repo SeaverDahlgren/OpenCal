@@ -7,7 +7,6 @@ import {
   activateNextSubgoal,
   applyToolResultToTaskState,
   beginExecution,
-  bindUserReplyToTaskState,
   buildIncompleteTaskMessage,
   buildTaskSkillSelectionInput,
   completeResponseSubgoals,
@@ -19,6 +18,7 @@ import {
   registerAwaitingUserResponse,
   shouldStartNewTask,
   summarizeTaskStateForPrompt,
+  tryResolveBlockedReply,
   type TaskState,
 } from "./task-state.js";
 import { compactConversation, updateToolsIndex } from "../memory/context.js";
@@ -388,6 +388,55 @@ export class AgentRunner {
     const priorTaskId = this.currentTaskState?.taskId;
     const hadOpenTask = this.currentTaskState !== null;
 
+    if (!this.currentTaskState) {
+      this.currentTaskState = createTaskState(latestUserInput);
+      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
+      await appendDebugLog(debugLogPath, "task.created", {
+        taskId: this.currentTaskState.taskId,
+        taskSummary: this.currentTaskState.taskSummary,
+        subgoals: this.currentTaskState.subgoals,
+      });
+      return;
+    }
+
+    if (this.currentTaskState.awaitingUserResponse) {
+      const blockedTaskId = this.currentTaskState.taskId;
+      const blockedTaskSummary = this.currentTaskState.taskSummary;
+      const resolution = tryResolveBlockedReply(this.currentTaskState, latestUserInput);
+      if (resolution.matched) {
+        this.currentTaskState = activateNextSubgoal(resolution.taskState)!;
+        await appendDebugLog(debugLogPath, "task.bound_followup", {
+          taskId: this.currentTaskState.taskId,
+          previousTaskId: priorTaskId,
+          reply: latestUserInput,
+          matchedValue: resolution.matchedValue,
+          state: this.currentTaskState,
+        });
+        return;
+      }
+
+      await appendDebugLog(debugLogPath, "task.updated", {
+        taskId: blockedTaskId,
+        reason: "blocked_reply_unmatched",
+        reply: latestUserInput,
+        state: this.currentTaskState,
+      });
+
+      this.currentTaskState = createTaskState(latestUserInput);
+      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
+      await appendDebugLog(debugLogPath, "task.replaced", {
+        previousTaskId: blockedTaskId,
+        previousTaskSummary: blockedTaskSummary,
+        newInput: latestUserInput,
+      });
+      await appendDebugLog(debugLogPath, "task.created", {
+        taskId: this.currentTaskState.taskId,
+        taskSummary: this.currentTaskState.taskSummary,
+        subgoals: this.currentTaskState.subgoals,
+      });
+      return;
+    }
+
     if (shouldStartNewTask(this.currentTaskState, latestUserInput)) {
       if (this.currentTaskState) {
         await appendDebugLog(debugLogPath, "task.replaced", {
@@ -403,29 +452,6 @@ export class AgentRunner {
         taskId: this.currentTaskState.taskId,
         taskSummary: this.currentTaskState.taskSummary,
         subgoals: this.currentTaskState.subgoals,
-      });
-      return;
-    }
-
-    if (!this.currentTaskState) {
-      this.currentTaskState = createTaskState(latestUserInput);
-      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
-      await appendDebugLog(debugLogPath, "task.created", {
-        taskId: this.currentTaskState.taskId,
-        taskSummary: this.currentTaskState.taskSummary,
-        subgoals: this.currentTaskState.subgoals,
-      });
-      return;
-    }
-
-    if (this.currentTaskState.awaitingUserResponse) {
-      this.currentTaskState = bindUserReplyToTaskState(this.currentTaskState, latestUserInput);
-      this.currentTaskState = activateNextSubgoal(this.currentTaskState)!;
-      await appendDebugLog(debugLogPath, "task.bound_followup", {
-        taskId: this.currentTaskState.taskId,
-        previousTaskId: priorTaskId,
-        reply: latestUserInput,
-        state: this.currentTaskState,
       });
       return;
     }
