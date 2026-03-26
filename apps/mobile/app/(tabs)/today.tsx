@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
 import type { TodayDto } from "../../src/api/types";
@@ -13,11 +14,14 @@ export default function TodayScreen() {
   const [data, setData] = useState<TodayDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!token) {
+      setLoading(false);
       return;
     }
+    setLoading(true);
     setError(null);
     try {
       setData(await createApiClient(token).getToday());
@@ -26,11 +30,13 @@ export default function TodayScreen() {
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    void load();
   }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   if (loading) {
     return <CenteredLoader />;
@@ -49,6 +55,11 @@ export default function TodayScreen() {
           <Text style={styles.insightEyebrow}>AI INTELLIGENCE</Text>
           <Text style={styles.insightTitle}>{data.insight.title}</Text>
           <Text style={styles.insightBody}>{data.insight.body}</Text>
+          {data.insight.action?.prompt ? (
+            <Text style={styles.inlineAction} onPress={() => router.push(`/chat?prompt=${encodeURIComponent(data.insight!.action!.prompt)}`)}>
+              {data.insight.actionLabel}
+            </Text>
+          ) : null}
         </SurfaceCard>
       ) : null}
       <SurfaceCard elevated>
@@ -97,5 +108,6 @@ const styles = StyleSheet.create({
   insightEyebrow: { color: colors.tertiary, ...typography.eyebrow },
   insightTitle: { color: colors.text, fontSize: 24, fontWeight: "800" },
   insightBody: { color: colors.textMuted, fontSize: 16, lineHeight: 22 },
+  inlineAction: { color: colors.primary, fontSize: 15, fontWeight: "800" },
   muted: { color: colors.textMuted, fontSize: 16 },
 });

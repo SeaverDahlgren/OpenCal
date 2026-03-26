@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { EditorialHeader } from "../src/components/EditorialHeader";
 import { ScreenShell } from "../src/components/ScreenShell";
@@ -6,9 +7,16 @@ import { useSession } from "../src/state/session";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function ChatScreen() {
+  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const { chatHistory, pendingTurn, sendAgentAction } = useSession();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (typeof prompt === "string" && prompt.trim() && !draft) {
+      setDraft(prompt.trim());
+    }
+  }, [draft, prompt]);
 
   async function submit(body: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) {
     setSending(true);
@@ -40,6 +48,15 @@ export default function ChatScreen() {
           )}
           ListFooterComponent={
             <View style={{ gap: spacing.md }}>
+              {chatHistory.length === 0 && !pendingTurn ? (
+                <View style={styles.emptyCard}>
+                  <Text style={styles.inlineEyebrow}>START HERE</Text>
+                  <Text style={styles.inlineTitle}>Ask OpenCal to plan, reschedule, or draft.</Text>
+                  <Text style={styles.inlineBody}>
+                    The conversation stays synced with the backend session, so you can leave and come back without losing context.
+                  </Text>
+                </View>
+              ) : null}
               {pendingTurn?.clarification ? (
                 <View style={styles.inlineCard}>
                   <Text style={styles.inlineEyebrow}>ACTION NEEDED</Text>
@@ -106,6 +123,7 @@ const styles = StyleSheet.create({
   message: { color: colors.text, fontSize: 15, lineHeight: 22 },
   userMessage: { color: colors.background },
   inlineCard: { backgroundColor: colors.surfaceHigh, borderRadius: radii.lg, padding: spacing.md, gap: spacing.sm },
+  emptyCard: { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.md, gap: spacing.sm },
   inlineEyebrow: { color: colors.tertiary, ...typography.eyebrow },
   inlineTitle: { color: colors.text, fontWeight: "700", fontSize: 16 },
   inlineBody: { color: colors.textMuted },
