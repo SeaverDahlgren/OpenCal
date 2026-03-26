@@ -15,6 +15,9 @@ const envSchema = z.object({
   GOOGLE_OAUTH_REDIRECT_URI: z
     .string()
     .default("http://127.0.0.1:42813/oauth/callback"),
+  GOOGLE_OAUTH_API_REDIRECT_URI: z
+    .string()
+    .default("http://127.0.0.1:8787/api/v1/auth/google/callback"),
   CONTEXT_WINDOW_LIMIT: z.coerce.number().positive().default(128000),
   MAX_OUTPUT_TOKENS: z.coerce.number().positive().default(2000),
   COMPACTION_THRESHOLD: z.coerce.number().gt(0).lt(1).default(0.8),
@@ -32,6 +35,7 @@ export type AppConfig = {
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
+  googleApiRedirectUri: string;
   contextWindowLimit: number;
   maxOutputTokens: number;
   compactionThreshold: number;
@@ -62,6 +66,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
     googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
     googleRedirectUri: env.GOOGLE_OAUTH_REDIRECT_URI,
+    googleApiRedirectUri: env.GOOGLE_OAUTH_API_REDIRECT_URI,
     contextWindowLimit: env.CONTEXT_WINDOW_LIMIT,
     maxOutputTokens: env.MAX_OUTPUT_TOKENS,
     compactionThreshold: env.COMPACTION_THRESHOLD,

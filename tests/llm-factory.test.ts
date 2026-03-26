@@ -11,6 +11,7 @@ const baseConfig: AppConfig = {
   googleClientId: "client-id",
   googleClientSecret: "client-secret",
   googleRedirectUri: "http://127.0.0.1:42813/oauth/callback",
+  googleApiRedirectUri: "http://127.0.0.1:8787/api/v1/auth/google/callback",
   contextWindowLimit: 128000,
   maxOutputTokens: 2000,
   compactionThreshold: 0.8,

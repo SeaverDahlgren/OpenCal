@@ -53,7 +53,10 @@ read_when:
 - Google OAuth remains backend-owned.
 - The mobile app expects a backend-issued bearer token.
 - The app includes an `auth-callback` route that can accept a `sessionToken` query param from your deep-link flow.
-- `POST /api/v1/auth/google/start` now accepts `returnTo`, and the backend callback will redirect back to that deep link with `sessionToken` and `sessionId` query params when provided.
+- `POST /api/v1/auth/google/start` accepts `returnTo`, and the backend callback redirects back to that deep link with `sessionToken` and `sessionId` query params when provided.
+- The Google OAuth redirect used by the mobile/API path is:
+  - `GOOGLE_OAUTH_API_REDIRECT_URI`
+  - default: `http://127.0.0.1:8787/api/v1/auth/google/callback`
 
 ## Current Scope
 

@@ -15,11 +15,18 @@ export class ApiAuthService {
   ) {}
 
   buildAuthUrl(state?: string) {
-    return buildGoogleAuthorizationUrl(this.config, { state });
+    return buildGoogleAuthorizationUrl(this.config, {
+      state,
+      redirectUri: this.config.googleApiRedirectUri,
+    });
   }
 
   async completeAuthorization(code: string) {
-    const auth = await exchangeGoogleAuthorizationCode(this.config, code);
+    const auth = await exchangeGoogleAuthorizationCode(
+      this.config,
+      code,
+      this.config.googleApiRedirectUri,
+    );
     const oauth2 = google.oauth2({ version: "v2", auth });
     const profile = await oauth2.userinfo.get();
     const user = {
