@@ -5,6 +5,7 @@ import { runAgentSessionTurn } from "../../../../src/app/session-runtime.js";
 import { buildSkillCatalogAndManifests } from "../skills.js";
 import { jsonError, jsonRoute, readJsonBody } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
+import { buildTaskStateRoutePayload, resolveUserTimezone } from "./utils.js";
 
 const agentTurnSchema = z
   .object({
@@ -32,7 +33,7 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
         provider,
         tools,
         workspace: ctx.workspace,
-        timezone: currentTimezone(ctx.workspace.user),
+        timezone: resolveUserTimezone(ctx.workspace.user),
         skillManifests: skills.manifests,
         skillsCatalog: skills.catalog,
       },
@@ -44,40 +45,7 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
   }
 
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/agent/task-state") {
-    return await jsonRoute(ctx.res, 200, {
-      taskState: ctx.session.taskState
-        ? {
-            taskId: ctx.session.taskState.taskId,
-            summary: ctx.session.taskState.taskSummary,
-            status: ctx.session.taskState.mode,
-            activeSubgoal: ctx.session.taskState.activeSubgoalId,
-            hasBlockedPrompt: Boolean(ctx.session.taskState.awaitingUserResponse),
-          }
-        : null,
-      clarification: ctx.session.taskState?.awaitingUserResponse
-        ? {
-            type: ctx.session.taskState.awaitingUserResponse.options?.length ? "choice" : "freeform",
-            prompt: ctx.session.taskState.awaitingUserResponse.prompt,
-            options: (ctx.session.taskState.awaitingUserResponse.options ?? []).map((option, index) => ({
-              id: String(index + 1),
-              label: option.summary,
-              value: option.value,
-            })),
-          }
-        : null,
-      confirmation: ctx.session.pendingConfirmation
-        ? {
-            type: "protected_action",
-            prompt: `Confirm ${ctx.session.pendingConfirmation.toolName.replace(/_/g, " ")}.`,
-            actionLabel: "Confirm",
-            cancelLabel: "Cancel",
-            payloadPreview: {
-              kind: ctx.session.pendingConfirmation.toolName,
-              raw: ctx.session.pendingConfirmation.arguments,
-            },
-          }
-        : null,
-    });
+    return await jsonRoute(ctx.res, 200, buildTaskStateRoutePayload(ctx.session));
   }
 
   return false;
@@ -91,10 +59,6 @@ function configForSession(base: AuthedRouteContext["config"], session: AuthedRou
     geminiModel: session.provider === "gemini" ? session.model : base.geminiModel,
     groqModel: session.provider === "groq" ? session.model : base.groqModel,
   };
-}
-
-function currentTimezone(userMarkdown = "") {
-  return userMarkdown.match(/timezone:\s*([A-Za-z_\/]+)/i)?.[1] ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 function toAgentAction(body: z.infer<typeof agentTurnSchema>) {

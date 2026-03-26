@@ -2,6 +2,7 @@ import { z } from "zod";
 import { mapCalendarDayView, mapCalendarMonthView, mapTodayOverview } from "../dto/mappers.js";
 import { jsonError, jsonRoute } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
+import { resolveUserTimezone } from "./utils.js";
 
 const monthQuerySchema = z.object({
   year: z.coerce.number().int(),
@@ -26,7 +27,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       200,
       mapTodayOverview({
         date: today,
-        timezone: currentTimezone(ctx.workspace.user),
+        timezone: resolveUserTimezone(ctx.workspace.user),
         events,
       }),
     );
@@ -55,7 +56,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       mapCalendarMonthView({
         year,
         month,
-        timezone: currentTimezone(ctx.workspace.user),
+        timezone: resolveUserTimezone(ctx.workspace.user),
         events,
       }),
     );
@@ -80,15 +81,11 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       200,
       mapCalendarDayView({
         date,
-        timezone: currentTimezone(ctx.workspace.user),
+        timezone: resolveUserTimezone(ctx.workspace.user),
         events,
       }),
     );
   }
 
   return false;
-}
-
-function currentTimezone(userMarkdown = "") {
-  return userMarkdown.match(/timezone:\s*([A-Za-z_\/]+)/i)?.[1] ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 }

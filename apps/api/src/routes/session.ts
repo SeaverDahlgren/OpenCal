@@ -1,18 +1,10 @@
 import { jsonRoute } from "../server/http.js";
 import type { SessionRouteContext } from "./types.js";
+import { buildSessionRoutePayload } from "./utils.js";
 
 export async function handleSessionRoute(ctx: SessionRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/session") {
-    return await jsonRoute(ctx.res, 200, {
-      session: {
-        sessionId: ctx.session.sessionId,
-        status: "authenticated",
-        user: ctx.session.user,
-        timezone: currentTimezone(),
-        hasBlockedTask: Boolean(ctx.session.taskState?.awaitingUserResponse || ctx.session.pendingConfirmation),
-        activeTaskSummary: ctx.session.taskState?.taskSummary ?? "",
-      },
-    });
+    return await jsonRoute(ctx.res, 200, buildSessionRoutePayload(ctx.session));
   }
 
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/session/reset") {
@@ -24,8 +16,4 @@ export async function handleSessionRoute(ctx: SessionRouteContext) {
   }
 
   return false;
-}
-
-function currentTimezone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
