@@ -15,7 +15,7 @@ async function main() {
     const provider = createLlmProvider(config);
     const authClient = await ensureGoogleAuthorization(config, io, command === "auth");
     const googleClients = createGoogleClients(authClient);
-    const tools = buildToolRegistry(googleClients, io);
+    const tools = buildToolRegistry(googleClients);
     const runner = new AgentRunner(config, provider, io, tools);
     await runner.initialize();
 

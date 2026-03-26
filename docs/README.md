@@ -15,6 +15,8 @@ read_when:
   Gemini and Groq adapter setup.
 - [debugging.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/debugging.md)
   Runtime logs, common failure modes, and debugging steps.
+- [mobile.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/mobile.md)
+  Expo app and HTTP API layout, scripts, and mobile/backend contract notes.
 - [skills/README.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/skills/README.md)
   Planner-visible semantic skill manifests and their doc paths.
 

@@ -25,6 +25,64 @@ export type GoogleClients = {
   gmail: gmail_v1.Gmail;
 };
 
+export function getGoogleScopes() {
+  return [...SCOPES];
+}
+
+export function createGoogleOAuthClient(config: AppConfig) {
+  return new google.auth.OAuth2(
+    config.googleClientId,
+    config.googleClientSecret,
+    config.googleRedirectUri,
+  );
+}
+
+export function buildGoogleAuthorizationUrl(
+  config: AppConfig,
+  options: { state?: string; redirectUri?: string } = {},
+) {
+  const client = new google.auth.OAuth2(
+    config.googleClientId,
+    config.googleClientSecret,
+    options.redirectUri ?? config.googleRedirectUri,
+  );
+  return client.generateAuthUrl({
+    access_type: "offline",
+    prompt: "consent",
+    scope: SCOPES,
+    state: options.state,
+  });
+}
+
+export async function exchangeGoogleAuthorizationCode(
+  config: AppConfig,
+  code: string,
+  redirectUri = config.googleRedirectUri,
+) {
+  const client = new google.auth.OAuth2(
+    config.googleClientId,
+    config.googleClientSecret,
+    redirectUri,
+  );
+  const { tokens } = await client.getToken(code);
+  client.setCredentials(tokens);
+  await storeToken(config, tokens);
+  return client;
+}
+
+export async function loadStoredGoogleAuthorization(
+  config: AppConfig,
+): Promise<InstanceType<typeof google.auth.OAuth2> | null> {
+  const stored = await readStoredToken(config);
+  if (!stored) {
+    return null;
+  }
+
+  const client = createGoogleOAuthClient(config);
+  client.setCredentials(stored);
+  return client;
+}
+
 export async function ensureGoogleAuthorization(
   config: AppConfig,
   io: ConsoleIO,

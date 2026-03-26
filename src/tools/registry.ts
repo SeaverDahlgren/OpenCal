@@ -2,7 +2,6 @@ import { z } from "zod";
 import type { GoogleClients } from "../integrations/google/auth.js";
 import { GoogleCalendarService } from "../integrations/google/calendar.js";
 import { GoogleGmailService } from "../integrations/google/gmail.js";
-import type { ConsoleIO } from "../cli/io.js";
 import type { ToolDefinition } from "./types.js";
 
 const calendarIdSchema = z.preprocess(
@@ -18,7 +17,7 @@ const calendarIdSchema = z.preprocess(
   z.string().default("primary"),
 );
 
-export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
+export function buildToolRegistry(clients: GoogleClients) {
   const calendarService = new GoogleCalendarService(clients.calendar);
   const gmailService = new GoogleGmailService(clients.gmail);
 
@@ -331,17 +330,14 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
       }),
       inputShape: '{prompt: string, candidates: {label: string, value: string}[]}',
       execute: async (input) => {
-        const selection = await io.choose(input.prompt, input.candidates);
-        if (!selection) {
-          return {
-            ok: false,
-            error: "No entity selected.",
-          };
-        }
         return {
-          ok: true,
-          data: selection,
-          summary: `Selected ${selection.value}.`,
+          ok: false,
+          error: "Entity resolution requires user input.",
+          ambiguous: {
+            kind: "entity",
+            prompt: input.prompt,
+            candidates: input.candidates,
+          },
         };
       },
     }),
@@ -355,20 +351,14 @@ export function buildToolRegistry(clients: GoogleClients, io: ConsoleIO) {
       }),
       inputShape: '{prompt: string, options: string[]}',
       execute: async (input) => {
-        const selection = await io.choose(
-          input.prompt,
-          input.options.map((option) => ({ label: option, value: option })),
-        );
-        if (!selection) {
-          return {
-            ok: false,
-            error: "Time clarification cancelled.",
-          };
-        }
         return {
-          ok: true,
-          data: selection.value,
-          summary: `Clarified time as ${selection.value}.`,
+          ok: false,
+          error: "Time clarification requires user input.",
+          ambiguous: {
+            kind: "time",
+            prompt: input.prompt,
+            candidates: input.options.map((option) => ({ label: option, value: option })),
+          },
         };
       },
     }),

@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "OpenCal",
+    "slug": "opencal",
+    "scheme": "opencal",
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiBaseUrl": "http://127.0.0.1:8787/api/v1"
+    }
+  }
+}

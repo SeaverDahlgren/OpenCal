@@ -1,0 +1,186 @@
+import { useEffect, useState } from "react";
+import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { createApiClient } from "../../src/api/client";
+import type { SettingsDto } from "../../src/api/types";
+import { useSession } from "../../src/state/session";
+import { colors, radii, spacing } from "../../src/theme/tokens";
+
+export default function SettingsScreen() {
+  const { token, clearSession } = useSession();
+  const [data, setData] = useState<SettingsDto | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function load() {
+    if (!token) {
+      return;
+    }
+    setData(await createApiClient(token).getSettings());
+  }
+
+  useEffect(() => {
+    void load();
+  }, [token]);
+
+  async function save() {
+    if (!token || !data) {
+      return;
+    }
+    setSaving(true);
+    const updated = await createApiClient(token).updateSettings(data);
+    setData(updated);
+    setNotice("Settings saved.");
+    setSaving(false);
+  }
+
+  if (!data) {
+    return (
+      <View style={styles.loader}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>Settings</Text>
+      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Profile</Text>
+        <Text style={styles.value}>{data.profile.name}</Text>
+        <Text style={styles.muted}>{data.profile.email}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Preferences</Text>
+        <Field
+          label="Timezone"
+          value={data.preferences.timezone}
+          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, timezone: value } })}
+        />
+        <Field
+          label="Work Start"
+          value={data.preferences.workStart}
+          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, workStart: value } })}
+        />
+        <Field
+          label="Work End"
+          value={data.preferences.workEnd}
+          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, workEnd: value } })}
+        />
+        <Field
+          label="Meeting Preference"
+          value={data.preferences.meetingPreference}
+          onChangeText={(value) =>
+            setData({ ...data, preferences: { ...data.preferences, meetingPreference: value } })
+          }
+        />
+        <Field
+          label="Assistant Notes"
+          value={data.preferences.assistantNotes}
+          multiline
+          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, assistantNotes: value } })}
+        />
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <Text style={styles.sectionTitle}>Advanced</Text>
+          <Switch value={showAdvanced} onValueChange={setShowAdvanced} />
+        </View>
+        {showAdvanced ? (
+          <View style={{ gap: spacing.md }}>
+            <Field
+              label="Provider"
+              value={data.advanced.provider}
+              onChangeText={(value) => setData({ ...data, advanced: { ...data.advanced, provider: value } })}
+            />
+            <Field
+              label="Model"
+              value={data.advanced.model}
+              onChangeText={(value) => setData({ ...data, advanced: { ...data.advanced, model: value } })}
+            />
+            <Field
+              label="Verbosity"
+              value={data.advanced.toolResultVerbosity}
+              onChangeText={(value) =>
+                setData({
+                  ...data,
+                  advanced: {
+                    ...data.advanced,
+                    toolResultVerbosity: value === "verbose" ? "verbose" : "compact",
+                  },
+                })
+              }
+            />
+            <Text style={styles.muted}>Session ID: {data.advanced.sessionId}</Text>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => void clearSession()}>
+              <Text style={styles.secondaryText}>Reconnect / Clear Token</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </View>
+
+      <TouchableOpacity style={styles.primaryButton} onPress={() => void save()} disabled={saving}>
+        <Text style={styles.primaryText}>{saving ? "Saving..." : "Save Settings"}</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+function Field(props: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  multiline?: boolean;
+}) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={styles.label}>{props.label}</Text>
+      <TextInput
+        value={props.value}
+        onChangeText={props.onChangeText}
+        multiline={props.multiline}
+        style={[styles.input, props.multiline && { minHeight: 92, textAlignVertical: "top" }]}
+        placeholderTextColor={colors.textMuted}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 },
+  loader: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
+  title: { color: colors.text, fontSize: 34, fontWeight: "800" },
+  notice: { color: colors.tertiary, fontWeight: "700" },
+  card: { backgroundColor: colors.surfaceHigh, borderRadius: radii.lg, padding: spacing.lg, gap: spacing.md },
+  sectionTitle: { color: colors.text, fontSize: 20, fontWeight: "700" },
+  value: { color: colors.text, fontSize: 18, fontWeight: "600" },
+  muted: { color: colors.textMuted },
+  label: { color: colors.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 1 },
+  input: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    color: colors.text,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+  },
+  primaryText: { color: colors.background, fontWeight: "800", fontSize: 16 },
+  secondaryButton: {
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceHighest,
+  },
+  secondaryText: { color: colors.primary, fontWeight: "700" },
+});

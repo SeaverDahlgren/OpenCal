@@ -4,6 +4,7 @@
     "noEmit": false
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "apps/api/src/**/*.ts"
   ]
 }
