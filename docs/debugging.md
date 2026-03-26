@@ -19,6 +19,27 @@ Two log streams exist:
 
 When `TOOL_RESULT_VERBOSITY=compact`, the agent still logs full raw tool payloads here even though model-facing tool messages are shortened.
 
+## Runtime Structure To Know
+
+When tracing a bug, these modules now own the main behavior:
+
+- `src/app/turn-engine-shared.ts`
+  Shared turn-engine helpers for both CLI and mobile/API flows.
+- `src/agent/task-state.ts`
+  Task-state public API.
+- `src/agent/task-state-replies.ts`
+  Blocked reply matching, option selection, and slot-choice parsing.
+- `src/agent/task-state-inference.ts`
+  Subgoal inference and task-summary merge behavior.
+- `src/agent/task-state-artifacts.ts`
+  Tool-result artifact shaping and subgoal completion rules.
+- `apps/api/src/routes/utils.ts`
+  Shared session/task-state response shaping for the API.
+- `apps/mobile/src/state/session.tsx`
+  Mobile session bootstrap, refresh, and agent action path.
+- `apps/mobile/src/state/session-view.ts`
+  Pending clarification/confirmation derivation used by chat.
+
 ## Debug Log Events
 
 Common events in `.opencal/logs/*.log`:
@@ -93,6 +114,18 @@ With the active-subgoal executor, the most useful fields inside `task.updated` e
 - `activeSubgoalId`
 - active subgoal `status`
 - active subgoal `artifacts`
+
+If a blocked numeric reply is misbound or ignored, inspect:
+
+1. `task.updated` for a blocked active subgoal with slot options
+2. `task.bound_followup` for the numeric reply
+3. `task.replaced` to confirm the runtime did not incorrectly start a new task
+
+If mobile chat and backend task-state disagree, compare:
+
+1. `GET /api/v1/agent/task-state` payload
+2. `apps/mobile/src/state/session.tsx` refresh behavior
+3. `apps/mobile/src/state/session-view.ts` pending-turn derivation
 
 ## What To Capture In A Bug Report
 

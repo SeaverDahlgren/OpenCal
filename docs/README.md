@@ -1,5 +1,5 @@
 ---
-summary: Documentation index for setup, provider configuration, and debugging.
+summary: Documentation index for setup, provider configuration, debugging, and the mobile/API architecture.
 read_when:
   - starting repo work and looking for the right doc entrypoint
   - adding new docs pages or reorganizing documentation
@@ -14,9 +14,9 @@ read_when:
 - [providers.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/providers.md)
   Gemini and Groq adapter setup.
 - [debugging.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/debugging.md)
-  Runtime logs, common failure modes, and debugging steps.
+  Runtime logs, task-state traces, and debugging steps for CLI and mobile/API flows.
 - [mobile.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/mobile.md)
-  Expo app and HTTP API layout, scripts, and mobile/backend contract notes.
+  Expo app and HTTP API layout, refactored module boundaries, and mobile/backend contract notes.
 - [skills/README.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/skills/README.md)
   Planner-visible semantic skill manifests and their doc paths.
 

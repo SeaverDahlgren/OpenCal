@@ -15,6 +15,32 @@ read_when:
 - `apps/mobile`
   Expo app with Today, Calendar, Settings, and AI chat scaffolding.
 
+## Current Internal Boundaries
+
+- `src/app/turn-engine-shared.ts`
+  Shared turn-engine helpers used by both the CLI runner and the mobile session runtime.
+- `src/agent/task-state.ts`
+  Public task-state facade.
+- `src/agent/task-state-*.ts`
+  Internal task-state modules split by concern:
+  - `task-state-types.ts`
+  - `task-state-utils.ts`
+  - `task-state-inference.ts`
+  - `task-state-replies.ts`
+  - `task-state-artifacts.ts`
+- `apps/api/src/routes/utils.ts`
+  Shared route-level helpers for timezone/session/task-state payload shaping.
+- `apps/api/src/dto/calendar.ts`
+  Today/month/day DTO mappers.
+- `apps/api/src/dto/settings.ts`
+  Settings DTO mappers and `USER.md` preference updates.
+- `apps/api/src/dto/mappers.ts`
+  Thin compatibility barrel that re-exports the DTO functions above.
+- `apps/mobile/src/state/session.tsx`
+  Session authority for bearer token, session bootstrap, task-state refresh, and agent actions.
+- `apps/mobile/src/state/session-view.ts`
+  Mobile UI view-model helpers for pending chat clarification/confirmation state.
+
 ## Commands
 
 - `npm run api:dev`
@@ -35,6 +61,26 @@ read_when:
 - Calendar month/day views
 - Settings with core preferences and Advanced AI/session controls
 - AI chat with inline clarification and confirmation cards
+
+## State Ownership
+
+- Backend session state is authoritative for:
+  - conversation messages
+  - active task state
+  - pending clarification
+  - pending confirmation
+  - provider/model/verbosity selections
+- Mobile session state is responsible for:
+  - bearer token storage
+  - session bootstrap and refresh
+  - exposing a normalized pending chat turn to screens
+- Chat screen should render state from the session layer, not reconstruct blocked-task state directly from raw API task payloads.
+
+## API Notes
+
+- Route modules are split under `apps/api/src/routes/`.
+- Repeated route helpers now live in `apps/api/src/routes/utils.ts`.
+- DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
 
 ## Notes
 
