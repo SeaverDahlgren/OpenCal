@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
 import type { SettingsDto } from "../../src/api/types";
@@ -11,33 +12,65 @@ import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 export default function SettingsScreen() {
   const { token, clearSession, resetAgentSession } = useSession();
   const [data, setData] = useState<SettingsDto | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!token) {
+      setLoading(false);
       return;
     }
-    setData(await createApiClient(token).getSettings());
-  }
-
-  useEffect(() => {
-    void load();
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await createApiClient(token).getSettings());
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to load settings.");
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   async function save() {
     if (!token || !data) {
       return;
     }
     setSaving(true);
-    const updated = await createApiClient(token).updateSettings(data);
-    setData(updated);
-    setNotice("Settings saved.");
-    setSaving(false);
+    setError(null);
+    setNotice(null);
+    try {
+      const updated = await createApiClient(token).updateSettings(data);
+      setData(updated);
+      setNotice("Settings saved.");
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to save settings.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (!data) {
+  async function handleResetAgentSession() {
+    setError(null);
+    setNotice(null);
+    try {
+      await resetAgentSession();
+      await load();
+      setNotice("Agent session reset.");
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to reset the agent session.");
+    }
+  }
+
+  if (loading || !data) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator color={colors.primary} />
@@ -49,6 +82,7 @@ export default function SettingsScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Control profile preferences, planning defaults, and advanced beta configuration." />
       {notice ? <InlineNotice tone="success" message={notice} /> : null}
+      {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
 
       <SurfaceCard elevated>
         <Text style={styles.sectionTitle}>Profile</Text>
@@ -119,7 +153,7 @@ export default function SettingsScreen() {
               }
             />
             <Text style={styles.muted}>Session ID: {data.advanced.sessionId}</Text>
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => void resetAgentSession()}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => void handleResetAgentSession()}>
               <Text style={styles.secondaryText}>Reset Agent Session</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.secondaryButton} onPress={() => void clearSession()}>

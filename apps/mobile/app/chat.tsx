@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { EditorialHeader } from "../src/components/EditorialHeader";
+import { InlineNotice } from "../src/components/InlineNotice";
 import { ScreenShell } from "../src/components/ScreenShell";
 import { useSession } from "../src/state/session";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
@@ -11,6 +12,7 @@ export default function ChatScreen() {
   const { chatHistory, pendingTurn, sendAgentAction } = useSession();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof prompt === "string" && prompt.trim() && !draft) {
@@ -20,13 +22,19 @@ export default function ChatScreen() {
 
   async function submit(body: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) {
     setSending(true);
-    const next = await sendAgentAction(body);
-    if (!next) {
+    setError(null);
+    try {
+      const next = await sendAgentAction(body);
+      if (!next) {
+        setSending(false);
+        return;
+      }
+      setDraft("");
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to send that message.");
+    } finally {
       setSending(false);
-      return;
     }
-    setDraft("");
-    setSending(false);
   }
 
   return (
@@ -37,6 +45,7 @@ export default function ChatScreen() {
     >
       <ScreenShell scroll={false}>
         <EditorialHeader eyebrow="AI CHANNEL" title="OpenCal" subtitle="Clarifications and confirmations stay inline while the text composer remains available." />
+        {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void submit({ message: draft.trim() })} /> : null}
         <FlatList
           data={chatHistory}
           keyExtractor={(item) => item.id}
