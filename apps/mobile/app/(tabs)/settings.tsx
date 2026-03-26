@@ -156,15 +156,16 @@ export default function SettingsScreen() {
             <TouchableOpacity style={styles.secondaryButton} onPress={() => void handleResetAgentSession()}>
               <Text style={styles.secondaryText}>Reset Agent Session</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => void clearSession()}>
-              <Text style={styles.secondaryText}>Reconnect / Clear Token</Text>
-            </TouchableOpacity>
           </View>
         ) : null}
       </SurfaceCard>
 
       <TouchableOpacity style={styles.primaryButton} onPress={() => void save()} disabled={saving}>
         <Text style={styles.primaryText}>{saving ? "Saving..." : "Save Settings"}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.destructiveButton} onPress={() => void clearSession()}>
+        <Text style={styles.destructiveText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -213,6 +214,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryText: { color: colors.background, fontWeight: "800", fontSize: 16 },
+  destructiveButton: {
+    backgroundColor: "#5a1e26",
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#a84552",
+  },
+  destructiveText: { color: "#ffd7dc", fontWeight: "800", fontSize: 16 },
   secondaryButton: {
     borderRadius: radii.md,
     paddingVertical: spacing.sm,

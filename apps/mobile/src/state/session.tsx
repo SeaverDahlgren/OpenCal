@@ -7,6 +7,7 @@ import type { AgentTurnDto, ChatHistoryDto, SessionDto, TaskStateDto } from "../
 import { derivePendingTurn, hasBlockedUiState, type AgentActionInput } from "./session-view";
 
 const TOKEN_KEY = "opencal.session.token";
+const SIGNED_OUT_KEY = "opencal.session.signedOut";
 
 type SessionContextValue = {
   token: string | null;
@@ -43,11 +44,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   async function bootstrap() {
     const stored = await SecureStore.getItemAsync(TOKEN_KEY);
+    const signedOut = (await SecureStore.getItemAsync(SIGNED_OUT_KEY)) === "true";
     setTokenState(stored);
     if (!stored) {
+      if (signedOut) {
+        setLoading(false);
+        return;
+      }
       try {
         const reused = await createApiClient(null).reuseGoogleAuth();
         await SecureStore.setItemAsync(TOKEN_KEY, reused.sessionToken);
+        await SecureStore.deleteItemAsync(SIGNED_OUT_KEY);
         setTokenState(reused.sessionToken);
         const client = createApiClient(reused.sessionToken);
         const [result, nextTaskState, history] = await Promise.all([
@@ -98,6 +105,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   async function setToken(next: string | null) {
     if (next) {
       await SecureStore.setItemAsync(TOKEN_KEY, next);
+      await SecureStore.deleteItemAsync(SIGNED_OUT_KEY);
     } else {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
     }
@@ -148,12 +156,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function startAuth() {
+    await SecureStore.deleteItemAsync(SIGNED_OUT_KEY);
     const returnTo = Linking.createURL("auth-callback");
     const { authUrl } = await createApiClient(null).startGoogleAuth(returnTo);
     await Linking.openURL(authUrl);
   }
 
   async function clearSession() {
+    await SecureStore.setItemAsync(SIGNED_OUT_KEY, "true");
     await setToken(null);
     router.replace("/signin");
   }
