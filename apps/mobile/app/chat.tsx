@@ -64,6 +64,7 @@ export default function ChatScreen() {
         <FlatList
           data={chatHistory}
           keyExtractor={(item) => item.id}
+          style={styles.listView}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <View style={[styles.bubble, item.role === "user" ? styles.userBubble : styles.assistantBubble]}>
@@ -71,51 +72,53 @@ export default function ChatScreen() {
             </View>
           )}
           ListFooterComponent={
-            <View style={{ gap: spacing.md }}>
-              {chatHistory.length === 0 && !pendingTurn ? (
-                <View style={styles.emptyCard}>
-                  <Text style={styles.inlineEyebrow}>START HERE</Text>
-                  <Text style={styles.inlineTitle}>Ask OpenCal to plan, reschedule, or draft.</Text>
-                  <Text style={styles.inlineBody}>
-                    The conversation stays synced with the backend session, so you can leave and come back without losing context.
-                  </Text>
-                </View>
-              ) : null}
-              {pendingTurn?.clarification ? (
-                <View style={styles.inlineCard}>
-                  <Text style={styles.inlineEyebrow}>ACTION NEEDED</Text>
-                  <Text style={styles.inlineTitle}>{pendingTurn.clarification.prompt}</Text>
-                  {pendingTurn.clarification.options.map((option) => (
-                    <TouchableOpacity
-                      key={option.id}
-                      style={styles.option}
-                      onPress={() => void submit({ optionValue: option.value })}
-                    >
-                      <Text style={styles.optionText}>{option.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : null}
-              {pendingTurn?.confirmation ? (
-                <View style={styles.inlineCard}>
-                  <Text style={styles.inlineEyebrow}>CONFIRMATION</Text>
-                  <Text style={styles.inlineTitle}>{pendingTurn.confirmation.prompt}</Text>
-                  <Text style={styles.inlineBody}>
-                    {pendingTurn.confirmation.payloadPreview.summary ?? pendingTurn.confirmation.payloadPreview.kind}
-                  </Text>
-                  <View style={styles.actions}>
-                    <TouchableOpacity style={styles.confirm} onPress={() => void submit({ action: "confirm" })}>
-                      <Text style={styles.confirmText}>{pendingTurn.confirmation.actionLabel}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.cancel} onPress={() => void submit({ action: "cancel" })}>
-                      <Text style={styles.cancelText}>{pendingTurn.confirmation.cancelLabel}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : null}
-            </View>
+            chatHistory.length === 0 && !pendingTurn ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.inlineEyebrow}>START HERE</Text>
+                <Text style={styles.inlineTitle}>Ask OpenCal to plan, reschedule, or draft.</Text>
+                <Text style={styles.inlineBody}>
+                  The conversation stays synced with the backend session, so you can leave and come back without losing context.
+                </Text>
+              </View>
+            ) : null
           }
         />
+        {pendingTurn?.clarification ? (
+          <View style={styles.pendingPanel}>
+            <View style={styles.inlineCard}>
+              <Text style={styles.inlineEyebrow}>ACTION NEEDED</Text>
+              <Text style={styles.inlineTitle}>{pendingTurn.clarification.prompt}</Text>
+              {pendingTurn.clarification.options.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={styles.option}
+                  onPress={() => void submit({ optionValue: option.value })}
+                >
+                  <Text style={styles.optionText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {pendingTurn?.confirmation ? (
+          <View style={styles.pendingPanel}>
+            <View style={styles.inlineCard}>
+              <Text style={styles.inlineEyebrow}>CONFIRMATION</Text>
+              <Text style={styles.inlineTitle}>{pendingTurn.confirmation.prompt}</Text>
+              <Text style={styles.inlineBody}>
+                {pendingTurn.confirmation.payloadPreview.summary ?? pendingTurn.confirmation.payloadPreview.kind}
+              </Text>
+              <View style={styles.actions}>
+                <TouchableOpacity style={styles.confirm} onPress={() => void submit({ action: "confirm" })}>
+                  <Text style={styles.confirmText}>{pendingTurn.confirmation.actionLabel}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.cancel} onPress={() => void submit({ action: "cancel" })}>
+                  <Text style={styles.cancelText}>{pendingTurn.confirmation.cancelLabel}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : null}
       </ScreenShell>
 
       <View style={styles.composer}>
@@ -141,7 +144,9 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   headerRow: { gap: spacing.sm },
+  listView: { flex: 1 },
   list: { gap: spacing.md, paddingBottom: 24 },
+  pendingPanel: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   bubble: { borderRadius: radii.lg, padding: spacing.md, maxWidth: "88%" },
   userBubble: { backgroundColor: colors.primary, alignSelf: "flex-end" },
   assistantBubble: { backgroundColor: colors.surfaceHigh, alignSelf: "flex-start" },
