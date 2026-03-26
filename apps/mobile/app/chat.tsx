@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { createApiClient } from "../src/api/client";
 import type { AgentTurnDto } from "../src/api/types";
 import { EditorialHeader } from "../src/components/EditorialHeader";
 import { ScreenShell } from "../src/components/ScreenShell";
@@ -14,45 +13,29 @@ type ChatMessage = {
 };
 
 export default function ChatScreen() {
-  const { token, taskState, refreshSession, refreshTaskState } = useSession();
+  const { pendingTurn, sendAgentAction } = useSession();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [response, setResponse] = useState<AgentTurnDto | null>(null);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!taskState) {
-      setResponse(null);
-      return;
+    if (pendingTurn) {
+      setResponse(pendingTurn);
     }
-    if (taskState.clarification || taskState.confirmation) {
-      setResponse({
-        assistant: {
-          message:
-            taskState.clarification?.prompt ??
-            taskState.confirmation?.prompt ??
-            taskState.taskState?.summary ??
-            "Resume your task.",
-        },
-        clarification: taskState.clarification,
-        confirmation: taskState.confirmation,
-        session: { hasBlockedTask: Boolean(taskState.taskState?.hasBlockedPrompt || taskState.confirmation) },
-      });
-      return;
-    }
-    setResponse(null);
-  }, [taskState]);
+  }, [pendingTurn]);
 
   async function submit(body: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) {
-    if (!token) {
-      return;
-    }
     setSending(true);
     const userContent = body.message ?? body.optionValue ?? body.action ?? "";
     if (userContent) {
       setMessages((current) => [...current, { id: `${Date.now()}-user`, role: "user", content: userContent }]);
     }
-    const next = await createApiClient(token).sendAgentMessage(body);
+    const next = await sendAgentAction(body);
+    if (!next) {
+      setSending(false);
+      return;
+    }
     setMessages((current) => [
       ...current,
       { id: `${Date.now()}-assistant`, role: "assistant", content: next.assistant.message },
@@ -60,7 +43,6 @@ export default function ChatScreen() {
     setResponse(next);
     setDraft("");
     setSending(false);
-    await Promise.all([refreshSession(), refreshTaskState()]);
   }
 
   return (

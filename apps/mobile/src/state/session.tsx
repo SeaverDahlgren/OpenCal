@@ -3,7 +3,8 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { createApiClient } from "../api/client";
-import type { SessionDto, TaskStateDto } from "../api/types";
+import type { AgentTurnDto, SessionDto, TaskStateDto } from "../api/types";
+import { derivePendingTurn, hasBlockedUiState, type AgentActionInput } from "./session-view";
 
 const TOKEN_KEY = "opencal.session.token";
 
@@ -11,9 +12,11 @@ type SessionContextValue = {
   token: string | null;
   session: SessionDto["session"] | null;
   taskState: TaskStateDto | null;
+  pendingTurn: AgentTurnDto | null;
   loading: boolean;
   blocked: boolean;
   setToken: (token: string | null) => Promise<void>;
+  sendAgentAction: (input: AgentActionInput) => Promise<AgentTurnDto | null>;
   refreshSession: () => Promise<void>;
   refreshTaskState: () => Promise<void>;
   startAuth: () => Promise<void>;
@@ -27,6 +30,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [session, setSession] = useState<SessionDto["session"] | null>(null);
   const [taskState, setTaskState] = useState<TaskStateDto | null>(null);
+  const [pendingTurn, setPendingTurn] = useState<AgentTurnDto | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -45,16 +49,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     try {
       const client = createApiClient(stored);
       const [result, nextTaskState] = await Promise.all([client.getSession(), client.getTaskState()]);
-      setSession(result.session);
-      setTaskState(nextTaskState);
+      applySessionSnapshot(result.session, nextTaskState);
     } catch {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       setTokenState(null);
       setSession(null);
       setTaskState(null);
+      setPendingTurn(null);
     } finally {
       setLoading(false);
     }
+  }
+
+  function applySessionSnapshot(nextSession: SessionDto["session"] | null, nextTaskState: TaskStateDto | null) {
+    setSession(nextSession);
+    setTaskState(nextTaskState);
+    setPendingTurn(derivePendingTurn(nextTaskState));
   }
 
   async function setToken(next: string | null) {
@@ -65,14 +75,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     setTokenState(next);
     if (!next) {
-      setSession(null);
-      setTaskState(null);
+      applySessionSnapshot(null, null);
       return;
     }
     const client = createApiClient(next);
     const [result, nextTaskState] = await Promise.all([client.getSession(), client.getTaskState()]);
-    setSession(result.session);
-    setTaskState(nextTaskState);
+    applySessionSnapshot(result.session, nextTaskState);
     router.replace("/(tabs)/today");
   }
 
@@ -89,10 +97,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   async function refreshTaskState() {
     if (!token) {
       setTaskState(null);
+      setPendingTurn(null);
       return;
     }
     const result = await createApiClient(token).getTaskState();
     setTaskState(result);
+    setPendingTurn(derivePendingTurn(result));
   }
 
   async function startAuth() {
@@ -104,6 +114,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   async function clearSession() {
     await setToken(null);
     router.replace("/signin");
+  }
+
+  async function sendAgentAction(input: AgentActionInput) {
+    if (!token) {
+      return null;
+    }
+    const client = createApiClient(token);
+    const next = await client.sendAgentMessage(input);
+    await Promise.all([refreshSession(), refreshTaskState()]);
+    return next;
   }
 
   async function resetAgentSession() {
@@ -119,16 +139,18 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       token,
       session,
       taskState,
+      pendingTurn,
       loading,
-      blocked: Boolean(taskState?.clarification || taskState?.confirmation || session?.hasBlockedTask),
+      blocked: hasBlockedUiState(session, pendingTurn),
       setToken,
+      sendAgentAction,
       refreshSession,
       refreshTaskState,
       startAuth,
       clearSession,
       resetAgentSession,
     }),
-    [loading, session, taskState, token],
+    [loading, pendingTurn, session, taskState, token],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
