@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { EditorialHeader } from "../src/components/EditorialHeader";
 import { InlineNotice } from "../src/components/InlineNotice";
@@ -9,6 +9,7 @@ import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function ChatScreen() {
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  const router = useRouter();
   const { chatHistory, pendingTurn, sendAgentAction } = useSession();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -43,8 +44,22 @@ export default function ChatScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={96}
     >
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.dismissLabel}>Done</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <ScreenShell scroll={false}>
-        <EditorialHeader eyebrow="AI CHANNEL" title="OpenCal" subtitle="Clarifications and confirmations stay inline while the text composer remains available." />
+        <View style={styles.headerRow}>
+          <EditorialHeader eyebrow="AI CHANNEL" title="OpenCal" subtitle="Clarifications and confirmations stay inline while the text composer remains available." />
+          <TouchableOpacity style={styles.dismissButton} onPress={() => router.back()}>
+            <Text style={styles.dismissButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
         {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void submit({ message: draft.trim() })} /> : null}
         <FlatList
           data={chatHistory}
@@ -125,6 +140,7 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  headerRow: { gap: spacing.sm },
   list: { gap: spacing.md, paddingBottom: 24 },
   bubble: { borderRadius: radii.lg, padding: spacing.md, maxWidth: "88%" },
   userBubble: { backgroundColor: colors.primary, alignSelf: "flex-end" },
@@ -167,4 +183,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   sendText: { color: colors.background, fontWeight: "800" },
+  dismissLabel: { color: colors.primary, fontSize: 15, fontWeight: "700" },
+  dismissButton: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  dismissButtonText: { color: colors.primary, fontWeight: "700" },
 });
