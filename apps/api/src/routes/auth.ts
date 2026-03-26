@@ -15,6 +15,25 @@ export async function handleAuthRoute(ctx: PublicRouteContext) {
     });
   }
 
+  if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/auth/google/reuse") {
+    const session = await ctx.auth.reuseAuthorizedSession();
+    if (!session) {
+      return await jsonError(
+        ctx.res,
+        401,
+        "GOOGLE_AUTH_REQUIRED",
+        "No existing Google authorization is available.",
+        false,
+      );
+    }
+
+    return await jsonRoute(ctx.res, 200, {
+      sessionToken: session.token,
+      sessionId: session.sessionId,
+      user: session.user,
+    });
+  }
+
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/auth/google/callback") {
     const code = ctx.url.searchParams.get("code");
     if (!code) {

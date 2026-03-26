@@ -66,6 +66,8 @@ read_when:
 ## Mobile / API Auth
 
 - Start the backend with `npm run api:dev`.
+- If the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
+- If that route returns `GOOGLE_AUTH_REQUIRED`, the app stays on the sign-in screen and you need a fresh Google OAuth flow.
 - The mobile/API auth flow uses `GOOGLE_OAUTH_API_REDIRECT_URI`.
 - Google should redirect to:
   - `http://127.0.0.1:8787/api/v1/auth/google/callback`

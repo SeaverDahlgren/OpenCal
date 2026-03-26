@@ -49,6 +49,16 @@ export class ApiClient {
     });
   }
 
+  async reuseGoogleAuth() {
+    return this.request<{
+      sessionToken: string;
+      sessionId: string;
+      user: { name: string; email: string };
+    }>("/auth/google/reuse", {
+      method: "POST",
+    });
+  }
+
   async sendAgentMessage(body: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) {
     return this.request<AgentTurnDto>("/agent/turn", {
       method: "POST",

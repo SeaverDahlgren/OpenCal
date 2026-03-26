@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiAuthService } from "../apps/api/src/auth/service.js";
 import type { AppConfig } from "../src/config/env.js";
+import * as googleAuth from "../src/integrations/google/auth.js";
 
 const baseConfig: AppConfig = {
   llmProvider: "groq",
@@ -23,11 +24,34 @@ const baseConfig: AppConfig = {
 };
 
 describe("api auth service", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("builds Google auth URLs against the API callback by default", () => {
     const service = new ApiAuthService(baseConfig, {} as never);
     const url = new URL(service.buildAuthUrl("state-123"));
 
     expect(url.searchParams.get("redirect_uri")).toBe(baseConfig.googleApiRedirectUri);
     expect(url.searchParams.get("state")).toBe("state-123");
+  });
+
+  it("reuses the current session when local Google auth already exists", async () => {
+    const currentSession = {
+      sessionId: "sess_123",
+      token: "token_123",
+      user: {
+        name: "Seaver",
+        email: "seaver@example.com",
+      },
+    };
+    vi.spyOn(googleAuth, "loadStoredGoogleAuthorization").mockResolvedValue({
+      getAccessToken: async () => ({ token: "access-token" }),
+    } as never);
+    const service = new ApiAuthService(baseConfig, {
+      getCurrentSession: async () => currentSession,
+    } as never);
+
+    await expect(service.reuseAuthorizedSession()).resolves.toEqual(currentSession);
   });
 });

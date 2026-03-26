@@ -7,11 +7,12 @@ export default function SignInScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.eyebrow}>OPENCALE PRIVATE BETA</Text>
+      <Text style={styles.eyebrow}>OPENCAL PRIVATE BETA</Text>
       <Text style={styles.title}>Sign in with your backend-owned Google account.</Text>
       <Text style={styles.body}>
         OpenCal uses your backend session for Calendar and Gmail access. The browser handoff will return a session token to the app.
       </Text>
+      {loading ? <Text style={styles.loadingText}>Checking for an existing beta session...</Text> : null}
       <TouchableOpacity style={styles.button} onPress={() => void startAuth()} disabled={loading}>
         <Text style={styles.buttonText}>Continue with Google</Text>
       </TouchableOpacity>
@@ -42,6 +43,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 16,
     lineHeight: 24,
+  },
+  loadingText: {
+    color: colors.tertiary,
+    fontSize: 14,
   },
   button: {
     marginTop: spacing.lg,

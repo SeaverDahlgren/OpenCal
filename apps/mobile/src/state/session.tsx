@@ -45,6 +45,21 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const stored = await SecureStore.getItemAsync(TOKEN_KEY);
     setTokenState(stored);
     if (!stored) {
+      try {
+        const reused = await createApiClient(null).reuseGoogleAuth();
+        await SecureStore.setItemAsync(TOKEN_KEY, reused.sessionToken);
+        setTokenState(reused.sessionToken);
+        const client = createApiClient(reused.sessionToken);
+        const [result, nextTaskState, history] = await Promise.all([
+          client.getSession(),
+          client.getTaskState(),
+          client.getChatHistory(),
+        ]);
+        applySessionSnapshot(result.session, nextTaskState, history.messages);
+      } catch {
+        setLoading(false);
+        return;
+      }
       setLoading(false);
       return;
     }

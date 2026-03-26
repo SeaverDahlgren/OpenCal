@@ -52,11 +52,25 @@ read_when:
 
 - Google OAuth remains backend-owned.
 - The mobile app expects a backend-issued bearer token.
+- On cold start without a stored mobile bearer token, the session layer first tries `POST /api/v1/auth/google/reuse`.
+- `auth/google/reuse` is a private-beta bootstrap path:
+  - if local Google auth is still valid, the backend reuses or creates the current mobile session
+  - if local Google auth is stale or missing, it returns `GOOGLE_AUTH_REQUIRED` and the app stays on the sign-in screen
 - The app includes an `auth-callback` route that can accept a `sessionToken` query param from your deep-link flow.
 - `POST /api/v1/auth/google/start` accepts `returnTo`, and the backend callback redirects back to that deep link with `sessionToken` and `sessionId` query params when provided.
 - The Google OAuth redirect used by the mobile/API path is:
   - `GOOGLE_OAUTH_API_REDIRECT_URI`
   - default: `http://127.0.0.1:8787/api/v1/auth/google/callback`
+
+## Expo Runtime Notes
+
+- Expo Go on SDK 53 expects Expo-aligned native navigation packages.
+- The mobile app depends on:
+  - `react-native-screens`
+  - `react-native-safe-area-context`
+  - `react-native-gesture-handler`
+  - `react-native-reanimated`
+- If the simulator shows `react-native-screens` prop-type crashes under Fabric/New Architecture, verify the installed versions match the Expo SDK instead of overriding `newArchEnabled`.
 
 ## Current Scope
 
