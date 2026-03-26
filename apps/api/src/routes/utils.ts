@@ -45,6 +45,20 @@ export function buildTaskStateRoutePayload(session: StoredSessionState) {
   };
 }
 
+export function buildChatHistoryRoutePayload(session: StoredSessionState) {
+  return {
+    messages: session.messages
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .slice(-100)
+      .map((message, index) => ({
+        id: `${message.timestamp}-${message.role}-${index}`,
+        role: message.role,
+        content: message.content,
+        timestamp: message.timestamp,
+      })),
+  };
+}
+
 export function buildSessionRoutePayload(session: StoredSessionState, userMarkdown = "") {
   return {
     session: {

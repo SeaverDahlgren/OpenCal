@@ -3,7 +3,7 @@ import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { createApiClient } from "../api/client";
-import type { AgentTurnDto, SessionDto, TaskStateDto } from "../api/types";
+import type { AgentTurnDto, ChatHistoryDto, SessionDto, TaskStateDto } from "../api/types";
 import { derivePendingTurn, hasBlockedUiState, type AgentActionInput } from "./session-view";
 
 const TOKEN_KEY = "opencal.session.token";
@@ -12,6 +12,7 @@ type SessionContextValue = {
   token: string | null;
   session: SessionDto["session"] | null;
   taskState: TaskStateDto | null;
+  chatHistory: ChatHistoryDto["messages"];
   pendingTurn: AgentTurnDto | null;
   loading: boolean;
   blocked: boolean;
@@ -19,6 +20,7 @@ type SessionContextValue = {
   sendAgentAction: (input: AgentActionInput) => Promise<AgentTurnDto | null>;
   refreshSession: () => Promise<void>;
   refreshTaskState: () => Promise<void>;
+  refreshChatHistory: () => Promise<void>;
   startAuth: () => Promise<void>;
   clearSession: () => Promise<void>;
   resetAgentSession: () => Promise<void>;
@@ -30,6 +32,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [session, setSession] = useState<SessionDto["session"] | null>(null);
   const [taskState, setTaskState] = useState<TaskStateDto | null>(null);
+  const [chatHistory, setChatHistory] = useState<ChatHistoryDto["messages"]>([]);
   const [pendingTurn, setPendingTurn] = useState<AgentTurnDto | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -48,22 +51,32 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const client = createApiClient(stored);
-      const [result, nextTaskState] = await Promise.all([client.getSession(), client.getTaskState()]);
-      applySessionSnapshot(result.session, nextTaskState);
+      const [result, nextTaskState, history] = await Promise.all([
+        client.getSession(),
+        client.getTaskState(),
+        client.getChatHistory(),
+      ]);
+      applySessionSnapshot(result.session, nextTaskState, history.messages);
     } catch {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       setTokenState(null);
       setSession(null);
       setTaskState(null);
+      setChatHistory([]);
       setPendingTurn(null);
     } finally {
       setLoading(false);
     }
   }
 
-  function applySessionSnapshot(nextSession: SessionDto["session"] | null, nextTaskState: TaskStateDto | null) {
+  function applySessionSnapshot(
+    nextSession: SessionDto["session"] | null,
+    nextTaskState: TaskStateDto | null,
+    nextChatHistory: ChatHistoryDto["messages"] = [],
+  ) {
     setSession(nextSession);
     setTaskState(nextTaskState);
+    setChatHistory(nextChatHistory);
     setPendingTurn(derivePendingTurn(nextTaskState));
   }
 
@@ -75,12 +88,16 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     setTokenState(next);
     if (!next) {
-      applySessionSnapshot(null, null);
+      applySessionSnapshot(null, null, []);
       return;
     }
     const client = createApiClient(next);
-    const [result, nextTaskState] = await Promise.all([client.getSession(), client.getTaskState()]);
-    applySessionSnapshot(result.session, nextTaskState);
+    const [result, nextTaskState, history] = await Promise.all([
+      client.getSession(),
+      client.getTaskState(),
+      client.getChatHistory(),
+    ]);
+    applySessionSnapshot(result.session, nextTaskState, history.messages);
     router.replace("/(tabs)/today");
   }
 
@@ -88,6 +105,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (!token) {
       setSession(null);
       setTaskState(null);
+      setChatHistory([]);
       return;
     }
     const result = await createApiClient(token).getSession();
@@ -103,6 +121,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const result = await createApiClient(token).getTaskState();
     setTaskState(result);
     setPendingTurn(derivePendingTurn(result));
+  }
+
+  async function refreshChatHistory() {
+    if (!token) {
+      setChatHistory([]);
+      return;
+    }
+    const result = await createApiClient(token).getChatHistory();
+    setChatHistory(result.messages);
   }
 
   async function startAuth() {
@@ -122,7 +149,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     const client = createApiClient(token);
     const next = await client.sendAgentMessage(input);
-    await Promise.all([refreshSession(), refreshTaskState()]);
+    await Promise.all([refreshSession(), refreshTaskState(), refreshChatHistory()]);
     return next;
   }
 
@@ -139,6 +166,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       token,
       session,
       taskState,
+      chatHistory,
       pendingTurn,
       loading,
       blocked: hasBlockedUiState(session, pendingTurn),
@@ -146,11 +174,12 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       sendAgentAction,
       refreshSession,
       refreshTaskState,
+      refreshChatHistory,
       startAuth,
       clearSession,
       resetAgentSession,
     }),
-    [loading, pendingTurn, session, taskState, token],
+    [chatHistory, loading, pendingTurn, session, taskState, token],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

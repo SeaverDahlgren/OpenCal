@@ -117,6 +117,15 @@ export type TaskStateDto = {
   confirmation: AgentTurnDto["confirmation"];
 };
 
+export type ChatHistoryDto = {
+  messages: Array<{
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    timestamp: string;
+  }>;
+};
+
 export type ApiErrorDto = {
   error: {
     code: string;

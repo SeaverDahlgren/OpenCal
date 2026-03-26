@@ -1,46 +1,22 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import type { AgentTurnDto } from "../src/api/types";
 import { EditorialHeader } from "../src/components/EditorialHeader";
 import { ScreenShell } from "../src/components/ScreenShell";
 import { useSession } from "../src/state/session";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
-
 export default function ChatScreen() {
-  const { pendingTurn, sendAgentAction } = useSession();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { chatHistory, pendingTurn, sendAgentAction } = useSession();
   const [draft, setDraft] = useState("");
-  const [response, setResponse] = useState<AgentTurnDto | null>(null);
   const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    if (pendingTurn) {
-      setResponse(pendingTurn);
-    }
-  }, [pendingTurn]);
 
   async function submit(body: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) {
     setSending(true);
-    const userContent = body.message ?? body.optionValue ?? body.action ?? "";
-    if (userContent) {
-      setMessages((current) => [...current, { id: `${Date.now()}-user`, role: "user", content: userContent }]);
-    }
     const next = await sendAgentAction(body);
     if (!next) {
       setSending(false);
       return;
     }
-    setMessages((current) => [
-      ...current,
-      { id: `${Date.now()}-assistant`, role: "assistant", content: next.assistant.message },
-    ]);
-    setResponse(next);
     setDraft("");
     setSending(false);
   }
@@ -54,7 +30,7 @@ export default function ChatScreen() {
       <ScreenShell scroll={false}>
         <EditorialHeader eyebrow="AI CHANNEL" title="OpenCal" subtitle="Clarifications and confirmations stay inline while the text composer remains available." />
         <FlatList
-          data={messages}
+          data={chatHistory}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
@@ -64,11 +40,11 @@ export default function ChatScreen() {
           )}
           ListFooterComponent={
             <View style={{ gap: spacing.md }}>
-              {response?.clarification ? (
+              {pendingTurn?.clarification ? (
                 <View style={styles.inlineCard}>
                   <Text style={styles.inlineEyebrow}>ACTION NEEDED</Text>
-                  <Text style={styles.inlineTitle}>{response.clarification.prompt}</Text>
-                  {response.clarification.options.map((option) => (
+                  <Text style={styles.inlineTitle}>{pendingTurn.clarification.prompt}</Text>
+                  {pendingTurn.clarification.options.map((option) => (
                     <TouchableOpacity
                       key={option.id}
                       style={styles.option}
@@ -79,19 +55,19 @@ export default function ChatScreen() {
                   ))}
                 </View>
               ) : null}
-              {response?.confirmation ? (
+              {pendingTurn?.confirmation ? (
                 <View style={styles.inlineCard}>
                   <Text style={styles.inlineEyebrow}>CONFIRMATION</Text>
-                  <Text style={styles.inlineTitle}>{response.confirmation.prompt}</Text>
+                  <Text style={styles.inlineTitle}>{pendingTurn.confirmation.prompt}</Text>
                   <Text style={styles.inlineBody}>
-                    {response.confirmation.payloadPreview.summary ?? response.confirmation.payloadPreview.kind}
+                    {pendingTurn.confirmation.payloadPreview.summary ?? pendingTurn.confirmation.payloadPreview.kind}
                   </Text>
                   <View style={styles.actions}>
                     <TouchableOpacity style={styles.confirm} onPress={() => void submit({ action: "confirm" })}>
-                      <Text style={styles.confirmText}>{response.confirmation.actionLabel}</Text>
+                      <Text style={styles.confirmText}>{pendingTurn.confirmation.actionLabel}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.cancel} onPress={() => void submit({ action: "cancel" })}>
-                      <Text style={styles.cancelText}>{response.confirmation.cancelLabel}</Text>
+                      <Text style={styles.cancelText}>{pendingTurn.confirmation.cancelLabel}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

@@ -3,6 +3,7 @@ import type {
   ApiErrorDto,
   CalendarDayDto,
   CalendarMonthDto,
+  ChatHistoryDto,
   SessionDto,
   SettingsDto,
   TaskStateDto,
@@ -57,6 +58,10 @@ export class ApiClient {
 
   async getTaskState() {
     return this.request<TaskStateDto>("/agent/task-state");
+  }
+
+  async getChatHistory() {
+    return this.request<ChatHistoryDto>("/agent/history");
   }
 
   async resetSession() {

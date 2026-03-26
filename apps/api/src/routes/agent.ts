@@ -5,7 +5,7 @@ import { runAgentSessionTurn } from "../../../../src/app/session-runtime.js";
 import { buildSkillCatalogAndManifests } from "../skills.js";
 import { jsonError, jsonRoute, readJsonBody } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
-import { buildTaskStateRoutePayload, resolveUserTimezone } from "./utils.js";
+import { buildChatHistoryRoutePayload, buildTaskStateRoutePayload, resolveUserTimezone } from "./utils.js";
 
 const agentTurnSchema = z
   .object({
@@ -46,6 +46,10 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
 
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/agent/task-state") {
     return await jsonRoute(ctx.res, 200, buildTaskStateRoutePayload(ctx.session));
+  }
+
+  if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/agent/history") {
+    return await jsonRoute(ctx.res, 200, buildChatHistoryRoutePayload(ctx.session));
   }
 
   return false;
