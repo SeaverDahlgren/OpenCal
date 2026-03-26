@@ -76,7 +76,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function startAuth() {
-    const { authUrl } = await createApiClient(null).startGoogleAuth();
+    const returnTo = Linking.createURL("auth-callback");
+    const { authUrl } = await createApiClient(null).startGoogleAuth(returnTo);
     await Linking.openURL(authUrl);
   }
 

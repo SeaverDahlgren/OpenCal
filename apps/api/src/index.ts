@@ -5,6 +5,7 @@ import { loadConfig, type AppConfig } from "../../../src/config/env.js";
 import { loadWorkspaceFiles, ensureWorkspace } from "../../../src/memory/workspace.js";
 import { buildSkillCatalogAndManifests } from "./skills.js";
 import { ApiAuthService } from "./auth/service.js";
+import { buildMobileReturnUrl, decodeAuthState, encodeAuthState } from "./auth/state.js";
 import { SessionStore } from "./sessions/store.js";
 import { createLlmProvider } from "../../../src/llm/factory.js";
 import { buildToolRegistry } from "../../../src/tools/registry.js";
@@ -23,8 +24,9 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "127.0.0.1"}`);
 
     if (req.method === "POST" && url.pathname === "/api/v1/auth/google/start") {
+      const body = (await readJsonBody(req)) as { returnTo?: string };
       return await jsonRoute(res, 200, {
-        authUrl: auth.buildAuthUrl(randomState()),
+        authUrl: auth.buildAuthUrl(encodeAuthState({ returnTo: body.returnTo })),
       });
     }
 
@@ -34,6 +36,13 @@ const server = http.createServer(async (req, res) => {
         return await jsonError(res, 400, "VALIDATION_ERROR", "Missing OAuth code.", false);
       }
       const session = await auth.completeAuthorization(code);
+      const state = decodeAuthState(url.searchParams.get("state"));
+      const returnUrl = buildMobileReturnUrl(state.returnTo, session);
+      if (returnUrl) {
+        res.writeHead(302, { location: returnUrl });
+        res.end();
+        return;
+      }
       return await jsonRoute(res, 200, {
         sessionToken: session.token,
         sessionId: session.sessionId,
@@ -340,8 +349,4 @@ function toAgentAction(body: { message?: string; action?: string; optionValue?: 
     return { type: "message", message: body.message.trim() };
   }
   return null;
-}
-
-function randomState() {
-  return Math.random().toString(36).slice(2);
 }

@@ -40,9 +40,10 @@ export class ApiClient {
     });
   }
 
-  async startGoogleAuth() {
+  async startGoogleAuth(returnTo: string) {
     return this.request<{ authUrl: string }>("/auth/google/start", {
       method: "POST",
+      body: JSON.stringify({ returnTo }),
     });
   }
 
