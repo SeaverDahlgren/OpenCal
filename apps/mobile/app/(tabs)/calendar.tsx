@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
 import type { CalendarDayDto, CalendarMonthDto } from "../../src/api/types";
 import { EditorialHeader } from "../../src/components/EditorialHeader";
@@ -125,8 +125,8 @@ export default function CalendarScreen() {
               {item.attendees.length ? (
                 <Text style={styles.eventMeta}>{item.attendees.map((attendee) => attendee.name).join(", ")}</Text>
               ) : null}
-              <Text
-                style={styles.eventAction}
+              <TouchableOpacity
+                style={styles.eventActionButton}
                 onPress={() =>
                   router.push(
                     `/chat?prompt=${encodeURIComponent(
@@ -135,8 +135,8 @@ export default function CalendarScreen() {
                   )
                 }
               >
-                Reschedule with AI
-              </Text>
+                <Text style={styles.eventAction}>Reschedule with AI</Text>
+              </TouchableOpacity>
             </View>
           ))
         ) : (
@@ -177,6 +177,7 @@ const styles = StyleSheet.create({
   eventTime: { color: colors.primary, ...typography.label },
   eventTitle: { color: colors.text, fontSize: 18, fontWeight: "700" },
   eventMeta: { color: colors.textMuted, ...typography.body },
+  eventActionButton: { alignSelf: "flex-start", paddingTop: spacing.xs, paddingBottom: spacing.sm },
   eventAction: { color: colors.primary, fontSize: 14, fontWeight: "800" },
   muted: { color: colors.textMuted },
 });

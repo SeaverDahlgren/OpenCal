@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChatHistoryRoutePayload } from "../apps/api/src/routes/utils.js";
+import { buildChatHistoryRoutePayload, buildUtcDayBounds } from "../apps/api/src/routes/utils.js";
 import type { StoredSessionState } from "../src/app/session-types.js";
 
 describe("api route utils", () => {
@@ -38,6 +38,13 @@ describe("api route utils", () => {
           timestamp: "2026-03-25T00:03:00.000Z",
         },
       ],
+    });
+  });
+
+  it("builds explicit UTC day bounds for calendar queries", () => {
+    expect(buildUtcDayBounds("2026-03-25")).toEqual({
+      timeMin: "2026-03-25T00:00:00.000Z",
+      timeMax: "2026-03-25T23:59:59.999Z",
     });
   });
 });

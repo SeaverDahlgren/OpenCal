@@ -8,6 +8,13 @@ export function resolveSystemTimezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
+export function buildUtcDayBounds(date: string) {
+  return {
+    timeMin: `${date}T00:00:00.000Z`,
+    timeMax: `${date}T23:59:59.999Z`,
+  };
+}
+
 export function buildTaskStateRoutePayload(session: StoredSessionState) {
   return {
     taskState: session.taskState

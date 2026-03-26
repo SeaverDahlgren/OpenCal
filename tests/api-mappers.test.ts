@@ -47,6 +47,7 @@ describe("api dto mappers", () => {
     });
 
     expect(result.days).toHaveLength(42);
+    expect(result.monthLabel).toBe("March 2026");
     expect(result.days.find((day) => day.date === "2026-03-03")).toEqual(
       expect.objectContaining({
         eventCount: 2,

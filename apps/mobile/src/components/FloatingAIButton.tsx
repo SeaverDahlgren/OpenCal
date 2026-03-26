@@ -1,14 +1,16 @@
 import { Link } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { colors, radii, spacing } from "../theme/tokens";
 
 export function FloatingAIButton({ blocked }: { blocked: boolean }) {
   return (
-    <Link href="/chat" style={styles.link}>
-      <View style={styles.button}>
+    <Link href="/chat" asChild>
+      <Pressable style={styles.link}>
+        <View style={styles.button}>
         <Text style={styles.icon}>AI</Text>
         {blocked ? <View style={styles.badge} /> : null}
-      </View>
+        </View>
+      </Pressable>
     </Link>
   );
 }
@@ -17,7 +19,7 @@ const styles = StyleSheet.create({
   link: {
     position: "absolute",
     right: spacing.lg,
-    bottom: spacing.xl,
+    bottom: 76,
     zIndex: 10,
   },
   button: {

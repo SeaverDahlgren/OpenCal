@@ -61,7 +61,7 @@ export function mapCalendarMonthView(args: {
   return {
     year: args.year,
     month: args.month,
-    monthLabel: currentMonth.toLocaleDateString("en-US", {
+    monthLabel: new Date(Date.UTC(args.year, args.month - 1, 15, 12)).toLocaleDateString("en-US", {
       month: "long",
       year: "numeric",
       timeZone: args.timezone,

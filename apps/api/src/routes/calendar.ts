@@ -2,7 +2,7 @@ import { z } from "zod";
 import { mapCalendarDayView, mapCalendarMonthView, mapTodayOverview } from "../dto/mappers.js";
 import { jsonError, jsonRoute } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
-import { resolveUserTimezone } from "./utils.js";
+import { buildUtcDayBounds, resolveUserTimezone } from "./utils.js";
 
 const monthQuerySchema = z.object({
   year: z.coerce.number().int(),
@@ -16,10 +16,11 @@ const dayQuerySchema = z.object({
 export async function handleCalendarRoute(ctx: AuthedRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/today") {
     const today = new Date().toISOString().slice(0, 10);
+    const { timeMin, timeMax } = buildUtcDayBounds(today);
     const events = await ctx.calendarService.searchEvents({
       calendarId: "primary",
-      timeMin: `${today}T00:00:00`,
-      timeMax: `${today}T23:59:59`,
+      timeMin,
+      timeMax,
       maxResults: 25,
     });
     return await jsonRoute(
@@ -70,10 +71,11 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "date is required.", false);
     }
     const { date } = parsed.data;
+    const { timeMin, timeMax } = buildUtcDayBounds(date);
     const events = await ctx.calendarService.searchEvents({
       calendarId: "primary",
-      timeMin: `${date}T00:00:00`,
-      timeMax: `${date}T23:59:59`,
+      timeMin,
+      timeMax,
       maxResults: 100,
     });
     return await jsonRoute(
