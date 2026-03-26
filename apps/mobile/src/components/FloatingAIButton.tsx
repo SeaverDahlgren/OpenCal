@@ -1,24 +1,32 @@
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radii, spacing } from "../theme/tokens";
 
 export function FloatingAIButton({ blocked }: { blocked: boolean }) {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   return (
-    <Link href="/chat" asChild>
-      <Pressable style={[styles.link, { bottom: insets.bottom + 72 }]}>
+    <View pointerEvents="box-none" style={styles.overlay}>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push("/chat")}
+        style={[styles.link, { bottom: insets.bottom + 72 }]}
+      >
         <View style={styles.button}>
           <Text style={styles.icon}>AI</Text>
           {blocked ? <View style={styles.badge} /> : null}
         </View>
       </Pressable>
-    </Link>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
   link: {
     position: "absolute",
     right: spacing.md,
