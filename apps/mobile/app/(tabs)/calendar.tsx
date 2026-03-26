@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
@@ -10,7 +10,7 @@ import { useSession } from "../../src/state/session";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 export default function CalendarScreen() {
-  const { token } = useSession();
+  const { token, scheduleVersion } = useSession();
   const [month, setMonth] = useState<CalendarMonthDto | null>(null);
   const [day, setDay] = useState<CalendarDayDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,34 +23,51 @@ export default function CalendarScreen() {
   const monthTranslate = useRef(new Animated.Value(0)).current;
   const monthOpacity = useRef(new Animated.Value(1)).current;
   const hasLoadedRef = useRef(false);
+  const monthCacheRef = useRef<Record<string, CalendarMonthDto>>({});
+  const monthRequestRef = useRef(0);
+  const dayRequestRef = useRef(0);
 
-  const fetchCalendar = useCallback(async (targetMonth: Date, focusDate: string) => {
-    const client = createApiClient(token);
-    const [nextMonth, nextDay] = await Promise.all([
-      client.getCalendarMonth(targetMonth.getFullYear(), targetMonth.getMonth() + 1),
-      client.getCalendarDay(focusDate),
-    ]);
-    return { nextMonth, nextDay };
+  const loadMonthData = useCallback(async (targetMonth: Date) => {
+    if (!token) {
+      return;
+    }
+    const monthKey = getMonthKey(targetMonth);
+    const requestId = ++monthRequestRef.current;
+    const nextMonth = await createApiClient(token).getCalendarMonth(targetMonth.getFullYear(), targetMonth.getMonth() + 1);
+    monthCacheRef.current[monthKey] = nextMonth;
+    if (requestId !== monthRequestRef.current) {
+      return;
+    }
+    setMonth(nextMonth);
   }, [token]);
 
-  const loadCalendar = useCallback(async (options?: {
-    targetMonth?: Date;
-    targetDate?: string;
+  const loadDayData = useCallback(async (date: string) => {
+    if (!token) {
+      return;
+    }
+    const requestId = ++dayRequestRef.current;
+    try {
+      const nextDay = await createApiClient(token).getCalendarDay(date);
+      if (requestId !== dayRequestRef.current) {
+        return;
+      }
+      setDay(nextDay);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to load calendar.");
+    }
+  }, [token]);
+
+  const hydrateVisibleCalendar = useCallback(async (targetMonth: Date, focusDate: string, options?: {
     initial?: boolean;
     refreshing?: boolean;
-    direction?: number;
   }) => {
     if (!token) {
       setLoading(false);
       return;
     }
 
-    const targetMonth = options?.targetMonth ?? visibleMonth;
-    const focusDate = options?.targetDate ?? (isDateInMonth(selectedDate, targetMonth) ? selectedDate : toDateOnly(startOfMonth(targetMonth)));
-    const isInitial = options?.initial ?? !month;
+    const isInitial = options?.initial ?? false;
     const isRefreshing = options?.refreshing ?? false;
-    const direction = options?.direction ?? 0;
-
     if (isInitial) {
       setLoading(true);
     }
@@ -59,32 +76,61 @@ export default function CalendarScreen() {
     }
     setError(null);
 
+    const monthKey = getMonthKey(targetMonth);
+
     try {
-      if (direction && month) {
-        setMonthAnimating(true);
-        await runMonthExitAnimation(monthTranslate, monthOpacity, direction);
-      }
-
-      const { nextMonth, nextDay } = await fetchCalendar(targetMonth, focusDate);
-
+      const client = createApiClient(token);
+      const [nextMonth, nextDay] = await Promise.all([
+        client.getCalendarMonth(targetMonth.getFullYear(), targetMonth.getMonth() + 1),
+        client.getCalendarDay(focusDate),
+      ]);
+      monthCacheRef.current[monthKey] = nextMonth;
       setVisibleMonth(targetMonth);
       setSelectedDate(focusDate);
       setMonth(nextMonth);
       setDay(nextDay);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Failed to load calendar.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [token]);
+
+  const transitionMonth = useCallback(async (targetMonth: Date, targetDate: string, direction: number) => {
+    if (!token || monthAnimating) {
+      return;
+    }
+
+    const monthKey = getMonthKey(targetMonth);
+    const optimisticMonth = monthCacheRef.current[monthKey] ?? buildPlaceholderMonth(targetMonth);
+
+    setError(null);
+    setMonthAnimating(true);
+
+    try {
+      if (direction && month) {
+        await runMonthExitAnimation(monthTranslate, monthOpacity, direction);
+      }
+
+      setVisibleMonth(targetMonth);
+      setSelectedDate(targetDate);
+      setMonth(optimisticMonth);
+      setDay(null);
+      dayRequestRef.current += 1;
 
       if (direction && month) {
         monthTranslate.setValue(direction > 0 ? 22 : -22);
         monthOpacity.setValue(0.35);
         await runMonthEnterAnimation(monthTranslate, monthOpacity);
       }
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Failed to load calendar.");
+
+      void loadMonthData(targetMonth);
+      void loadDayData(targetDate);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
       setMonthAnimating(false);
     }
-  }, [fetchCalendar, month, monthOpacity, monthTranslate, selectedDate, token, visibleMonth]);
+  }, [loadDayData, loadMonthData, month, monthAnimating, monthOpacity, monthTranslate, token]);
 
   async function selectDay(date: string) {
     if (!token) {
@@ -92,16 +138,19 @@ export default function CalendarScreen() {
     }
     const nextMonth = startOfMonth(new Date(`${date}T12:00:00`));
     const direction = nextMonth.getTime() === visibleMonth.getTime() ? 0 : nextMonth > visibleMonth ? 1 : -1;
-    await loadCalendar({ targetMonth: nextMonth, targetDate: date, direction });
+    if (direction === 0) {
+      setSelectedDate(date);
+      setError(null);
+      void loadDayData(date);
+      return;
+    }
+    await transitionMonth(nextMonth, date, direction);
   }
 
   function moveMonth(offset: number) {
-    if (monthAnimating) {
-      return;
-    }
     const nextMonth = startOfMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + offset, 1));
     const nextSelectedDate = toDateOnly(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1, 12));
-    void loadCalendar({ targetMonth: nextMonth, targetDate: nextSelectedDate, direction: offset });
+    void transitionMonth(nextMonth, nextSelectedDate, offset);
   }
 
   useFocusEffect(
@@ -114,9 +163,16 @@ export default function CalendarScreen() {
         return;
       }
       hasLoadedRef.current = true;
-      void loadCalendar({ initial: true });
-    }, [loadCalendar, token]),
+      void hydrateVisibleCalendar(visibleMonth, selectedDate, { initial: true });
+    }, [hydrateVisibleCalendar, selectedDate, token, visibleMonth]),
   );
+
+  useEffect(() => {
+    if (!token || !hasLoadedRef.current) {
+      return;
+    }
+    void hydrateVisibleCalendar(visibleMonth, selectedDate);
+  }, [hydrateVisibleCalendar, scheduleVersion, selectedDate, token, visibleMonth]);
 
   if (loading || !month) {
     return (
@@ -130,10 +186,10 @@ export default function CalendarScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadCalendar({ refreshing: true })} tintColor={colors.primary} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void hydrateVisibleCalendar(visibleMonth, selectedDate, { refreshing: true })} tintColor={colors.primary} />}
     >
-      <EditorialHeader eyebrow="STRATEGIC OVERVIEW" title={month.monthLabel} subtitle="Primary calendar with AI-assisted rescheduling." />
-      {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void loadCalendar({ refreshing: true })} /> : null}
+      <EditorialHeader title={month.monthLabel} subtitle="" />
+      {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void hydrateVisibleCalendar(visibleMonth, selectedDate, { refreshing: true })} /> : null}
       <Animated.View style={{ transform: [{ translateX: monthTranslate }], opacity: monthOpacity }}>
       <SurfaceCard style={styles.monthCard}>
         <View style={styles.monthNav}>
@@ -271,6 +327,40 @@ function toDateOnly(value: Date) {
 
 function isDateInMonth(date: string, month: Date) {
   return date.startsWith(`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`);
+}
+
+function getMonthKey(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function buildPlaceholderMonth(targetMonth: Date): CalendarMonthDto {
+  const firstDay = new Date(Date.UTC(targetMonth.getFullYear(), targetMonth.getMonth(), 1));
+  const start = startOfCalendarGrid(firstDay);
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + index);
+    const dateOnly = date.toISOString().slice(0, 10);
+    return {
+      date: dateOnly,
+      inMonth: date.getUTCMonth() === firstDay.getUTCMonth(),
+      isToday: dateOnly === toDateOnly(new Date()),
+      eventCount: 0,
+      highlights: [],
+    };
+  });
+
+  return {
+    monthLabel: targetMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    days,
+  };
+}
+
+function startOfCalendarGrid(date: Date) {
+  const copy = new Date(date);
+  const day = copy.getUTCDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  copy.setUTCDate(copy.getUTCDate() + offset);
+  return copy;
 }
 
 function runMonthExitAnimation(translate: Animated.Value, opacity: Animated.Value, direction: number) {

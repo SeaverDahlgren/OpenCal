@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
@@ -10,11 +10,12 @@ import { useSession } from "../../src/state/session";
 import { colors, spacing, typography } from "../../src/theme/tokens";
 
 export default function TodayScreen() {
-  const { token } = useSession();
+  const { token, scheduleVersion } = useSession();
   const [data, setData] = useState<TodayDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const loadedRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -34,9 +35,17 @@ export default function TodayScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      loadedRef.current = true;
       void load();
     }, [load]),
   );
+
+  useEffect(() => {
+    if (!token || !loadedRef.current) {
+      return;
+    }
+    void load();
+  }, [load, scheduleVersion, token]);
 
   if (loading) {
     return <CenteredLoader />;
@@ -48,7 +57,7 @@ export default function TodayScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.primary} />}
     >
-      <EditorialHeader eyebrow={data?.date} title={data?.greeting ?? "Today"} subtitle="Strategic overview of your day." />
+      <EditorialHeader eyebrow={formatTodayEyebrow(data?.date)} title={data?.greeting ?? "Today"} subtitle="Strategic overview of your day." />
       {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
       {data?.insight ? (
         <SurfaceCard elevated style={styles.insight}>
@@ -94,6 +103,23 @@ function CenteredLoader() {
       <ActivityIndicator color={colors.primary} />
     </View>
   );
+}
+
+function formatTodayEyebrow(date?: string) {
+  if (!date) {
+    return undefined;
+  }
+
+  const parsed = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  return parsed.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
 
 const styles = StyleSheet.create({

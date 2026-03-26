@@ -15,6 +15,7 @@ type SessionContextValue = {
   taskState: TaskStateDto | null;
   chatHistory: ChatHistoryDto["messages"];
   pendingTurn: AgentTurnDto | null;
+  scheduleVersion: number;
   loading: boolean;
   blocked: boolean;
   setToken: (token: string | null) => Promise<void>;
@@ -35,6 +36,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [taskState, setTaskState] = useState<TaskStateDto | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatHistoryDto["messages"]>([]);
   const [pendingTurn, setPendingTurn] = useState<AgentTurnDto | null>(null);
+  const [scheduleVersion, setScheduleVersion] = useState(0);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -175,6 +177,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const client = createApiClient(token);
     const next = await client.sendAgentMessage(input);
     await Promise.all([refreshSession(), refreshTaskState(), refreshChatHistory()]);
+    setScheduleVersion((value) => value + 1);
     return next;
   }
 
@@ -193,6 +196,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       taskState,
       chatHistory,
       pendingTurn,
+      scheduleVersion,
       loading,
       blocked: hasBlockedUiState(session, pendingTurn),
       setToken,
@@ -204,7 +208,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       clearSession,
       resetAgentSession,
     }),
-    [chatHistory, loading, pendingTurn, session, taskState, token],
+    [chatHistory, loading, pendingTurn, scheduleVersion, session, taskState, token],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
