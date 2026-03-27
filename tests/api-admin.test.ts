@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { handleAdminRoute } from "../apps/api/src/routes/admin.js";
 import { SessionStore } from "../apps/api/src/sessions/store.js";
 import type { AppConfig } from "../src/config/env.js";
 
@@ -31,6 +33,60 @@ describe("admin-ready session store helpers", () => {
     expect(await store.loadBySessionId(first.sessionId)).toMatchObject({ user: { email: "avery@example.com" } });
     expect(await store.loadBySessionId(second.sessionId)).toMatchObject({ user: { email: "jordan@example.com" } });
   });
+
+  it("resets and revokes sessions through the admin route", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-session-store-"));
+    createdDirs.push(privateDir);
+    const store = new SessionStore(createConfig(privateDir));
+    const session = await store.createOrReplaceSession({
+      name: "Avery",
+      email: "avery@example.com",
+    });
+    await store.save({
+      ...session,
+      messages: [{ role: "user", content: "hello", timestamp: "2026-03-25T00:00:00.000Z" }],
+    });
+
+    const reset = createResponse();
+    await handleAdminRoute({
+      req: createRequest("POST", "/api/v1/admin/session/reset?email=avery@example.com"),
+      res: reset.res,
+      url: new URL("http://127.0.0.1:8787/api/v1/admin/session/reset?email=avery@example.com"),
+      config: createConfig(privateDir),
+      auth: {} as never,
+      sessions: store,
+      profiles: {} as never,
+    });
+    expect(reset.statusCode()).toBe(200);
+    expect(JSON.parse(reset.body())).toMatchObject({
+      ok: true,
+      action: "reset",
+      session: {
+        sessionId: session.sessionId,
+        messageCount: 0,
+      },
+    });
+
+    const revoke = createResponse();
+    await handleAdminRoute({
+      req: createRequest("POST", `/api/v1/admin/session/revoke?sessionId=${session.sessionId}`),
+      res: revoke.res,
+      url: new URL(`http://127.0.0.1:8787/api/v1/admin/session/revoke?sessionId=${session.sessionId}`),
+      config: createConfig(privateDir),
+      auth: {} as never,
+      sessions: store,
+      profiles: {} as never,
+    });
+    expect(revoke.statusCode()).toBe(200);
+    expect(JSON.parse(revoke.body())).toMatchObject({
+      ok: true,
+      action: "revoke",
+      session: {
+        sessionId: session.sessionId,
+      },
+    });
+    expect(await store.loadBySessionId(session.sessionId)).toBeNull();
+  });
 });
 
 function createConfig(privateDir: string): AppConfig {
@@ -42,6 +98,7 @@ function createConfig(privateDir: string): AppConfig {
     groqApiKey: "test-key",
     openAiApiKey: undefined,
     adminApiKey: "admin-secret",
+    stateEncryptionKey: undefined,
     googleClientId: "google-client-id",
     googleClientSecret: "google-client-secret",
     googleRedirectUri: "http://127.0.0.1:42813/oauth/callback",
@@ -57,5 +114,44 @@ function createConfig(privateDir: string): AppConfig {
     groqModel: "llama-3.3-70b-versatile",
     rootDir: privateDir,
     privateDir,
+  };
+}
+
+function createRequest(method: string, url: string) {
+  return ({
+    method,
+    url,
+    headers: {
+      "x-admin-key": "admin-secret",
+    },
+  } as unknown) as http.IncomingMessage;
+}
+
+function createResponse() {
+  const chunks: string[] = [];
+  const raw = {
+    statusCode: 200,
+    headers: {} as Record<string, string>,
+    setHeader() {},
+    getHeader() {
+      return undefined;
+    },
+    writeHead(status: number, headers: Record<string, string>) {
+      this.statusCode = status;
+      this.headers = headers;
+      return this;
+    },
+    end(chunk?: string) {
+      if (chunk) {
+        chunks.push(chunk);
+      }
+    },
+  };
+  const res = raw as unknown as http.ServerResponse;
+
+  return {
+    res,
+    statusCode: () => raw.statusCode,
+    body: () => chunks.join(""),
   };
 }

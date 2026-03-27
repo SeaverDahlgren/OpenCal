@@ -79,6 +79,8 @@ read_when:
 - If `ADMIN_API_KEY` is set, the API also exposes a support endpoint:
   - `GET /api/v1/admin/session`
   - filter with `?sessionId=...` or `?email=...`
+  - `POST /api/v1/admin/session/reset`
+  - `POST /api/v1/admin/session/revoke`
   - send `x-admin-key: <ADMIN_API_KEY>`
 - In `development`, if the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
 - If that route returns `GOOGLE_AUTH_REQUIRED`, the app stays on the sign-in screen and you need a fresh Google OAuth flow.
