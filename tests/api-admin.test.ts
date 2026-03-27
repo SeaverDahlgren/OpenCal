@@ -57,6 +57,7 @@ describe("admin-ready session store helpers", () => {
       sessions: store,
       profiles: {} as never,
       idempotency: {} as never,
+      jobs: {} as never,
     });
     expect(reset.statusCode()).toBe(200);
     expect(JSON.parse(reset.body())).toMatchObject({
@@ -78,6 +79,7 @@ describe("admin-ready session store helpers", () => {
       sessions: store,
       profiles: {} as never,
       idempotency: {} as never,
+      jobs: {} as never,
     });
     expect(revoke.statusCode()).toBe(200);
     expect(JSON.parse(revoke.body())).toMatchObject({
@@ -110,6 +112,8 @@ function createConfig(privateDir: string): AppConfig {
     compactionThreshold: 0.8,
     sessionTtlDays: 14,
     idempotencyTtlHours: 24,
+    jobMaxAttempts: 3,
+    jobRetryDelayMs: 30000,
     rateLimitWindowMs: 60000,
     rateLimitMaxRequests: 120,
     openAiModel: "gpt-5-mini",

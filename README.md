@@ -115,6 +115,12 @@ Start the API with:
 npm run api:dev
 ```
 
+Process one queued background job with:
+
+```bash
+npm run api:worker
+```
+
 By default it listens on:
 
 ```text
@@ -143,6 +149,7 @@ POST /api/v1/admin/session/revoke?email=...
 Enable it by setting `ADMIN_API_KEY` and sending that value as `x-admin-key`. Responses are sanitized. Reset clears task/chat state while keeping the session record. Revoke deletes the session.
 
 For `POST /api/v1/agent/turn`, send an `Idempotency-Key` header on mobile retries or reconnects. The API caches successful responses per session so duplicate confirms do not create duplicate events or drafts.
+Retryable model failures on that route are also queued as background jobs for later worker replay.
 
 ### Mobile App
 

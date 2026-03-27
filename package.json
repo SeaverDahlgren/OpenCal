@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/index.ts",
     "api:dev": "tsx apps/api/src/index.ts",
+    "api:worker": "tsx apps/api/src/worker.ts",
     "mobile:start": "npm --prefix apps/mobile run start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"

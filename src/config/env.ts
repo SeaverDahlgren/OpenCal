@@ -28,6 +28,8 @@ const envSchema = z.object({
   COMPACTION_THRESHOLD: z.coerce.number().gt(0).lt(1).default(0.8),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(14),
   IDEMPOTENCY_TTL_HOURS: z.coerce.number().int().positive().default(24),
+  JOB_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+  JOB_RETRY_DELAY_MS: z.coerce.number().int().positive().default(30000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
@@ -55,6 +57,8 @@ export type AppConfig = {
   compactionThreshold: number;
   sessionTtlDays: number;
   idempotencyTtlHours: number;
+  jobMaxAttempts: number;
+  jobRetryDelayMs: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
   openAiModel: string;
@@ -98,6 +102,8 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     compactionThreshold: env.COMPACTION_THRESHOLD,
     sessionTtlDays: env.SESSION_TTL_DAYS,
     idempotencyTtlHours: env.IDEMPOTENCY_TTL_HOURS,
+    jobMaxAttempts: env.JOB_MAX_ATTEMPTS,
+    jobRetryDelayMs: env.JOB_RETRY_DELAY_MS,
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
     openAiModel: env.OPENAI_MODEL,

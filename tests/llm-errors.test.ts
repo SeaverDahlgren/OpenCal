@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toUserFacingLlmErrorMessage } from "../src/llm/errors.js";
+import { isRetryableLlmError, toUserFacingLlmErrorMessage } from "../src/llm/errors.js";
 
 describe("toUserFacingLlmErrorMessage", () => {
   it("maps structured 503 errors to a retry message", () => {
@@ -24,5 +24,12 @@ describe("toUserFacingLlmErrorMessage", () => {
     expect(message).toBe(
       "The model request failed, so I couldn't finish that turn. Check your API credentials/config and try again.",
     );
+  });
+
+  it("detects retryable llm failures", () => {
+    expect(
+      isRetryableLlmError('{"error":{"code":503,"message":"high demand","status":"UNAVAILABLE"}}'),
+    ).toBe(true);
+    expect(isRetryableLlmError(new Error("bad api key"))).toBe(false);
   });
 });

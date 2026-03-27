@@ -1,12 +1,10 @@
 import crypto from "node:crypto";
 import { z } from "zod";
-import { createLlmProvider } from "../../../../src/llm/factory.js";
-import { buildToolRegistry } from "../../../../src/tools/registry.js";
-import { runAgentSessionTurn } from "../../../../src/app/session-runtime.js";
-import { buildSkillCatalogAndManifests } from "../skills.js";
+import { toUserFacingLlmErrorMessage, isRetryableLlmError } from "../../../../src/llm/errors.js";
+import { executeAgentTurn } from "../agent/execute-turn.js";
 import { jsonError, jsonRoute, readIdempotencyKey, readJsonBody } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
-import { buildChatHistoryRoutePayload, buildTaskStateRoutePayload, resolveUserTimezone } from "./utils.js";
+import { buildChatHistoryRoutePayload, buildTaskStateRoutePayload } from "./utils.js";
 import { buildIdempotencyExpiry } from "../idempotency/store.js";
 
 const agentTurnSchema = z
@@ -44,23 +42,38 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
         return await jsonRoute(ctx.res, replay.status, replay.response);
       }
     }
-    const runtimeConfig = configForSession(ctx.config, ctx.session);
-    const provider = createLlmProvider(runtimeConfig);
-    const tools = buildToolRegistry(ctx.googleClients);
-    const skills = await buildSkillCatalogAndManifests(ctx.config.rootDir);
-    const result = await runAgentSessionTurn(
-      {
-        config: runtimeConfig,
-        provider,
-        tools,
+    let result;
+    try {
+      result = await executeAgentTurn({
+        config: ctx.config,
+        session: ctx.session,
+        profile: ctx.profile,
         workspace: ctx.workspace,
-        timezone: resolveUserTimezone(ctx.profile),
-        skillManifests: skills.manifests,
-        skillsCatalog: skills.catalog,
-      },
-      ctx.session,
-      toAgentAction(body.data),
-    );
+        googleClients: ctx.googleClients,
+        action: toAgentAction(body.data),
+      });
+    } catch (error) {
+      if (!isRetryableLlmError(error)) {
+        throw error;
+      }
+      const job = await ctx.jobs.enqueue({
+        kind: "agent_turn_retry",
+        payload: {
+          sessionId: ctx.session.sessionId,
+          action: toAgentAction(body.data),
+        },
+        maxAttempts: ctx.config.jobMaxAttempts,
+        runAt: new Date().toISOString(),
+      });
+      return await jsonRoute(ctx.res, 503, {
+        error: {
+          code: "MODEL_UNAVAILABLE",
+          message: toUserFacingLlmErrorMessage(error),
+          retryable: true,
+          jobId: job.jobId,
+        },
+      });
+    }
     await ctx.sessions.save(result.session);
     if (idempotencyKey && requestHash) {
       await ctx.idempotency.save({
@@ -90,16 +103,6 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
 
 function hashRequest(route: string, body: unknown) {
   return crypto.createHash("sha256").update(`${route}:${JSON.stringify(body)}`).digest("hex");
-}
-
-function configForSession(base: AuthedRouteContext["config"], session: AuthedRouteContext["session"]) {
-  return {
-    ...base,
-    llmProvider: session.provider,
-    toolResultVerbosity: session.toolResultVerbosity,
-    geminiModel: session.provider === "gemini" ? session.model : base.geminiModel,
-    groqModel: session.provider === "groq" ? session.model : base.groqModel,
-  };
 }
 
 function toAgentAction(body: z.infer<typeof agentTurnSchema>) {

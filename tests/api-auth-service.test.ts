@@ -20,6 +20,8 @@ const baseConfig: AppConfig = {
   compactionThreshold: 0.8,
   sessionTtlDays: 14,
   idempotencyTtlHours: 24,
+  jobMaxAttempts: 3,
+  jobRetryDelayMs: 30000,
   rateLimitWindowMs: 60000,
   rateLimitMaxRequests: 120,
   openAiModel: "gpt-5-mini",

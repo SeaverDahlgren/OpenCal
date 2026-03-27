@@ -33,6 +33,19 @@ export function toUserFacingLlmErrorMessage(error: unknown): string {
   return "The model request failed, so I couldn't finish that turn. Check your API credentials/config and try again.";
 }
 
+export function isRetryableLlmError(error: unknown): boolean {
+  const parsed = parseLlmError(error);
+  const normalizedCode =
+    typeof parsed.code === "string" ? normalizeErrorToken(parsed.code) : parsed.code;
+  const normalizedStatus = parsed.status ? normalizeErrorToken(parsed.status) : undefined;
+
+  return (
+    (typeof normalizedCode === "number" && RETRYABLE_CODES.has(normalizedCode)) ||
+    (typeof normalizedCode === "string" && RETRYABLE_STATUSES.has(normalizedCode)) ||
+    Boolean(normalizedStatus && RETRYABLE_STATUSES.has(normalizedStatus))
+  );
+}
+
 function parseLlmError(error: unknown): ParsedLlmError {
   const fromObject = extractObjectShape(error);
   if (fromObject) {
