@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { EditorialHeader } from "../src/components/EditorialHeader";
 import { InlineNotice } from "../src/components/InlineNotice";
 import { ScreenShell } from "../src/components/ScreenShell";
 import { useSession } from "../src/state/session";
@@ -15,6 +14,7 @@ export default function ChatScreen() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRecommendations, setShowRecommendations] = useState(false);
 
   const scrollToLatest = useCallback((animated: boolean) => {
     requestAnimationFrame(() => {
@@ -75,11 +75,23 @@ export default function ChatScreen() {
       />
       <ScreenShell scroll={false}>
         <View style={styles.headerRow}>
-          <EditorialHeader eyebrow="AI CHANNEL" title="OpenCal" subtitle="Clarifications and confirmations stay inline while the text composer remains available." />
-          <TouchableOpacity style={styles.dismissButton} onPress={() => router.back()}>
-            <Text style={styles.dismissButtonText}>Close</Text>
+          <Text style={styles.title}>Open CAL</Text>
+          <TouchableOpacity
+            style={styles.helpButton}
+            onPress={() => setShowRecommendations((value) => !value)}
+          >
+            <Text style={styles.helpButtonText}>?</Text>
           </TouchableOpacity>
         </View>
+        {showRecommendations ? (
+          <View style={styles.recommendationsCard}>
+            <Text style={styles.inlineEyebrow}>TRY ASKING</Text>
+            <Text style={styles.recommendation}>What does my day look like?</Text>
+            <Text style={styles.recommendation}>Reschedule my meeting with Joe for tomorrow afternoon.</Text>
+            <Text style={styles.recommendation}>Draft an email to Sarah about moving our meeting.</Text>
+            <Text style={styles.recommendation}>How many times am I swimming next month?</Text>
+          </View>
+        ) : null}
         {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void submit({ message: draft.trim() })} /> : null}
         <FlatList
           ref={listRef}
@@ -165,7 +177,24 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  headerRow: { gap: spacing.sm },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  title: { color: colors.text, fontSize: 28, fontWeight: "800" },
+  helpButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.full,
+    backgroundColor: colors.surfaceHighest,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helpButtonText: { color: colors.primary, fontSize: 20, fontWeight: "800" },
+  recommendationsCard: {
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  recommendation: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   listView: { flex: 1 },
   list: { gap: spacing.md, paddingBottom: 24 },
   pendingPanel: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
@@ -211,12 +240,4 @@ const styles = StyleSheet.create({
   },
   sendText: { color: colors.background, fontWeight: "800" },
   dismissLabel: { color: colors.primary, fontSize: 15, fontWeight: "700" },
-  dismissButton: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.surfaceHighest,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  dismissButtonText: { color: colors.primary, fontWeight: "700" },
 });
