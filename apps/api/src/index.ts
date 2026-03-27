@@ -14,7 +14,14 @@ import { handleAuthRoute } from "./routes/auth.js";
 import { handleCalendarRoute } from "./routes/calendar.js";
 import { handleSessionRoute } from "./routes/session.js";
 import { handleSettingsRoute } from "./routes/settings.js";
-import { applySecurityHeaders, jsonError, jsonRoute, readBearerToken, RequestTooLargeError } from "./server/http.js";
+import {
+  applySecurityHeaders,
+  InvalidJsonBodyError,
+  jsonError,
+  jsonRoute,
+  readBearerToken,
+  RequestTooLargeError,
+} from "./server/http.js";
 import { buildReadyPayload } from "./server/health.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { closeServer, registerAbortOnSignals } from "./server/shutdown.js";
@@ -283,6 +290,9 @@ const server = http.createServer(async (req, res) => {
         `Request body exceeded ${error.maxBytes} bytes.`,
         false,
       );
+    }
+    if (error instanceof InvalidJsonBodyError) {
+      return await jsonError(res, 400, "VALIDATION_ERROR", error.message, false);
     }
     return await jsonError(
       res,

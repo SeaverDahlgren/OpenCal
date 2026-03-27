@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readJsonBody, RequestTooLargeError } from "../apps/api/src/server/http.js";
+import { InvalidJsonBodyError, readJsonBody, RequestTooLargeError } from "../apps/api/src/server/http.js";
 
 describe("json body reader", () => {
   it("parses small JSON payloads", async () => {
@@ -22,6 +22,17 @@ describe("json body reader", () => {
         32,
       ),
     ).rejects.toBeInstanceOf(RequestTooLargeError);
+  });
+
+  it("rejects malformed json payloads", async () => {
+    await expect(
+      readJsonBody(
+        createRequest([
+          Buffer.from('{"body": '),
+        ]),
+        64,
+      ),
+    ).rejects.toBeInstanceOf(InvalidJsonBodyError);
   });
 });
 

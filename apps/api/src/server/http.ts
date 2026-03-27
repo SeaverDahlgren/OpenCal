@@ -7,6 +7,13 @@ export class RequestTooLargeError extends Error {
   }
 }
 
+export class InvalidJsonBodyError extends Error {
+  constructor() {
+    super("Request body is not valid JSON.");
+    this.name = "InvalidJsonBodyError";
+  }
+}
+
 export function applySecurityHeaders(res: http.ServerResponse) {
   res.setHeader("x-content-type-options", "nosniff");
   res.setHeader("x-frame-options", "DENY");
@@ -29,7 +36,11 @@ export async function readJsonBody<T extends Record<string, unknown>>(req: http.
   if (chunks.length === 0) {
     return {} as T;
   }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as T;
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8")) as T;
+  } catch {
+    throw new InvalidJsonBodyError();
+  }
 }
 
 export async function jsonRoute(res: http.ServerResponse, status: number, body: unknown) {
