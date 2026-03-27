@@ -132,6 +132,7 @@ read_when:
 - Health probes are available at:
   - `/api/v1/health/live`
   - `/api/v1/health/ready`
+- The readiness payload now includes backend mode and queued job counts so hosted environments can distinguish `ready` from `degraded`.
 - When `ADMIN_API_KEY` is configured, support tooling can inspect sessions through:
   - `/api/v1/admin/session`
   - `/api/v1/admin/job`

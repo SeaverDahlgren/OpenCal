@@ -15,6 +15,7 @@ import { handleCalendarRoute } from "./routes/calendar.js";
 import { handleSessionRoute } from "./routes/session.js";
 import { handleSettingsRoute } from "./routes/settings.js";
 import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
+import { buildReadyPayload } from "./server/health.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { updateSessionClientContext } from "./server/client-context.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
@@ -55,10 +56,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === "GET" && url.pathname === "/api/v1/health/ready") {
+      const payload = buildReadyPayload(config, await jobs.list());
       const result = await jsonRoute(res, 200, {
-        status: "ready",
-        service: "opencal-api",
-        environment: config.appEnv,
+        ...payload,
       });
       await appendDebugLog(debugLogPath, "api.request.complete", {
         requestId,

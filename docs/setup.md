@@ -82,6 +82,11 @@ read_when:
 - The API exposes health probes for hosted environments:
   - `GET /api/v1/health/live`
   - `GET /api/v1/health/ready`
+- The readiness probe now includes:
+  - active `storageBackend`
+  - active `jobBackend`
+  - queued job counts by status
+  - `degraded` status when exhausted jobs exist
 - If `ADMIN_API_KEY` is set, the API also exposes a support endpoint:
   - `GET /api/v1/admin/session`
   - filter with `?sessionId=...` or `?email=...`

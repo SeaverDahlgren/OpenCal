@@ -147,6 +147,8 @@ GET /api/v1/health/live
 GET /api/v1/health/ready
 ```
 
+`/api/v1/health/ready` now returns the active storage/job backends plus queued job counts. If any jobs are in the `exhausted` state, readiness is reported as `degraded`.
+
 Optional support endpoint:
 
 ```text
