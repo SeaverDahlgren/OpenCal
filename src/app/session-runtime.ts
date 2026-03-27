@@ -52,6 +52,13 @@ type MutableSession = {
   pendingConfirmation: PendingConfirmation | null;
 };
 
+type DecisionOutcome = {
+  reply: string;
+  continueLoop: boolean;
+  response?: AssistantTurnPayload;
+  persistAssistantMessage?: boolean;
+};
+
 export async function runAgentSessionTurn(
   deps: RuntimeDeps,
   storedSession: StoredSessionState,
@@ -129,11 +136,13 @@ export async function runAgentSessionTurn(
     finalReply = outcome.reply;
 
     if (outcome.response) {
-      session.messages.push(createConversationMessage("assistant", outcome.response.assistant.message));
-      await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
-        ...debugBase,
-        content: outcome.response.assistant.message,
-      });
+      if (outcome.persistAssistantMessage !== false) {
+        session.messages.push(createConversationMessage("assistant", outcome.response.assistant.message));
+        await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
+          ...debugBase,
+          content: outcome.response.assistant.message,
+        });
+      }
       return {
         session: persistSession(storedSession, session),
         response: outcome.response,
@@ -230,7 +239,7 @@ async function handleDecision(
   session: MutableSession,
   decision: AgentDecision,
   debugBase: Record<string, unknown>,
-): Promise<{ reply: string; continueLoop: boolean; response?: AssistantTurnPayload }> {
+): Promise<DecisionOutcome> {
   if (decision.type === "message") {
     session.taskState = completeResponseSubgoals(session.taskState, decision.message);
     if (hasPendingSubgoals(session.taskState)) {
@@ -302,6 +311,7 @@ async function handleDecision(
       return {
         reply: `Please confirm: should I ${actionSummary}?`,
         continueLoop: false,
+        persistAssistantMessage: false,
         response: buildTurnResponse(
           session,
           `Please confirm: should I ${actionSummary}?`,
