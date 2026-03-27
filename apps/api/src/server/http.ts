@@ -22,12 +22,18 @@ export async function jsonError(
   code: string,
   message: string,
   retryable: boolean,
+  options?: {
+    retryAfterSeconds?: number;
+  },
 ) {
+  const requestId = res.getHeader("x-request-id");
   return await jsonRoute(res, status, {
     error: {
       code,
       message,
       retryable,
+      retryAfterSeconds: options?.retryAfterSeconds,
+      requestId: typeof requestId === "string" ? requestId : undefined,
     },
   });
 }
@@ -38,4 +44,9 @@ export function readBearerToken(req: http.IncomingMessage) {
     return null;
   }
   return header.slice("Bearer ".length);
+}
+
+export function readAdminKey(req: http.IncomingMessage) {
+  const value = req.headers["x-admin-key"];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }

@@ -11,6 +11,7 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  ADMIN_API_KEY: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(1, "GOOGLE_OAUTH_CLIENT_ID is required"),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1, "GOOGLE_OAUTH_CLIENT_SECRET is required"),
   GOOGLE_OAUTH_REDIRECT_URI: z
@@ -23,6 +24,8 @@ const envSchema = z.object({
   MAX_OUTPUT_TOKENS: z.coerce.number().positive().default(2000),
   COMPACTION_THRESHOLD: z.coerce.number().gt(0).lt(1).default(0.8),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(14),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
@@ -35,6 +38,7 @@ export type AppConfig = {
   geminiApiKey?: string;
   groqApiKey?: string;
   openAiApiKey?: string;
+  adminApiKey?: string;
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
@@ -43,6 +47,8 @@ export type AppConfig = {
   maxOutputTokens: number;
   compactionThreshold: number;
   sessionTtlDays: number;
+  rateLimitWindowMs: number;
+  rateLimitMaxRequests: number;
   openAiModel: string;
   geminiModel: string;
   groqModel: string;
@@ -68,6 +74,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     geminiApiKey: env.GEMINI_API_KEY,
     groqApiKey: env.GROQ_API_KEY,
     openAiApiKey: env.OPENAI_API_KEY,
+    adminApiKey: env.ADMIN_API_KEY,
     googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
     googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
     googleRedirectUri: env.GOOGLE_OAUTH_REDIRECT_URI,
@@ -76,6 +83,8 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     maxOutputTokens: env.MAX_OUTPUT_TOKENS,
     compactionThreshold: env.COMPACTION_THRESHOLD,
     sessionTtlDays: env.SESSION_TTL_DAYS,
+    rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
+    rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
     openAiModel: env.OPENAI_MODEL,
     geminiModel: env.GEMINI_MODEL,
     groqModel: env.GROQ_MODEL,

@@ -36,6 +36,7 @@ Then fill in the Google OAuth values and one provider key:
 
 ```env
 APP_ENV=development
+ADMIN_API_KEY=
 GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
 GOOGLE_OAUTH_REDIRECT_URI=http://127.0.0.1:42813/oauth/callback
@@ -120,6 +121,14 @@ Health probes:
 GET /api/v1/health/live
 GET /api/v1/health/ready
 ```
+
+Optional support endpoint:
+
+```text
+GET /api/v1/admin/session
+```
+
+Enable it by setting `ADMIN_API_KEY` and sending that value as `x-admin-key`.
 
 ### Mobile App
 
@@ -236,6 +245,8 @@ Structured logs are written to:
 ```
 
 Use them to inspect tool failures, task-state transitions, blocked prompts, confirmation flows, and Google/API runtime issues.
+
+API errors include a request id when available so support/debugging can correlate a client-visible failure with backend logs.
 
 ## More Docs
 

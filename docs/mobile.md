@@ -104,6 +104,9 @@ read_when:
 - Health probes are available at:
   - `/api/v1/health/live`
   - `/api/v1/health/ready`
+- When `ADMIN_API_KEY` is configured, support tooling can inspect sessions through:
+  - `/api/v1/admin/session`
+- API error payloads now include request ids for support/debugging correlation.
 
 ## Notes
 

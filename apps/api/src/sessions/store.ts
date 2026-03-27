@@ -31,6 +31,16 @@ export class SessionStore {
     );
   }
 
+  async loadBySessionId(sessionId: string) {
+    const state = await this.readState();
+    return state.sessions[sessionId] ?? null;
+  }
+
+  async listSessions() {
+    const state = await this.readState();
+    return Object.values(state.sessions).sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }
+
   async createOrReplaceSession(user: { name: string; email: string }) {
     const state = await this.readState();
     const now = new Date().toISOString();

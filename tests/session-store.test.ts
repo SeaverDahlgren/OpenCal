@@ -110,6 +110,8 @@ function createConfig(privateDir: string): AppConfig {
     maxOutputTokens: 2000,
     compactionThreshold: 0.8,
     sessionTtlDays: 14,
+    rateLimitWindowMs: 60000,
+    rateLimitMaxRequests: 120,
     openAiModel: "gpt-5-mini",
     geminiModel: "gemini-2.5-flash",
     groqModel: "llama-3.3-70b-versatile",
