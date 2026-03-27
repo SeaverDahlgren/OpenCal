@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { AppConfig } from "../../../../src/config/env.js";
+import { readSecureJsonFile, writeSecureJsonFile } from "../storage/secure-json.js";
 import { createUserProfile, type UserProfile } from "./profile.js";
 
 const PROFILE_FILE = "user-profiles.json";
@@ -39,15 +40,13 @@ export class UserProfileStore {
 
   private async readState(): Promise<UserProfileState> {
     await fs.mkdir(this.config.privateDir, { recursive: true });
-    try {
-      return JSON.parse(await fs.readFile(this.filePath(), "utf8")) as UserProfileState;
-    } catch {
-      return { profiles: {} };
-    }
+    return (
+      (await readSecureJsonFile<UserProfileState>(this.filePath(), this.config.stateEncryptionKey)) ?? { profiles: {} }
+    );
   }
 
   private async writeState(state: UserProfileState) {
-    await fs.writeFile(this.filePath(), JSON.stringify(state, null, 2), "utf8");
+    await writeSecureJsonFile(this.filePath(), state, this.config.stateEncryptionKey);
   }
 
   private filePath() {

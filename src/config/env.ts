@@ -12,6 +12,7 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   ADMIN_API_KEY: z.string().optional(),
+  STATE_ENCRYPTION_KEY: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(1, "GOOGLE_OAUTH_CLIENT_ID is required"),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1, "GOOGLE_OAUTH_CLIENT_SECRET is required"),
   GOOGLE_OAUTH_REDIRECT_URI: z
@@ -39,6 +40,7 @@ export type AppConfig = {
   groqApiKey?: string;
   openAiApiKey?: string;
   adminApiKey?: string;
+  stateEncryptionKey?: string;
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
@@ -66,6 +68,9 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
   }
 
   const env = parsed.data;
+  if (env.APP_ENV !== "development" && !env.STATE_ENCRYPTION_KEY) {
+    throw new Error("Invalid environment configuration:\nSTATE_ENCRYPTION_KEY is required outside development");
+  }
 
   return {
     appEnv: env.APP_ENV,
@@ -75,6 +80,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     groqApiKey: env.GROQ_API_KEY,
     openAiApiKey: env.OPENAI_API_KEY,
     adminApiKey: env.ADMIN_API_KEY,
+    stateEncryptionKey: env.STATE_ENCRYPTION_KEY,
     googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
     googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
     googleRedirectUri: env.GOOGLE_OAUTH_REDIRECT_URI,

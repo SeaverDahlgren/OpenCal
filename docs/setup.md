@@ -20,6 +20,7 @@ read_when:
 2. Fill:
    - `APP_ENV`
    - `ADMIN_API_KEY` if you want the admin/support session endpoint enabled
+   - `STATE_ENCRYPTION_KEY`
    - `GOOGLE_OAUTH_CLIENT_ID`
    - `GOOGLE_OAUTH_CLIENT_SECRET`
    - `GOOGLE_OAUTH_REDIRECT_URI`
@@ -85,6 +86,7 @@ read_when:
   - `http://127.0.0.1:8787/api/v1/auth/google/callback`
 - The backend callback then creates the session and redirects back into Expo with `sessionToken` and `sessionId`.
 - Mobile/API sessions now expire based on `SESSION_TTL_DAYS`. Expired bearer tokens are pruned on read and must be re-established through auth.
+- In `staging` and `production`, `STATE_ENCRYPTION_KEY` is required and `.opencal/` session/profile files are encrypted at rest.
 - API errors now include a request id when available to simplify support/debugging.
 
 If the backend callback fails with an identity/authentication error after Google approval, the usual cause is that the stored token was granted before the app requested basic identity scopes. Re-run OAuth so Google grants the updated scope set.

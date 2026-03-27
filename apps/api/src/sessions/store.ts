@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { AppConfig } from "../../../../src/config/env.js";
 import type { SessionStateFile, StoredSessionState } from "../../../../src/app/session-types.js";
+import { readSecureJsonFile, writeSecureJsonFile } from "../storage/secure-json.js";
 
 const SESSION_FILE = "mobile-sessions.json";
 
@@ -114,23 +115,23 @@ export class SessionStore {
   private async readState(): Promise<SessionStateFile> {
     await fs.mkdir(this.config.privateDir, { recursive: true });
     const filePath = this.filePath();
-    try {
-      const parsed = JSON.parse(await fs.readFile(filePath, "utf8")) as SessionStateFile;
-      const nextState = pruneExpiredSessions(parsed);
-      if (nextState !== parsed) {
-        await this.writeState(nextState);
-      }
-      return nextState;
-    } catch {
+    const parsed = await readSecureJsonFile<SessionStateFile>(filePath, this.config.stateEncryptionKey);
+    if (!parsed) {
       return {
         currentSessionId: undefined,
         sessions: {},
       };
     }
+
+    const nextState = pruneExpiredSessions(parsed);
+    if (nextState !== parsed) {
+      await this.writeState(nextState);
+    }
+    return nextState;
   }
 
   private async writeState(state: SessionStateFile) {
-    await fs.writeFile(this.filePath(), JSON.stringify(state, null, 2), "utf8");
+    await writeSecureJsonFile(this.filePath(), state, this.config.stateEncryptionKey);
   }
 
   private filePath() {

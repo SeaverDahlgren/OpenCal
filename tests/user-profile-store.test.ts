@@ -86,6 +86,7 @@ function createConfig(privateDir: string): AppConfig {
     groqApiKey: "test-key",
     openAiApiKey: undefined,
     adminApiKey: undefined,
+    stateEncryptionKey: undefined,
     googleClientId: "google-client-id",
     googleClientSecret: "google-client-secret",
     googleRedirectUri: "http://127.0.0.1:42813/oauth/callback",

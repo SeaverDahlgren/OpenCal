@@ -37,6 +37,7 @@ Then fill in the Google OAuth values and one provider key:
 ```env
 APP_ENV=development
 ADMIN_API_KEY=
+STATE_ENCRYPTION_KEY=
 GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
 GOOGLE_OAUTH_REDIRECT_URI=http://127.0.0.1:42813/oauth/callback
@@ -55,6 +56,8 @@ API_PORT=8787
 SESSION_TTL_DAYS=14
 TOOL_RESULT_VERBOSITY=compact
 ```
+
+In `staging` or `production`, `STATE_ENCRYPTION_KEY` is required. The API uses it to encrypt persisted session and user-profile state under `.opencal/`.
 
 ## Google OAuth Setup
 
