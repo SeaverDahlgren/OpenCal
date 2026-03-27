@@ -164,6 +164,27 @@ export default function CalendarScreen() {
     void transitionMonth(nextMonth, nextSelectedDate, offset);
   }
 
+  function jumpToToday() {
+    const today = new Date();
+    const todayMonth = startOfMonth(today);
+    const todayDate = toDateOnly(today);
+    const direction =
+      todayMonth.getTime() === visibleMonth.getTime() ? 0 : todayMonth > visibleMonth ? 1 : -1;
+
+    if (direction === 0 && selectedDate === todayDate) {
+      return;
+    }
+
+    if (direction === 0) {
+      setSelectedDate(todayDate);
+      setError(null);
+      void loadDayData(todayDate);
+      return;
+    }
+
+    void transitionMonth(todayMonth, todayDate, direction);
+  }
+
   useFocusEffect(
     useCallback(() => {
       if (!token) {
@@ -216,9 +237,18 @@ export default function CalendarScreen() {
             <Text style={styles.monthButtonText}>Prev</Text>
           </TouchableOpacity>
           <Text style={styles.monthLabel}>{month.monthLabel}</Text>
-          <TouchableOpacity style={[styles.monthButton, monthAnimating && styles.monthButtonDisabled]} onPress={() => moveMonth(1)} disabled={monthAnimating}>
+          <View style={styles.monthActions}>
+            <TouchableOpacity
+              style={[styles.monthButton, monthAnimating && styles.monthButtonDisabled]}
+              onPress={jumpToToday}
+              disabled={monthAnimating}
+            >
+              <Text style={styles.monthButtonText}>Today</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.monthButton, monthAnimating && styles.monthButtonDisabled]} onPress={() => moveMonth(1)} disabled={monthAnimating}>
             <Text style={styles.monthButtonText}>Next</Text>
           </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.weekdays}>
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
@@ -297,6 +327,7 @@ const styles = StyleSheet.create({
   loader: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
   monthCard: { gap: spacing.md },
   monthNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
+  monthActions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   monthLabel: { flex: 1, textAlign: "center", color: colors.text, ...typography.section },
   monthButton: {
     backgroundColor: colors.surfaceHighest,
