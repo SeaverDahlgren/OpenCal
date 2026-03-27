@@ -138,6 +138,7 @@ read_when:
   - `/api/v1/health/ready`
 - The readiness payload now includes backend mode and queued job counts so hosted environments can distinguish `ready` from `degraded`.
 - API responses now default to no-store caching and basic defensive headers, which matters once the mobile backend is hosted behind a shared edge or reverse proxy.
+- In staging/production, the API also adds HSTS so hosted browser-based auth hops learn to prefer HTTPS.
 - JSON POST bodies are capped by `MAX_REQUEST_BODY_BYTES`, so malformed or oversized client submissions fail with a deterministic `413` instead of unbounded buffering.
 - The hosted API now also uses explicit request, headers, and keep-alive timeouts from env config rather than inheriting Node defaults.
 - When `ADMIN_API_KEY` is configured, support tooling can inspect sessions through:

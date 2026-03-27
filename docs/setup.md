@@ -96,6 +96,8 @@ read_when:
   - `X-Content-Type-Options: nosniff`
   - `X-Frame-Options: DENY`
   - `Referrer-Policy: no-referrer`
+- Outside `development`, the API also sends:
+  - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
 - JSON request bodies are capped by `MAX_REQUEST_BODY_BYTES`. Oversized auth, settings, or agent POSTs now fail fast with `413 REQUEST_TOO_LARGE`.
 - The API server now also applies explicit:
   - request timeout via `API_REQUEST_TIMEOUT_MS`

@@ -38,7 +38,7 @@ const server = http.createServer(async (req, res) => {
   const requestId = crypto.randomUUID();
   res.setHeader("x-request-id", requestId);
   res.setHeader("x-opencal-api-version", config.apiVersion ?? "1.0.0");
-  applySecurityHeaders(res);
+  applySecurityHeaders(res, config.appEnv);
   const debugLogPath = path.join(config.rootDir, ".opencal", "logs", `${new Date().toISOString().slice(0, 10)}.log`);
 
   try {

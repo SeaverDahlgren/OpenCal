@@ -1,4 +1,5 @@
 import http from "node:http";
+import type { AppConfig } from "../../../../src/config/env.js";
 
 export class RequestTooLargeError extends Error {
   constructor(readonly maxBytes: number) {
@@ -14,12 +15,18 @@ export class InvalidJsonBodyError extends Error {
   }
 }
 
-export function applySecurityHeaders(res: http.ServerResponse) {
+export function applySecurityHeaders(
+  res: http.ServerResponse,
+  appEnv: Pick<AppConfig, "appEnv">["appEnv"] = "development",
+) {
   res.setHeader("x-content-type-options", "nosniff");
   res.setHeader("x-frame-options", "DENY");
   res.setHeader("referrer-policy", "no-referrer");
   res.setHeader("permissions-policy", "geolocation=(), microphone=(), camera=()");
   res.setHeader("cache-control", "no-store");
+  if (appEnv !== "development") {
+    res.setHeader("strict-transport-security", "max-age=31536000; includeSubDomains");
+  }
 }
 
 export async function readJsonBody<T extends Record<string, unknown>>(req: http.IncomingMessage, maxBytes = 1024 * 1024) {
