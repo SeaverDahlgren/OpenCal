@@ -75,8 +75,8 @@ read_when:
 ## Current Scope
 
 - Today overview
-- Calendar month/day views
-- Settings with core preferences and Advanced AI/session controls
+- Calendar month/day views with month navigation and a header-level `Today` jump
+- Settings with editable profile name, core preferences, and Advanced AI/session controls
 - AI chat with inline clarification and confirmation cards
 
 ## State Ownership
@@ -98,6 +98,7 @@ read_when:
 - Route modules are split under `apps/api/src/routes/`.
 - Repeated route helpers now live in `apps/api/src/routes/utils.ts`.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
+- Settings writes user preference state into `USER.md`, including the editable `name` field surfaced in the mobile profile section.
 
 ## Notes
 
