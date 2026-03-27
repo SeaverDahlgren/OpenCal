@@ -22,8 +22,8 @@ describe("session store", () => {
     const store = new SessionStore(createConfig(privateDir));
 
     const session = await store.createOrReplaceSession({
-      name: "Seaver",
-      email: "seaver@example.com",
+      name: "Avery",
+      email: "avery@example.com",
     });
 
     expect(session.provider).toBe("groq");

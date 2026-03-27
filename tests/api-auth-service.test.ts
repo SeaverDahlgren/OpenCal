@@ -41,8 +41,8 @@ describe("api auth service", () => {
       sessionId: "sess_123",
       token: "token_123",
       user: {
-        name: "Seaver",
-        email: "seaver@example.com",
+        name: "Avery",
+        email: "avery@example.com",
       },
     };
     vi.spyOn(googleAuth, "loadStoredGoogleAuthorization").mockResolvedValue({

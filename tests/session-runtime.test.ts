@@ -116,7 +116,7 @@ function createStoredSession(): StoredSessionState {
   return {
     sessionId: "sess-123",
     token: "token-123",
-    user: { name: "Seaver", email: "seaver@example.com" },
+    user: { name: "Avery", email: "avery@example.com" },
     provider: "groq",
     model: "llama-3.3-70b-versatile",
     toolResultVerbosity: "compact",

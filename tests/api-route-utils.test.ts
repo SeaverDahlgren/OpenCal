@@ -7,7 +7,7 @@ describe("api route utils", () => {
     const session: StoredSessionState = {
       sessionId: "sess-123",
       token: "token-123",
-      user: { name: "Seaver", email: "seaver@example.com" },
+      user: { name: "Avery", email: "avery@example.com" },
       provider: "groq",
       model: "llama-3.3-70b-versatile",
       toolResultVerbosity: "compact",
@@ -71,7 +71,7 @@ describe("api route utils", () => {
       arguments: {
         subject: "Reschedule request",
         to: ["sarah@example.com"],
-        body: "Hi Sarah,\n\nCould we move our meeting to Thursday afternoon?\n\nThanks,\nSeaver",
+        body: "Hi Sarah,\n\nCould we move our meeting to Thursday afternoon?\n\nThanks,\nAvery",
       },
     });
 
@@ -81,7 +81,7 @@ describe("api route utils", () => {
         summary: 'create the draft "Reschedule request"',
         subject: "Reschedule request",
         recipients: ["sarah@example.com"],
-        body: "Hi Sarah,\n\nCould we move our meeting to Thursday afternoon?\n\nThanks,\nSeaver",
+        body: "Hi Sarah,\n\nCould we move our meeting to Thursday afternoon?\n\nThanks,\nAvery",
       },
     });
   });
@@ -107,7 +107,7 @@ function baseSession(pendingConfirmation: StoredSessionState["pendingConfirmatio
   return {
     sessionId: "sess-123",
     token: "token-123",
-    user: { name: "Seaver", email: "seaver@example.com" },
+    user: { name: "Avery", email: "avery@example.com" },
     provider: "groq",
     model: "llama-3.3-70b-versatile",
     toolResultVerbosity: "compact",
