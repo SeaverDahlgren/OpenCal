@@ -16,6 +16,7 @@ export default function SettingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showTimezoneOptions, setShowTimezoneOptions] = useState(false);
   const [showProviderOptions, setShowProviderOptions] = useState(false);
   const [showVerbosityOptions, setShowVerbosityOptions] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -105,10 +106,20 @@ export default function SettingsScreen() {
 
       <SurfaceCard elevated>
         <Text style={styles.sectionTitle}>Preferences</Text>
-        <Field
+        <SelectField
           label="Timezone"
           value={data.preferences.timezone}
-          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, timezone: value } })}
+          open={showTimezoneOptions}
+          options={buildTimezoneOptions(data.preferences.timezone)}
+          onToggle={() => {
+            setShowTimezoneOptions((value) => !value);
+            setShowProviderOptions(false);
+            setShowVerbosityOptions(false);
+          }}
+          onSelect={(value) => {
+            setData({ ...data, preferences: { ...data.preferences, timezone: value } });
+            setShowTimezoneOptions(false);
+          }}
         />
         <Field
           label="Work Start"
@@ -121,17 +132,19 @@ export default function SettingsScreen() {
           onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, workEnd: value } })}
         />
         <Field
-          label="Meeting Preference"
-          value={data.preferences.meetingPreference}
-          onChangeText={(value) =>
-            setData({ ...data, preferences: { ...data.preferences, meetingPreference: value } })
-          }
-        />
-        <Field
-          label="Assistant Notes"
-          value={data.preferences.assistantNotes}
+          label="Personalized Notes"
+          value={mergePersonalizedNotes(data.preferences.meetingPreference, data.preferences.assistantNotes)}
           multiline
-          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, assistantNotes: value } })}
+          onChangeText={(value) =>
+            setData({
+              ...data,
+              preferences: {
+                ...data.preferences,
+                meetingPreference: value,
+                assistantNotes: value,
+              },
+            })
+          }
         />
       </SurfaceCard>
 
@@ -152,6 +165,7 @@ export default function SettingsScreen() {
               ]}
               onToggle={() => {
                 setShowProviderOptions((value) => !value);
+                setShowTimezoneOptions(false);
                 setShowVerbosityOptions(false);
               }}
               onSelect={(value) => {
@@ -174,6 +188,7 @@ export default function SettingsScreen() {
               ]}
               onToggle={() => {
                 setShowVerbosityOptions((value) => !value);
+                setShowTimezoneOptions(false);
                 setShowProviderOptions(false);
               }}
               onSelect={(value) => {
@@ -204,6 +219,47 @@ export default function SettingsScreen() {
       </TouchableOpacity>
     </ScrollView>
   );
+}
+
+function buildTimezoneOptions(selectedValue: string) {
+  const options = [
+    { label: "Pacific Time", value: "America/Los_Angeles" },
+    { label: "Mountain Time", value: "America/Denver" },
+    { label: "Central Time", value: "America/Chicago" },
+    { label: "Eastern Time", value: "America/New_York" },
+    { label: "Alaska Time", value: "America/Anchorage" },
+    { label: "Hawaii Time", value: "Pacific/Honolulu" },
+    { label: "UTC", value: "UTC" },
+    { label: "London", value: "Europe/London" },
+    { label: "Paris", value: "Europe/Paris" },
+    { label: "Tokyo", value: "Asia/Tokyo" },
+    { label: "Sydney", value: "Australia/Sydney" },
+  ];
+
+  if (options.some((option) => option.value === selectedValue)) {
+    return options;
+  }
+
+  return [{ label: selectedValue, value: selectedValue }, ...options];
+}
+
+function mergePersonalizedNotes(meetingPreference: string, assistantNotes: string) {
+  const normalizedMeetingPreference = meetingPreference.trim();
+  const normalizedAssistantNotes = assistantNotes.trim();
+
+  if (!normalizedMeetingPreference) {
+    return normalizedAssistantNotes;
+  }
+
+  if (!normalizedAssistantNotes) {
+    return normalizedMeetingPreference;
+  }
+
+  if (normalizedMeetingPreference === normalizedAssistantNotes) {
+    return normalizedAssistantNotes;
+  }
+
+  return `${normalizedMeetingPreference}\n\n${normalizedAssistantNotes}`;
 }
 
 function Field(props: {
@@ -243,7 +299,7 @@ function SelectField(props: {
         <Text style={styles.selectChevron}>{props.open ? "▲" : "▼"}</Text>
       </TouchableOpacity>
       {props.open ? (
-        <View style={styles.selectMenu}>
+        <ScrollView style={styles.selectMenu} contentContainerStyle={styles.selectMenuContent} nestedScrollEnabled>
           {props.options.map((option) => {
             const active = option.value === props.value;
             return (
@@ -256,7 +312,7 @@ function SelectField(props: {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       ) : null}
     </View>
   );
@@ -291,6 +347,9 @@ const styles = StyleSheet.create({
   selectMenu: {
     backgroundColor: colors.surfaceHighest,
     borderRadius: radii.md,
+    maxHeight: 220,
+  },
+  selectMenuContent: {
     padding: 6,
     gap: 4,
   },
