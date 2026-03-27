@@ -86,6 +86,21 @@ export class SessionStore {
     return reset;
   }
 
+  async deleteSession(sessionId: string) {
+    const state = await this.readState();
+    const current = state.sessions[sessionId];
+    if (!current) {
+      return null;
+    }
+
+    delete state.sessions[sessionId];
+    if (state.currentSessionId === sessionId) {
+      state.currentSessionId = undefined;
+    }
+    await this.writeState(state);
+    return current;
+  }
+
   private async readState(): Promise<SessionStateFile> {
     await fs.mkdir(this.config.privateDir, { recursive: true });
     const filePath = this.filePath();

@@ -80,6 +80,12 @@ export class ApiClient {
     });
   }
 
+  async revokeSession() {
+    return this.request<{ ok: boolean; sessionId: string }>("/session/revoke", {
+      method: "POST",
+    });
+  }
+
   private async request<T>(path: string, init: RequestInit = {}) {
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,

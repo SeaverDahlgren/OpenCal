@@ -2,6 +2,7 @@ export type SessionDto = {
   session: {
     sessionId: string;
     status: string;
+    expiresAt?: string;
     user: {
       name: string;
       email: string;

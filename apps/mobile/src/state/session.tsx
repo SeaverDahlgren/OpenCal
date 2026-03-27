@@ -165,6 +165,13 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function clearSession() {
+    if (token) {
+      try {
+        await createApiClient(token).revokeSession();
+      } catch {
+        // Best-effort server-side revoke; local sign-out still proceeds.
+      }
+    }
     await SecureStore.setItemAsync(SIGNED_OUT_KEY, "true");
     await setToken(null);
     router.replace("/signin");

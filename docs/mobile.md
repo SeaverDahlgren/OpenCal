@@ -53,6 +53,7 @@ read_when:
 - Google OAuth remains backend-owned.
 - The mobile app expects a backend-issued bearer token.
 - Sessions are resolved per user email and expire after the configured session TTL.
+- Signing out now revokes the current backend session before clearing the local mobile token.
 - On cold start without a stored mobile bearer token, the session layer first tries `POST /api/v1/auth/google/reuse`.
 - `auth/google/reuse` is a private-beta bootstrap path:
   - if local Google auth is still valid, the backend reuses or creates the current mobile session

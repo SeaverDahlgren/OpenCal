@@ -77,6 +77,21 @@ describe("session store", () => {
     expect(await store.loadByToken(session.token)).toBeNull();
     expect(await store.getByUserEmail("avery@example.com")).toBeNull();
   });
+
+  it("deletes a session on revoke", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-session-store-"));
+    createdDirs.push(privateDir);
+    const store = new SessionStore(createConfig(privateDir));
+    const session = await store.createOrReplaceSession({
+      name: "Avery",
+      email: "avery@example.com",
+    });
+
+    const deleted = await store.deleteSession(session.sessionId);
+
+    expect(deleted?.sessionId).toBe(session.sessionId);
+    expect(await store.loadByToken(session.token)).toBeNull();
+  });
 });
 
 function createConfig(privateDir: string): AppConfig {

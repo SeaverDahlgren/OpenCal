@@ -173,6 +173,8 @@ Mobile/API sessions expire after `SESSION_TTL_DAYS`. Expired bearer tokens are r
 
 Open the mobile app, tap `Sign in with Google`, complete the browser flow, and return to the app.
 
+Signing out revokes the current backend session and then clears the local mobile token.
+
 ### Today
 
 The Today screen shows your current schedule and AI insight card. Pull to refresh whenever you want the latest calendar state.
