@@ -147,7 +147,7 @@ The hosted API now also uses explicit request, headers, and keep-alive timeouts 
 File-backed beta state is now bounded too: idempotency keys are capped by `IDEMPOTENCY_MAX_RECORDS`, terminal jobs are pruned after `JOB_RETENTION_DAYS`, and support audit history is capped by `AUDIT_MAX_EVENTS`.
 The in-memory beta rate limiter is bounded too: expired buckets are swept automatically, live buckets are capped by `RATE_LIMIT_MAX_KEYS`, and responses include `x-rate-limit-limit`, `x-rate-limit-remaining`, and `x-rate-limit-reset`.
 `loadConfig()` now also fails fast in production if you try to boot with file-backed core storage, a localhost/non-HTTPS API OAuth callback, or no `MIN_SUPPORTED_APP_VERSION`.
-`npm run deploy:check` turns those checks into a release-oriented report with explicit errors, warnings, and notes before you cut a beta deploy.
+`npm run deploy:check` turns those checks into a release-oriented report with explicit errors, warnings, and notes before you cut a beta deploy. Right now it also truthfully blocks a real production rollout because the `postgres` and `redis` adapters are still planned, not implemented.
 
 By default it listens on:
 

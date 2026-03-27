@@ -62,7 +62,7 @@ read_when:
 - `npm run api:worker:watch`
   Runs the worker in a polling loop for queued jobs.
 - `npm run deploy:check`
-  Validates hosted env assumptions and prints a deployment preflight report.
+  Validates hosted env assumptions and prints a deployment preflight report. It currently blocks true production rollout until `postgres` and `redis` runtime adapters land.
 - `npm run mobile:start`
   Runs `expo start` from `apps/mobile`.
 - The API and worker now handle `SIGINT` / `SIGTERM` gracefully so hosted restarts can drain without abrupt exits.

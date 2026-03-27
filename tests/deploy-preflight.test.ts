@@ -35,7 +35,7 @@ describe("deploy preflight", () => {
     );
   });
 
-  it("passes a hosted production config without warnings", () => {
+  it("surfaces unimplemented hosted backends as production blockers", () => {
     const report = buildPreflightReport(
       createConfig({
         appEnv: "production",
@@ -48,9 +48,13 @@ describe("deploy preflight", () => {
       }),
     );
 
-    expect(report.ok).toBe(true);
-    expect(report.errors).toEqual([]);
-    expect(report.warnings).toEqual([]);
+    expect(report.ok).toBe(false);
+    expect(report.errors).toEqual(
+      expect.arrayContaining([
+        "Postgres storage adapters are not implemented yet.",
+        "Redis job backends are not implemented yet.",
+      ]),
+    );
   });
 });
 

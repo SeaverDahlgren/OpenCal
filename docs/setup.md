@@ -88,7 +88,7 @@ read_when:
 ## Mobile / API Auth
 
 - Start the backend with `npm run api:dev`.
-- Run `npm run deploy:check` before staging/production deploys. It summarizes hard errors and softer warnings from the current env.
+- Run `npm run deploy:check` before staging/production deploys. It summarizes hard errors and softer warnings from the current env. Today it will still block a true production rollout because the `postgres` and `redis` runtime adapters are not implemented yet.
 - The API exposes health probes for hosted environments:
   - `GET /api/v1/health/live`
   - `GET /api/v1/health/ready`

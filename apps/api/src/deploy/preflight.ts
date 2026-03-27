@@ -16,9 +16,13 @@ export function buildPreflightReport(config: AppConfig): PreflightReport {
     notes.push("Production mode enabled.");
     if (config.storageBackend !== "postgres") {
       errors.push("Production should use STORAGE_BACKEND=postgres.");
+    } else {
+      errors.push("Postgres storage adapters are not implemented yet.");
     }
     if (config.jobBackend !== "redis") {
       errors.push("Production should use JOB_BACKEND=redis.");
+    } else {
+      errors.push("Redis job backends are not implemented yet.");
     }
     if (!config.minSupportedAppVersion) {
       errors.push("Production requires MIN_SUPPORTED_APP_VERSION.");
