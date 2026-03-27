@@ -2,7 +2,7 @@ import { z } from "zod";
 import { mapCalendarDayView, mapCalendarMonthView, mapTodayOverview } from "../dto/mappers.js";
 import { jsonError, jsonRoute } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
-import { buildUtcDayBounds, resolveUserTimezone } from "./utils.js";
+import { buildExpandedUtcDayBounds, buildExpandedUtcMonthBounds, dateKeyInTimezone, resolveUserTimezone } from "./utils.js";
 
 const monthQuerySchema = z.object({
   year: z.coerce.number().int(),
@@ -15,8 +15,9 @@ const dayQuerySchema = z.object({
 
 export async function handleCalendarRoute(ctx: AuthedRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/today") {
-    const today = new Date().toISOString().slice(0, 10);
-    const { timeMin, timeMax } = buildUtcDayBounds(today);
+    const timezone = resolveUserTimezone(ctx.workspace.user);
+    const today = dateKeyInTimezone(new Date(), timezone);
+    const { timeMin, timeMax } = buildExpandedUtcDayBounds(today);
     const events = await ctx.calendarService.searchEvents({
       calendarId: "primary",
       timeMin,
@@ -28,7 +29,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       200,
       mapTodayOverview({
         date: today,
-        timezone: resolveUserTimezone(ctx.workspace.user),
+        timezone,
         events,
       }),
     );
@@ -43,12 +44,12 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "year and month are required.", false);
     }
     const { year, month } = parsed.data;
-    const start = new Date(Date.UTC(year, month - 1, 1)).toISOString();
-    const end = new Date(Date.UTC(year, month, 0, 23, 59, 59)).toISOString();
+    const timezone = resolveUserTimezone(ctx.workspace.user);
+    const { timeMin, timeMax } = buildExpandedUtcMonthBounds(year, month);
     const events = await ctx.calendarService.searchEvents({
       calendarId: "primary",
-      timeMin: start,
-      timeMax: end,
+      timeMin,
+      timeMax,
       maxResults: 250,
     });
     return await jsonRoute(
@@ -57,7 +58,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       mapCalendarMonthView({
         year,
         month,
-        timezone: resolveUserTimezone(ctx.workspace.user),
+        timezone,
         events,
       }),
     );
@@ -71,7 +72,8 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "date is required.", false);
     }
     const { date } = parsed.data;
-    const { timeMin, timeMax } = buildUtcDayBounds(date);
+    const timezone = resolveUserTimezone(ctx.workspace.user);
+    const { timeMin, timeMax } = buildExpandedUtcDayBounds(date);
     const events = await ctx.calendarService.searchEvents({
       calendarId: "primary",
       timeMin,
@@ -83,7 +85,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       200,
       mapCalendarDayView({
         date,
-        timezone: resolveUserTimezone(ctx.workspace.user),
+        timezone,
         events,
       }),
     );

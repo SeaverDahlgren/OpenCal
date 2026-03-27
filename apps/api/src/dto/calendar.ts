@@ -11,11 +11,12 @@ export function mapTodayOverview(args: {
     calendarId?: string;
   }>;
 }) {
+  const visibleEvents = args.events.filter((event) => eventDateKey(event.start, args.timezone) === args.date);
   return {
     date: args.date,
     timezone: args.timezone,
     greeting: buildGreeting(),
-    schedule: args.events.map((event) => ({
+    schedule: visibleEvents.map((event) => ({
       eventId: event.id,
       title: event.summary,
       start: event.start,
@@ -42,12 +43,19 @@ export function mapCalendarMonthView(args: {
 }) {
   const today = new Date();
   const currentMonth = new Date(Date.UTC(args.year, args.month - 1, 1));
+  const eventCountByDate = new Map<string, number>();
+
+  for (const event of args.events) {
+    const dateKey = eventDateKey(event.start, args.timezone);
+    eventCountByDate.set(dateKey, (eventCountByDate.get(dateKey) ?? 0) + 1);
+  }
+
   const start = startOfCalendarGrid(currentMonth);
   const days = Array.from({ length: 42 }, (_, index) => {
     const date = new Date(start);
     date.setUTCDate(start.getUTCDate() + index);
     const dateOnly = date.toISOString().slice(0, 10);
-    const count = args.events.filter((event) => event.start.slice(0, 10) === dateOnly).length;
+    const count = eventCountByDate.get(dateOnly) ?? 0;
     return {
       date: dateOnly,
       inMonth: date.getUTCMonth() === currentMonth.getUTCMonth(),
@@ -87,6 +95,7 @@ export function mapCalendarDayView(args: {
     calendarId?: string;
   }>;
 }) {
+  const visibleEvents = args.events.filter((event) => eventDateKey(event.start, args.timezone) === args.date);
   return {
     date: args.date,
     dateLabel: new Date(`${args.date}T12:00:00Z`).toLocaleDateString("en-US", {
@@ -97,7 +106,7 @@ export function mapCalendarDayView(args: {
     }),
     timezone: args.timezone,
     calendarId: "primary",
-    items: args.events.map((event) => ({
+    items: visibleEvents.map((event) => ({
       eventId: event.id,
       title: event.summary,
       start: event.start,
@@ -153,4 +162,29 @@ function buildHighlights(eventCount: number) {
   return Array.from({ length: Math.min(eventCount, 3) }, (_, index) => ({
     tone: tones[index] ?? "primary",
   }));
+}
+
+function eventDateKey(start: string, timezone: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(start)) {
+    return start;
+  }
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(new Date(start))
+    .reduce(
+      (acc, part) => {
+        if (part.type === "year" || part.type === "month" || part.type === "day") {
+          acc[part.type] = part.value;
+        }
+        return acc;
+      },
+      { year: "0000", month: "01", day: "01" } as Record<"year" | "month" | "day", string>,
+    );
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
 }
