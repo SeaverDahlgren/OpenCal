@@ -162,7 +162,7 @@ const server = http.createServer(async (req, res) => {
     if (!session) {
       return await jsonError(res, 401, "SESSION_EXPIRED", "Session is invalid or expired.", false);
     }
-    const touchedSession = updateSessionClientContext(session, req);
+    const touchedSession = updateSessionClientContext(session, req, config.sessionTtlDays);
     if (touchedSession !== session) {
       await sessions.save(touchedSession);
       session = touchedSession;

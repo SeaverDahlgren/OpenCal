@@ -11,6 +11,7 @@ describe("session client context", () => {
         "x-opencal-platform": "ios",
         "user-agent": "ExpoGo/1",
       }),
+      14,
       "2026-03-26T20:00:00.000Z",
     );
 
@@ -40,10 +41,37 @@ describe("session client context", () => {
         "x-opencal-platform": "ios",
         "user-agent": "ExpoGo/1",
       }),
+      14,
       "2026-03-26T20:03:00.000Z",
     );
 
     expect(untouched).toBe(current);
+  });
+
+  it("extends expiry when the session is close to timing out", () => {
+    const current = createSession({
+      expiresAt: "2026-03-27T10:00:00.000Z",
+      client: {
+        appVersion: "1.2.3",
+        platform: "ios",
+        userAgent: "ExpoGo/1",
+        lastSeenAt: "2026-03-26T20:00:00.000Z",
+      },
+    });
+
+    const touched = updateSessionClientContext(
+      current,
+      createRequest({
+        "x-opencal-app-version": "1.2.3",
+        "x-opencal-platform": "ios",
+        "user-agent": "ExpoGo/1",
+      }),
+      14,
+      "2026-03-26T20:03:00.000Z",
+    );
+
+    expect(touched).not.toBe(current);
+    expect(touched.expiresAt).toBe("2026-04-09T20:03:00.000Z");
   });
 });
 

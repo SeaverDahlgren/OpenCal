@@ -2,10 +2,12 @@ import type { IncomingMessage } from "node:http";
 import type { StoredSessionState } from "../../../../src/app/session-types.js";
 
 const CLIENT_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
+const SESSION_RENEW_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 export function updateSessionClientContext(
   session: StoredSessionState,
   req: IncomingMessage,
+  sessionTtlDays: number,
   nowIso = new Date().toISOString(),
 ) {
   const nextClient = {
@@ -15,13 +17,15 @@ export function updateSessionClientContext(
     lastSeenAt: nowIso,
   };
 
-  if (!shouldPersistClientContext(session.client, nextClient, nowIso)) {
+  const nextExpiry = maybeExtendSessionExpiry(session.expiresAt, sessionTtlDays, nowIso);
+  if (!shouldPersistClientContext(session.client, nextClient, nextExpiry !== session.expiresAt, nowIso)) {
     return session;
   }
 
   return {
     ...session,
     updatedAt: nowIso,
+    expiresAt: nextExpiry,
     client: nextClient,
   };
 }
@@ -29,8 +33,12 @@ export function updateSessionClientContext(
 function shouldPersistClientContext(
   current: StoredSessionState["client"],
   next: NonNullable<StoredSessionState["client"]>,
+  expiryChanged: boolean,
   nowIso: string,
 ) {
+  if (expiryChanged) {
+    return true;
+  }
   if (!current) {
     return true;
   }
@@ -45,6 +53,16 @@ function shouldPersistClientContext(
 
   const elapsedMs = new Date(nowIso).getTime() - new Date(current.lastSeenAt).getTime();
   return elapsedMs >= CLIENT_TOUCH_INTERVAL_MS;
+}
+
+function maybeExtendSessionExpiry(currentExpiryIso: string, ttlDays: number, nowIso: string) {
+  const remainingMs = new Date(currentExpiryIso).getTime() - new Date(nowIso).getTime();
+  if (remainingMs > SESSION_RENEW_THRESHOLD_MS) {
+    return currentExpiryIso;
+  }
+  const nextExpiry = new Date(nowIso);
+  nextExpiry.setUTCDate(nextExpiry.getUTCDate() + ttlDays);
+  return nextExpiry.toISOString();
 }
 
 function readHeader(req: IncomingMessage, name: string) {

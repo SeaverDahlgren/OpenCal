@@ -71,6 +71,7 @@ read_when:
 - The mobile app sends `x-opencal-app-version` on every API request.
 - The mobile app now also sends `x-opencal-platform`, and the API stores the latest app version/platform metadata on the backend session for support/debugging.
 - Sessions are resolved per user email and expire after the configured session TTL.
+- Active sessions renew when they are close to expiry so normal mobile usage does not force avoidable reauth.
 - Session and profile state can be encrypted at rest with `STATE_ENCRYPTION_KEY`.
 - Persisted session records now keep a hash of the bearer token instead of the raw token string.
 - API Google credentials are now stored per user instead of one shared machine token.
