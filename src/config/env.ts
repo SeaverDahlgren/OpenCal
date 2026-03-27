@@ -25,6 +25,7 @@ const envSchema = z.object({
   MAX_OUTPUT_TOKENS: z.coerce.number().positive().default(2000),
   COMPACTION_THRESHOLD: z.coerce.number().gt(0).lt(1).default(0.8),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(14),
+  IDEMPOTENCY_TTL_HOURS: z.coerce.number().int().positive().default(24),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
@@ -49,6 +50,7 @@ export type AppConfig = {
   maxOutputTokens: number;
   compactionThreshold: number;
   sessionTtlDays: number;
+  idempotencyTtlHours: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
   openAiModel: string;
@@ -89,6 +91,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     maxOutputTokens: env.MAX_OUTPUT_TOKENS,
     compactionThreshold: env.COMPACTION_THRESHOLD,
     sessionTtlDays: env.SESSION_TTL_DAYS,
+    idempotencyTtlHours: env.IDEMPOTENCY_TTL_HOURS,
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
     openAiModel: env.OPENAI_MODEL,

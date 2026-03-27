@@ -7,7 +7,7 @@ import type { StoredSessionState } from "../../../../src/app/session-types.js";
 import type { ApiAuthService } from "../auth/service.js";
 import type { GoogleCalendarService } from "../../../../src/integrations/google/calendar.js";
 import type { UserProfile } from "../users/profile.js";
-import type { SessionRepository, UserProfileRepository } from "../storage/types.js";
+import type { IdempotencyRepository, SessionRepository, UserProfileRepository } from "../storage/types.js";
 
 export type PublicRouteContext = {
   req: IncomingMessage;
@@ -17,6 +17,7 @@ export type PublicRouteContext = {
   auth: ApiAuthService;
   sessions: SessionRepository;
   profiles: UserProfileRepository;
+  idempotency: IdempotencyRepository;
 };
 
 export type SessionRouteContext = PublicRouteContext & {

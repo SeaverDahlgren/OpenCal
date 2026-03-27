@@ -18,12 +18,14 @@ import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { SessionStore } from "./sessions/store.js";
 import { GoogleTokenStore } from "./auth/token-store.js";
 import { UserProfileStore } from "./users/store.js";
-import type { GoogleTokenRepository, SessionRepository, UserProfileRepository } from "./storage/types.js";
+import { IdempotencyStore } from "./idempotency/store.js";
+import type { GoogleTokenRepository, IdempotencyRepository, SessionRepository, UserProfileRepository } from "./storage/types.js";
 
 const config = loadConfig(process.cwd());
 const sessions: SessionRepository = new SessionStore(config);
 const profiles: UserProfileRepository = new UserProfileStore(config);
 const tokens: GoogleTokenRepository = new GoogleTokenStore(config);
+const idempotency: IdempotencyRepository = new IdempotencyStore(config);
 const auth = new ApiAuthService(config, sessions, tokens);
 const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rateLimitMaxRequests);
 
@@ -105,6 +107,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      idempotency,
     });
     if (adminHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {
@@ -124,6 +127,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      idempotency,
     });
     if (publicHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {
@@ -155,6 +159,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      idempotency,
       session,
       profile,
     });
@@ -181,6 +186,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      idempotency,
       session,
       profile,
       googleClients,

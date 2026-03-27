@@ -65,6 +65,7 @@ function createConfig(privateDir: string, stateEncryptionKey?: string): AppConfi
     maxOutputTokens: 2000,
     compactionThreshold: 0.8,
     sessionTtlDays: 14,
+    idempotencyTtlHours: 24,
     rateLimitWindowMs: 60000,
     rateLimitMaxRequests: 120,
     openAiModel: "gpt-5-mini",

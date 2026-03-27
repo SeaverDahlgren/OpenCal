@@ -56,6 +56,7 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: store,
       profiles: {} as never,
+      idempotency: {} as never,
     });
     expect(reset.statusCode()).toBe(200);
     expect(JSON.parse(reset.body())).toMatchObject({
@@ -76,6 +77,7 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: store,
       profiles: {} as never,
+      idempotency: {} as never,
     });
     expect(revoke.statusCode()).toBe(200);
     expect(JSON.parse(revoke.body())).toMatchObject({
@@ -107,6 +109,7 @@ function createConfig(privateDir: string): AppConfig {
     maxOutputTokens: 2000,
     compactionThreshold: 0.8,
     sessionTtlDays: 14,
+    idempotencyTtlHours: 24,
     rateLimitWindowMs: 60000,
     rateLimitMaxRequests: 120,
     openAiModel: "gpt-5-mini",

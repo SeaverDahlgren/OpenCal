@@ -24,3 +24,8 @@ export interface GoogleTokenRepository {
   load(email: string): Promise<Credentials | null>;
   save(email: string, credentials: Credentials): Promise<void>;
 }
+
+export interface IdempotencyRepository {
+  load(sessionId: string, key: string): Promise<import("../idempotency/store.js").IdempotencyRecord | null>;
+  save(record: import("../idempotency/store.js").IdempotencyRecord): Promise<void>;
+}

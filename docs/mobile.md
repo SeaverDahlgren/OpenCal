@@ -108,6 +108,7 @@ read_when:
 
 - Route modules are split under `apps/api/src/routes/`.
 - Repeated route helpers now live in `apps/api/src/routes/utils.ts`.
+- `POST /api/v1/agent/turn` supports `Idempotency-Key` for retry-safe mobile submits.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
 - Settings reads and writes per-user profile state from the API profile store.
 - `USER.md` is now a legacy mirror/export path for compatibility, not the API source of truth.

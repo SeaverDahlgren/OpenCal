@@ -50,3 +50,8 @@ export function readAdminKey(req: http.IncomingMessage) {
   const value = req.headers["x-admin-key"];
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
+
+export function readIdempotencyKey(req: http.IncomingMessage) {
+  const value = req.headers["idempotency-key"];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
