@@ -98,6 +98,24 @@ export class JobStore {
     return failed;
   }
 
+  async retry(jobId: string, runAt = new Date().toISOString()) {
+    const state = await this.readState();
+    const current = state.jobs[jobId];
+    if (!current) {
+      return null;
+    }
+    const next: JobRecord = {
+      ...current,
+      status: "pending",
+      runAt,
+      updatedAt: new Date().toISOString(),
+      lastError: undefined,
+    };
+    state.jobs[jobId] = next;
+    await this.writeState(state);
+    return next;
+  }
+
   private async readState(): Promise<JobState> {
     return (
       (await readSecureJsonFile<JobState>(this.filePath(), this.config.stateEncryptionKey)) ?? { jobs: {} }

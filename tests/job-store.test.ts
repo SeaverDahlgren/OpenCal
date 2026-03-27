@@ -56,6 +56,29 @@ describe("job store", () => {
       lastError: "temporary",
     });
   });
+
+  it("requeues an existing job for immediate retry", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-job-store-"));
+    createdDirs.push(privateDir);
+    const store = new JobStore(createConfig(privateDir));
+    const job = await store.enqueue({
+      kind: "agent_turn_retry",
+      payload: {
+        sessionId: "sess-1",
+        action: { type: "message", message: "retry this" },
+      },
+      maxAttempts: 2,
+      runAt: "2030-03-26T00:00:00.000Z",
+    });
+
+    const retried = await store.retry(job.jobId, "2000-03-26T00:00:00.000Z");
+
+    expect(retried).toMatchObject({
+      jobId: job.jobId,
+      status: "pending",
+      runAt: "2000-03-26T00:00:00.000Z",
+    });
+  });
 });
 
 function createConfig(privateDir: string): AppConfig {

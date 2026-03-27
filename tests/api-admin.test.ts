@@ -3,6 +3,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { JobStore } from "../apps/api/src/jobs/store.js";
 import { handleAdminRoute } from "../apps/api/src/routes/admin.js";
 import { SessionStore } from "../apps/api/src/sessions/store.js";
 import type { AppConfig } from "../src/config/env.js";
@@ -57,7 +58,7 @@ describe("admin-ready session store helpers", () => {
       sessions: store,
       profiles: {} as never,
       idempotency: {} as never,
-      jobs: {} as never,
+      jobs: new JobStore(createConfig(privateDir)),
     });
     expect(reset.statusCode()).toBe(200);
     expect(JSON.parse(reset.body())).toMatchObject({
@@ -79,7 +80,7 @@ describe("admin-ready session store helpers", () => {
       sessions: store,
       profiles: {} as never,
       idempotency: {} as never,
-      jobs: {} as never,
+      jobs: new JobStore(createConfig(privateDir)),
     });
     expect(revoke.statusCode()).toBe(200);
     expect(JSON.parse(revoke.body())).toMatchObject({
@@ -90,6 +91,66 @@ describe("admin-ready session store helpers", () => {
       },
     });
     expect(await store.loadBySessionId(session.sessionId)).toBeNull();
+  });
+
+  it("lists and retries queued jobs through the admin route", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-job-store-"));
+    createdDirs.push(privateDir);
+    const jobs = new JobStore(createConfig(privateDir));
+    const queued = await jobs.enqueue({
+      kind: "agent_turn_retry",
+      payload: {
+        sessionId: "sess-123",
+        action: { type: "message", message: "retry this" },
+      },
+      maxAttempts: 3,
+      runAt: "2030-03-26T00:00:00.000Z",
+    });
+
+    const list = createResponse();
+    await handleAdminRoute({
+      req: createRequest("GET", "/api/v1/admin/job?status=pending"),
+      res: list.res,
+      url: new URL("http://127.0.0.1:8787/api/v1/admin/job?status=pending"),
+      config: createConfig(privateDir),
+      auth: {} as never,
+      sessions: new SessionStore(createConfig(privateDir)),
+      profiles: {} as never,
+      idempotency: {} as never,
+      jobs,
+    });
+
+    expect(JSON.parse(list.body())).toMatchObject({
+      jobs: [
+        {
+          jobId: queued.jobId,
+          status: "pending",
+          sessionId: "sess-123",
+        },
+      ],
+    });
+
+    const retry = createResponse();
+    await handleAdminRoute({
+      req: createRequest("POST", `/api/v1/admin/job/retry?jobId=${queued.jobId}`),
+      res: retry.res,
+      url: new URL(`http://127.0.0.1:8787/api/v1/admin/job/retry?jobId=${queued.jobId}`),
+      config: createConfig(privateDir),
+      auth: {} as never,
+      sessions: new SessionStore(createConfig(privateDir)),
+      profiles: {} as never,
+      idempotency: {} as never,
+      jobs,
+    });
+
+    expect(JSON.parse(retry.body())).toMatchObject({
+      ok: true,
+      action: "retry",
+      job: {
+        jobId: queued.jobId,
+        status: "pending",
+      },
+    });
   });
 });
 

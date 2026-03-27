@@ -38,4 +38,5 @@ export interface JobRepository {
   reserveNext(): Promise<JobRecord | null>;
   complete(jobId: string, result: JobRecord["result"]): Promise<JobRecord | null>;
   fail(jobId: string, error: string, nextRunAt?: string): Promise<JobRecord | null>;
+  retry(jobId: string, runAt?: string): Promise<JobRecord | null>;
 }
