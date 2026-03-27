@@ -16,6 +16,8 @@ export default function SettingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showProviderOptions, setShowProviderOptions] = useState(false);
+  const [showVerbosityOptions, setShowVerbosityOptions] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -140,28 +142,50 @@ export default function SettingsScreen() {
         </View>
         {showAdvanced ? (
           <View style={{ gap: spacing.md }}>
-            <Field
+            <SelectField
               label="Provider"
               value={data.advanced.provider}
-              onChangeText={(value) => setData({ ...data, advanced: { ...data.advanced, provider: value } })}
+              open={showProviderOptions}
+              options={[
+                { label: "Groq", value: "groq" },
+                { label: "Gemini", value: "gemini" },
+              ]}
+              onToggle={() => {
+                setShowProviderOptions((value) => !value);
+                setShowVerbosityOptions(false);
+              }}
+              onSelect={(value) => {
+                setData({ ...data, advanced: { ...data.advanced, provider: value } });
+                setShowProviderOptions(false);
+              }}
             />
             <Field
               label="Model"
               value={data.advanced.model}
               onChangeText={(value) => setData({ ...data, advanced: { ...data.advanced, model: value } })}
             />
-            <Field
+            <SelectField
               label="Verbosity"
               value={data.advanced.toolResultVerbosity}
-              onChangeText={(value) =>
+              open={showVerbosityOptions}
+              options={[
+                { label: "Compact", value: "compact" },
+                { label: "Verbose", value: "verbose" },
+              ]}
+              onToggle={() => {
+                setShowVerbosityOptions((value) => !value);
+                setShowProviderOptions(false);
+              }}
+              onSelect={(value) => {
                 setData({
                   ...data,
                   advanced: {
                     ...data.advanced,
                     toolResultVerbosity: value === "verbose" ? "verbose" : "compact",
                   },
-                })
-              }
+                });
+                setShowVerbosityOptions(false);
+              }}
             />
             <Text style={styles.muted}>Session ID: {data.advanced.sessionId}</Text>
             <TouchableOpacity style={styles.secondaryButton} onPress={() => void handleResetAgentSession()}>
@@ -202,6 +226,42 @@ function Field(props: {
   );
 }
 
+function SelectField(props: {
+  label: string;
+  value: string;
+  open: boolean;
+  options: Array<{ label: string; value: string }>;
+  onToggle: () => void;
+  onSelect: (value: string) => void;
+}) {
+  const selected = props.options.find((option) => option.value === props.value);
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={styles.label}>{props.label}</Text>
+      <TouchableOpacity style={styles.selectTrigger} onPress={props.onToggle}>
+        <Text style={styles.selectValue}>{selected?.label ?? props.value}</Text>
+        <Text style={styles.selectChevron}>{props.open ? "▲" : "▼"}</Text>
+      </TouchableOpacity>
+      {props.open ? (
+        <View style={styles.selectMenu}>
+          {props.options.map((option) => {
+            const active = option.value === props.value;
+            return (
+              <TouchableOpacity
+                key={option.value}
+                style={[styles.selectOption, active && styles.selectOptionActive]}
+                onPress={() => props.onSelect(option.value)}
+              >
+                <Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]}>{option.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 },
@@ -216,6 +276,39 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
+  },
+  selectTrigger: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  selectValue: { color: colors.text, fontSize: 16 },
+  selectChevron: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
+  selectMenu: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    padding: 6,
+    gap: 4,
+  },
+  selectOption: {
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  selectOptionActive: {
+    backgroundColor: colors.surface,
+  },
+  selectOptionText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  selectOptionTextActive: {
+    color: colors.primary,
   },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   primaryButton: {
