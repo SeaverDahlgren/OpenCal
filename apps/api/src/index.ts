@@ -18,11 +18,12 @@ import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { SessionStore } from "./sessions/store.js";
 import { GoogleTokenStore } from "./auth/token-store.js";
 import { UserProfileStore } from "./users/store.js";
+import type { GoogleTokenRepository, SessionRepository, UserProfileRepository } from "./storage/types.js";
 
 const config = loadConfig(process.cwd());
-const sessions = new SessionStore(config);
-const profiles = new UserProfileStore(config);
-const tokens = new GoogleTokenStore(config);
+const sessions: SessionRepository = new SessionStore(config);
+const profiles: UserProfileRepository = new UserProfileStore(config);
+const tokens: GoogleTokenRepository = new GoogleTokenStore(config);
 const auth = new ApiAuthService(config, sessions, tokens);
 const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rateLimitMaxRequests);
 

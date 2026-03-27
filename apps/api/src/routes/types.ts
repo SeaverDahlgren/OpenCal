@@ -5,10 +5,9 @@ import type { GoogleClients } from "../../../../src/integrations/google/auth.js"
 import type { WorkspaceFiles } from "../../../../src/memory/workspace.js";
 import type { StoredSessionState } from "../../../../src/app/session-types.js";
 import type { ApiAuthService } from "../auth/service.js";
-import type { SessionStore } from "../sessions/store.js";
 import type { GoogleCalendarService } from "../../../../src/integrations/google/calendar.js";
-import type { UserProfileStore } from "../users/store.js";
 import type { UserProfile } from "../users/profile.js";
+import type { SessionRepository, UserProfileRepository } from "../storage/types.js";
 
 export type PublicRouteContext = {
   req: IncomingMessage;
@@ -16,8 +15,8 @@ export type PublicRouteContext = {
   url: URL;
   config: AppConfig;
   auth: ApiAuthService;
-  sessions: SessionStore;
-  profiles: UserProfileStore;
+  sessions: SessionRepository;
+  profiles: UserProfileRepository;
 };
 
 export type SessionRouteContext = PublicRouteContext & {

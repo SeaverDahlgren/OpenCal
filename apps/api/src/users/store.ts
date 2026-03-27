@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { AppConfig } from "../../../../src/config/env.js";
 import { readSecureJsonFile, writeSecureJsonFile } from "../storage/secure-json.js";
+import type { UserProfileRepository } from "../storage/types.js";
 import { createUserProfile, type UserProfile } from "./profile.js";
 
 const PROFILE_FILE = "user-profiles.json";
@@ -10,7 +11,7 @@ type UserProfileState = {
   profiles: Record<string, UserProfile>;
 };
 
-export class UserProfileStore {
+export class UserProfileStore implements UserProfileRepository {
   constructor(private readonly config: AppConfig) {}
 
   async load(email: string) {

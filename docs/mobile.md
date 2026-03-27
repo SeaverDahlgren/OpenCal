@@ -38,6 +38,8 @@ read_when:
   User profile shape plus legacy `USER.md` render/seed helpers.
 - `apps/api/src/users/store.ts`
   Per-user persisted profile storage for API settings and timezone reads.
+- `apps/api/src/storage/types.ts`
+  Repository interfaces that let the API swap file-backed storage for database-backed adapters without changing route code.
 - `apps/api/src/dto/mappers.ts`
   Thin compatibility barrel that re-exports the DTO functions above.
 - `apps/mobile/src/state/session.tsx`

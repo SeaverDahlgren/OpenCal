@@ -7,14 +7,14 @@ import {
   exchangeGoogleAuthorizationCode,
   loadStoredGoogleAuthorization,
 } from "../../../../src/integrations/google/auth.js";
-import { SessionStore } from "../sessions/store.js";
 import { GoogleTokenStore } from "./token-store.js";
+import type { GoogleTokenRepository, SessionRepository } from "../storage/types.js";
 
 export class ApiAuthService {
   constructor(
     private readonly config: AppConfig,
-    private readonly sessions: SessionStore,
-    private readonly tokens: GoogleTokenStore,
+    private readonly sessions: SessionRepository,
+    private readonly tokens: GoogleTokenRepository,
   ) {}
 
   buildAuthUrl(state?: string) {

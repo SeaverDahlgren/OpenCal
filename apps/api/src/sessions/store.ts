@@ -4,10 +4,11 @@ import path from "node:path";
 import type { AppConfig } from "../../../../src/config/env.js";
 import type { SessionStateFile, StoredSessionState } from "../../../../src/app/session-types.js";
 import { readSecureJsonFile, writeSecureJsonFile } from "../storage/secure-json.js";
+import type { SessionRepository } from "../storage/types.js";
 
 const SESSION_FILE = "mobile-sessions.json";
 
-export class SessionStore {
+export class SessionStore implements SessionRepository {
   constructor(private readonly config: AppConfig) {}
 
   async loadByToken(token: string) {

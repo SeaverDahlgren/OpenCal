@@ -1,6 +1,7 @@
 import type { Credentials } from "google-auth-library";
 import type { AppConfig } from "../../../../src/config/env.js";
 import { readSecureJsonFile, writeSecureJsonFile } from "../storage/secure-json.js";
+import type { GoogleTokenRepository } from "../storage/types.js";
 
 const TOKEN_FILE = "google-user-tokens.json";
 
@@ -8,7 +9,7 @@ type GoogleTokenState = {
   tokens: Record<string, Credentials>;
 };
 
-export class GoogleTokenStore {
+export class GoogleTokenStore implements GoogleTokenRepository {
   constructor(private readonly config: AppConfig) {}
 
   async load(email: string) {
