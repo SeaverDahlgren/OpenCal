@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { ActivityIndicator, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
 import type { SettingsDto } from "../../src/api/types";
 import { EditorialHeader } from "../../src/components/EditorialHeader";
@@ -13,17 +13,23 @@ export default function SettingsScreen() {
   const { token, clearSession, resetAgentSession } = useSession();
   const [data, setData] = useState<SettingsDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { refreshing?: boolean }) => {
     if (!token) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
-    setLoading(true);
+    if (options?.refreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       setData(await createApiClient(token).getSettings());
@@ -31,6 +37,7 @@ export default function SettingsScreen() {
       setError(nextError instanceof Error ? nextError.message : "Failed to load settings.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [token]);
 
@@ -70,7 +77,7 @@ export default function SettingsScreen() {
     }
   }
 
-  if (loading || !data) {
+  if (loading && !data) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator color={colors.primary} />
@@ -79,7 +86,11 @@ export default function SettingsScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load({ refreshing: true })} tintColor={colors.primary} />}
+    >
       <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Control profile preferences, planning defaults, and advanced beta configuration." />
       {notice ? <InlineNotice tone="success" message={notice} /> : null}
       {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}

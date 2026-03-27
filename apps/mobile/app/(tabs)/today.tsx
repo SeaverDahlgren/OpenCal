@@ -13,16 +13,22 @@ export default function TodayScreen() {
   const { token, scheduleVersion } = useSession();
   const [data, setData] = useState<TodayDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const loadedRef = useRef(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { refreshing?: boolean }) => {
     if (!token) {
       setLoading(false);
+      setRefreshing(false);
       return;
     }
-    setLoading(true);
+    if (options?.refreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       setData(await createApiClient(token).getToday());
@@ -30,6 +36,7 @@ export default function TodayScreen() {
       setError(nextError instanceof Error ? nextError.message : "Failed to load today.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [token]);
 
@@ -47,7 +54,7 @@ export default function TodayScreen() {
     void load();
   }, [load, scheduleVersion, token]);
 
-  if (loading) {
+  if (loading && !data) {
     return <CenteredLoader />;
   }
 
@@ -55,7 +62,7 @@ export default function TodayScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.primary} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load({ refreshing: true })} tintColor={colors.primary} />}
     >
       <EditorialHeader eyebrow={formatTodayEyebrow(data?.date)} title={data?.greeting ?? "Today"} subtitle="Strategic overview of your day." />
       {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
