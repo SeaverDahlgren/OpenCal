@@ -23,6 +23,8 @@ OpenCal can read your calendar, find availability, create or update events, sear
 
 `apps/web` contains the React reviewer app that is intended for a hosted demo URL.
 
+`deploy/oracle` contains a simple Oracle VM review-window deployment path for the API.
+
 ## Prerequisites
 
 You need Node `>=20.11.0`, a Google Cloud project with Calendar and Gmail enabled, and at least one LLM API key for Gemini or Groq. If you want to run the mobile app locally, you also need Expo Go, an emulator, or the iOS Simulator. If you want a reviewer-friendly live URL, the intended path is a hosted API plus the React web app on Vercel.
@@ -321,6 +323,18 @@ The review flow is:
 2. reviewer signs in with the invited Google account
 3. the API completes OAuth and redirects back to the web app
 4. reviewer uses Today, Calendar, Settings, and AI chat in the browser
+
+If you want a quicker infrastructure handoff, use the templates in:
+
+```text
+deploy/oracle/
+```
+
+That folder contains:
+
+- a sample `systemd` unit
+- a sample `nginx` reverse proxy config
+- a short Oracle/Vercel deployment runbook
 
 ## Share With Friends
 

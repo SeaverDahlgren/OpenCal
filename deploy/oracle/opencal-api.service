@@ -1,0 +1,16 @@
+[Unit]
+Description=OpenCal API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/OpenCal
+EnvironmentFile=/home/ubuntu/OpenCal/.env
+ExecStart=/usr/bin/npm run api:dev
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
