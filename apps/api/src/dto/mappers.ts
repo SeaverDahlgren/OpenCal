@@ -5,5 +5,4 @@ export {
 } from "./calendar.js";
 export {
   mapSettingsView,
-  updateUserMarkdown,
 } from "./settings.js";

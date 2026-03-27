@@ -194,7 +194,7 @@ The Calendar screen lets you move between months, inspect day details, and jump 
 
 ### Settings
 
-The Settings screen lets you edit your profile name, timezone, work hours, and personalized notes. Saving settings updates `USER.md`. Advanced mode exposes provider, model, and verbosity settings. Sign out is always available at the bottom of the page.
+The Settings screen lets you edit your profile name, timezone, work hours, and personalized notes. Saving settings updates the API-side user profile store and mirrors the result into `USER.md` for compatibility. Advanced mode exposes provider, model, and verbosity settings. Sign out is always available at the bottom of the page.
 
 ### AI Chat
 

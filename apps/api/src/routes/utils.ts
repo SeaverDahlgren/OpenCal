@@ -1,7 +1,8 @@
 import type { StoredSessionState } from "../../../../src/app/session-types.js";
+import type { UserProfile } from "../users/profile.js";
 
-export function resolveUserTimezone(userMarkdown = "") {
-  return userMarkdown.match(/timezone:\s*([A-Za-z_\/]+)/i)?.[1] ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function resolveUserTimezone(profile?: Pick<UserProfile, "timezone"> | null) {
+  return profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
 export function resolveSystemTimezone() {
@@ -118,14 +119,17 @@ export function buildChatHistoryRoutePayload(session: StoredSessionState) {
   };
 }
 
-export function buildSessionRoutePayload(session: StoredSessionState, userMarkdown = "") {
+export function buildSessionRoutePayload(session: StoredSessionState, profile: UserProfile) {
   return {
     session: {
       sessionId: session.sessionId,
       status: "authenticated",
-      user: session.user,
+      user: {
+        email: session.user.email,
+        name: profile.name || session.user.name,
+      },
       expiresAt: session.expiresAt,
-      timezone: resolveUserTimezone(userMarkdown) || resolveSystemTimezone(),
+      timezone: resolveUserTimezone(profile) || resolveSystemTimezone(),
       hasBlockedTask: Boolean(session.taskState?.awaitingUserResponse || session.pendingConfirmation),
       activeTaskSummary: session.taskState?.taskSummary ?? "",
     },

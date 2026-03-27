@@ -15,7 +15,7 @@ const dayQuerySchema = z.object({
 
 export async function handleCalendarRoute(ctx: AuthedRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/today") {
-    const timezone = resolveUserTimezone(ctx.workspace.user);
+    const timezone = resolveUserTimezone(ctx.profile);
     const today = dateKeyInTimezone(new Date(), timezone);
     const { timeMin, timeMax } = buildExpandedUtcDayBounds(today);
     const events = await ctx.calendarService.searchEvents({
@@ -44,7 +44,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "year and month are required.", false);
     }
     const { year, month } = parsed.data;
-    const timezone = resolveUserTimezone(ctx.workspace.user);
+    const timezone = resolveUserTimezone(ctx.profile);
     const { timeMin, timeMax } = buildExpandedUtcMonthBounds(year, month);
     const events = await ctx.calendarService.searchEvents({
       calendarId: "primary",
@@ -72,7 +72,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "date is required.", false);
     }
     const { date } = parsed.data;
-    const timezone = resolveUserTimezone(ctx.workspace.user);
+    const timezone = resolveUserTimezone(ctx.profile);
     const { timeMin, timeMax } = buildExpandedUtcDayBounds(date);
     const events = await ctx.calendarService.searchEvents({
       calendarId: "primary",

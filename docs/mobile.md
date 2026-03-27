@@ -33,7 +33,11 @@ read_when:
 - `apps/api/src/dto/calendar.ts`
   Today/month/day DTO mappers.
 - `apps/api/src/dto/settings.ts`
-  Settings DTO mappers and `USER.md` preference updates.
+  Settings DTO mappers from persisted user profile state.
+- `apps/api/src/users/profile.ts`
+  User profile shape plus legacy `USER.md` render/seed helpers.
+- `apps/api/src/users/store.ts`
+  Per-user persisted profile storage for API settings and timezone reads.
 - `apps/api/src/dto/mappers.ts`
   Thin compatibility barrel that re-exports the DTO functions above.
 - `apps/mobile/src/state/session.tsx`
@@ -100,7 +104,8 @@ read_when:
 - Route modules are split under `apps/api/src/routes/`.
 - Repeated route helpers now live in `apps/api/src/routes/utils.ts`.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
-- Settings writes user preference state into `USER.md`, including the editable `name` field surfaced in the mobile profile section.
+- Settings reads and writes per-user profile state from the API profile store.
+- `USER.md` is now a legacy mirror/export path for compatibility, not the API source of truth.
 - Health probes are available at:
   - `/api/v1/health/live`
   - `/api/v1/health/ready`

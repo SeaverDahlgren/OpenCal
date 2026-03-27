@@ -16,9 +16,11 @@ import { handleSettingsRoute } from "./routes/settings.js";
 import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { SessionStore } from "./sessions/store.js";
+import { UserProfileStore } from "./users/store.js";
 
 const config = loadConfig(process.cwd());
 const sessions = new SessionStore(config);
+const profiles = new UserProfileStore(config);
 const auth = new ApiAuthService(config, sessions);
 const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rateLimitMaxRequests);
 
@@ -99,6 +101,7 @@ const server = http.createServer(async (req, res) => {
       config,
       auth,
       sessions,
+      profiles,
     });
     if (adminHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {
@@ -117,6 +120,7 @@ const server = http.createServer(async (req, res) => {
       config,
       auth,
       sessions,
+      profiles,
     });
     if (publicHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {
@@ -137,6 +141,9 @@ const server = http.createServer(async (req, res) => {
       return await jsonError(res, 401, "SESSION_EXPIRED", "Session is invalid or expired.", false);
     }
 
+    const workspace = await loadWorkspaceFiles(config.rootDir, new Date().toISOString().slice(0, 10));
+    const profile = await profiles.loadOrCreate(session.user, workspace.user);
+
     const sessionHandled = await handleSessionRoute({
       req,
       res,
@@ -144,7 +151,9 @@ const server = http.createServer(async (req, res) => {
       config,
       auth,
       sessions,
+      profiles,
       session,
+      profile,
     });
     if (sessionHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {
@@ -161,8 +170,6 @@ const server = http.createServer(async (req, res) => {
     if (!googleClients) {
       return await jsonError(res, 401, "GOOGLE_AUTH_REQUIRED", "Google authorization is required.", false);
     }
-
-    const workspace = await loadWorkspaceFiles(config.rootDir, new Date().toISOString().slice(0, 10));
     const authedContext = {
       req,
       res,
@@ -170,7 +177,9 @@ const server = http.createServer(async (req, res) => {
       config,
       auth,
       sessions,
+      profiles,
       session,
+      profile,
       googleClients,
       workspace,
       calendarService: new GoogleCalendarService(googleClients.calendar),
@@ -191,7 +200,6 @@ const server = http.createServer(async (req, res) => {
 
     const settingsHandled = await handleSettingsRoute({
       ...authedContext,
-      userMarkdown: workspace.user,
     });
     if (settingsHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {

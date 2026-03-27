@@ -4,7 +4,7 @@ import { buildSessionRoutePayload } from "./utils.js";
 
 export async function handleSessionRoute(ctx: SessionRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/session") {
-    return await jsonRoute(ctx.res, 200, buildSessionRoutePayload(ctx.session));
+    return await jsonRoute(ctx.res, 200, buildSessionRoutePayload(ctx.session, ctx.profile));
   }
 
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/session/reset") {

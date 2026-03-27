@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
 import { z } from "zod";
-import { mapSettingsView, updateUserMarkdown } from "../dto/mappers.js";
+import { mapSettingsView } from "../dto/mappers.js";
 import { jsonRoute, readJsonBody } from "../server/http.js";
-import type { SessionRouteContext } from "./types.js";
+import { renderLegacyUserMarkdown, updateUserProfile } from "../users/profile.js";
+import type { AuthedRouteContext } from "./types.js";
 
 const settingsPatchSchema = z.object({
   profile: z
@@ -31,13 +32,13 @@ const settingsPatchSchema = z.object({
     .optional(),
 });
 
-export async function handleSettingsRoute(ctx: SessionRouteContext & { userMarkdown: string }) {
+export async function handleSettingsRoute(ctx: AuthedRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/settings") {
     return await jsonRoute(
       ctx.res,
       200,
       mapSettingsView({
-        userMarkdown: ctx.userMarkdown,
+        profile: ctx.profile,
         provider: ctx.session.provider,
         model: ctx.session.model,
         verbosity: ctx.session.toolResultVerbosity,
@@ -49,16 +50,17 @@ export async function handleSettingsRoute(ctx: SessionRouteContext & { userMarkd
 
   if (ctx.req.method === "PATCH" && ctx.url.pathname === "/api/v1/settings") {
     const body = settingsPatchSchema.parse(await readJsonBody(ctx.req));
-    const nextMarkdown = updateUserMarkdown(ctx.userMarkdown, {
+    const nextProfile = updateUserProfile(ctx.profile, {
       name: body.profile?.name,
       ...(body.preferences ?? {}),
     });
-    await fs.writeFile(`${ctx.config.rootDir}/USER.md`, nextMarkdown, "utf8");
+    await ctx.profiles.save(nextProfile);
+    await fs.writeFile(`${ctx.config.rootDir}/USER.md`, renderLegacyUserMarkdown(nextProfile), "utf8");
     const updatedSession = {
       ...ctx.session,
       user: {
         ...ctx.session.user,
-        name: body.profile?.name ?? ctx.session.user.name,
+        name: nextProfile.name || ctx.session.user.name,
       },
       provider: body.advanced?.provider ?? ctx.session.provider,
       model: body.advanced?.model ?? ctx.session.model,
@@ -69,7 +71,7 @@ export async function handleSettingsRoute(ctx: SessionRouteContext & { userMarkd
       ctx.res,
       200,
       mapSettingsView({
-        userMarkdown: nextMarkdown,
+        profile: nextProfile,
         provider: updatedSession.provider,
         model: updatedSession.model,
         verbosity: updatedSession.toolResultVerbosity,

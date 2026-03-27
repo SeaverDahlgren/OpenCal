@@ -33,7 +33,7 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
         provider,
         tools,
         workspace: ctx.workspace,
-        timezone: resolveUserTimezone(ctx.workspace.user),
+        timezone: resolveUserTimezone(ctx.profile),
         skillManifests: skills.manifests,
         skillsCatalog: skills.catalog,
       },

@@ -1,27 +1,26 @@
-type PreferenceSnapshot = {
-  name: string;
-  timezone: string;
-  workStart: string;
-  workEnd: string;
-  meetingPreference: string;
-  assistantNotes: string;
-};
+import type { UserProfile } from "../users/profile.js";
 
 export function mapSettingsView(args: {
-  userMarkdown: string;
+  profile: UserProfile;
   provider: string;
   model: string;
   verbosity: "compact" | "verbose";
   sessionId?: string;
   user: { name: string; email: string };
 }) {
-  const prefs = parseUserPreferences(args.userMarkdown);
   return {
     profile: {
-      ...args.user,
-      name: prefs.name || args.user.name,
+      email: args.profile.email || args.user.email,
+      name: args.profile.name || args.user.name,
     },
-    preferences: prefs,
+    preferences: {
+      name: args.profile.name,
+      timezone: args.profile.timezone,
+      workStart: args.profile.workStart,
+      workEnd: args.profile.workEnd,
+      meetingPreference: args.profile.meetingPreference,
+      assistantNotes: args.profile.assistantNotes,
+    },
     advanced: {
       provider: args.provider,
       model: args.model,
@@ -30,33 +29,4 @@ export function mapSettingsView(args: {
       sessionStatus: args.sessionId ? "active" : "disconnected",
     },
   };
-}
-
-export function updateUserMarkdown(userMarkdown: string, input: Partial<PreferenceSnapshot>) {
-  const next = { ...parseUserPreferences(userMarkdown), ...input };
-  const lines = [
-    `name: ${next.name}`,
-    `timezone: ${next.timezone}`,
-    `workStart: ${next.workStart}`,
-    `workEnd: ${next.workEnd}`,
-    `meetingPreference: ${next.meetingPreference}`,
-    `assistantNotes: ${next.assistantNotes}`,
-  ];
-  return `${lines.join("\n")}\n`;
-}
-
-function parseUserPreferences(userMarkdown: string): PreferenceSnapshot {
-  return {
-    name: matchValue(userMarkdown, "name") ?? "",
-    timezone: matchValue(userMarkdown, "timezone") ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-    workStart: matchValue(userMarkdown, "workStart") ?? "09:00",
-    workEnd: matchValue(userMarkdown, "workEnd") ?? "17:00",
-    meetingPreference: matchValue(userMarkdown, "meetingPreference") ?? "",
-    assistantNotes: matchValue(userMarkdown, "assistantNotes") ?? "",
-  };
-}
-
-function matchValue(markdown: string, key: string) {
-  const match = markdown.match(new RegExp(`^${key}:\\s*(.+)$`, "im"));
-  return match?.[1]?.trim();
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildChatHistoryRoutePayload, buildTaskStateRoutePayload, buildUtcDayBounds } from "../apps/api/src/routes/utils.js";
+import { buildChatHistoryRoutePayload, buildSessionRoutePayload, buildTaskStateRoutePayload, buildUtcDayBounds } from "../apps/api/src/routes/utils.js";
 import type { StoredSessionState } from "../src/app/session-types.js";
+import type { UserProfile } from "../apps/api/src/users/profile.js";
 
 describe("api route utils", () => {
   it("returns recent user and assistant chat history only", () => {
@@ -99,6 +100,35 @@ describe("api route utils", () => {
       prompt: 'Please confirm: should I delete "Swim Practice"?',
       payloadPreview: {
         summary: 'delete "Swim Practice"',
+      },
+    });
+  });
+
+  it("builds session payloads from the persisted user profile", () => {
+    const session = baseSession(null);
+    const profile: UserProfile = {
+      email: "avery@example.com",
+      name: "Avery Mercer",
+      timezone: "America/New_York",
+      workStart: "09:00",
+      workEnd: "17:00",
+      meetingPreference: "",
+      assistantNotes: "",
+      updatedAt: "2026-03-25T00:00:00.000Z",
+    };
+
+    expect(buildSessionRoutePayload(session, profile)).toEqual({
+      session: {
+        sessionId: "sess-123",
+        status: "authenticated",
+        user: {
+          email: "avery@example.com",
+          name: "Avery Mercer",
+        },
+        expiresAt: "2026-04-25T00:00:00.000Z",
+        timezone: "America/New_York",
+        hasBlockedTask: false,
+        activeTaskSummary: "",
       },
     });
   });
