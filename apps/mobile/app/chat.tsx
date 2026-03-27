@@ -79,24 +79,30 @@ export default function ChatScreen() {
         }}
       />
       <ScreenShell scroll={false}>
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>Open CAL</Text>
-          <TouchableOpacity
-            style={styles.helpButton}
-            onPress={() => setShowRecommendations((value) => !value)}
-          >
-            <Text style={styles.helpButtonText}>?</Text>
-          </TouchableOpacity>
-        </View>
-        {showRecommendations ? (
-          <View style={styles.recommendationsCard}>
-            <Text style={styles.inlineEyebrow}>TRY ASKING</Text>
-            <Text style={styles.recommendation}>What does my day look like?</Text>
-            <Text style={styles.recommendation}>Reschedule my meeting with Joe for tomorrow afternoon.</Text>
-            <Text style={styles.recommendation}>Draft an email to Sarah about moving our meeting.</Text>
-            <Text style={styles.recommendation}>How many times am I swimming next month?</Text>
+        <View style={styles.headerBanner}>
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>OpenCal</Text>
+            <TouchableOpacity
+              style={styles.helpButton}
+              onPress={() => setShowRecommendations((value) => !value)}
+            >
+              <Text style={styles.helpButtonText}>?</Text>
+            </TouchableOpacity>
           </View>
-        ) : null}
+          {showRecommendations ? (
+            <View style={styles.recommendationsCard}>
+              <Text style={styles.inlineEyebrow}>START HERE</Text>
+              <Text style={styles.recommendationLead}>
+                Ask OpenCal to plan, reschedule, or draft. The conversation stays synced with the backend session, so you can leave and come back without losing context.
+              </Text>
+              <Text style={styles.inlineEyebrow}>TRY ASKING</Text>
+              <Text style={styles.recommendation}>What does my day look like?</Text>
+              <Text style={styles.recommendation}>Reschedule my meeting with Joe for tomorrow afternoon.</Text>
+              <Text style={styles.recommendation}>Draft an email to Sarah about moving our meeting.</Text>
+              <Text style={styles.recommendation}>How many times am I swimming next month?</Text>
+            </View>
+          ) : null}
+        </View>
         {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void submit({ message: draft.trim() })} /> : null}
         <FlatList
           ref={listRef}
@@ -110,17 +116,6 @@ export default function ChatScreen() {
               <Text style={[styles.message, item.role === "user" && styles.userMessage]}>{item.content}</Text>
             </View>
           )}
-          ListFooterComponent={
-            chatHistory.length === 0 && !pendingTurn ? (
-              <View style={styles.emptyCard}>
-                <Text style={styles.inlineEyebrow}>START HERE</Text>
-                <Text style={styles.inlineTitle}>Ask OpenCal to plan, reschedule, or draft.</Text>
-                <Text style={styles.inlineBody}>
-                  The conversation stays synced with the backend session, so you can leave and come back without losing context.
-                </Text>
-              </View>
-            ) : null
-          }
         />
         {pendingTurn?.clarification ? (
           <View style={styles.pendingPanel}>
@@ -212,6 +207,12 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  headerBanner: {
+    backgroundColor: colors.surfaceHigh,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { color: colors.text, fontSize: 28, fontWeight: "800" },
   helpButton: {
@@ -224,10 +225,15 @@ const styles = StyleSheet.create({
   },
   helpButtonText: { color: colors.primary, fontSize: 20, fontWeight: "800" },
   recommendationsCard: {
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
     padding: spacing.md,
     gap: spacing.sm,
+  },
+  recommendationLead: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 20,
   },
   recommendation: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   listView: { flex: 1 },
@@ -239,7 +245,6 @@ const styles = StyleSheet.create({
   message: { color: colors.text, fontSize: 15, lineHeight: 22 },
   userMessage: { color: colors.background },
   inlineCard: { backgroundColor: colors.surfaceHigh, borderRadius: radii.lg, padding: spacing.md, gap: spacing.sm },
-  emptyCard: { backgroundColor: colors.surface, borderRadius: radii.lg, padding: spacing.md, gap: spacing.sm },
   inlineEyebrow: { color: colors.tertiary, ...typography.eyebrow },
   inlineTitle: { color: colors.text, fontWeight: "700", fontSize: 16 },
   inlineBody: { color: colors.textMuted },
