@@ -228,7 +228,18 @@ export default function CalendarScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void hydrateVisibleCalendar(visibleMonth, selectedDate, { refreshing: true })} tintColor={colors.primary} />}
     >
-      <EditorialHeader title={month.monthLabel} subtitle="" />
+      <View style={styles.headerRow}>
+        <View style={styles.headerCopy}>
+          <EditorialHeader title={month.monthLabel} subtitle="" />
+        </View>
+        <TouchableOpacity
+          style={[styles.todayButton, monthAnimating && styles.monthButtonDisabled]}
+          onPress={jumpToToday}
+          disabled={monthAnimating}
+        >
+          <Text style={styles.todayButtonText}>Today</Text>
+        </TouchableOpacity>
+      </View>
       {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void hydrateVisibleCalendar(visibleMonth, selectedDate, { refreshing: true })} /> : null}
       <Animated.View style={{ transform: [{ translateX: monthTranslate }], opacity: monthOpacity }}>
       <SurfaceCard style={styles.monthCard}>
@@ -238,13 +249,6 @@ export default function CalendarScreen() {
           </TouchableOpacity>
           <Text style={styles.monthLabel}>{month.monthLabel}</Text>
           <View style={styles.monthActions}>
-            <TouchableOpacity
-              style={[styles.monthButton, monthAnimating && styles.monthButtonDisabled]}
-              onPress={jumpToToday}
-              disabled={monthAnimating}
-            >
-              <Text style={styles.monthButtonText}>Today</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={[styles.monthButton, monthAnimating && styles.monthButtonDisabled]} onPress={() => moveMonth(1)} disabled={monthAnimating}>
             <Text style={styles.monthButtonText}>Next</Text>
           </TouchableOpacity>
@@ -325,6 +329,16 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 },
   loader: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
+  headerRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: spacing.md },
+  headerCopy: { flex: 1 },
+  todayButton: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  todayButtonText: { color: colors.primary, fontWeight: "700" },
   monthCard: { gap: spacing.md },
   monthNav: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   monthActions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
