@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { AppLogo } from "./AppLogo";
 import { colors, spacing, typography } from "../theme/tokens";
 
 export function EditorialHeader({
@@ -12,7 +13,10 @@ export function EditorialHeader({
 }) {
   return (
     <View style={styles.wrap}>
-      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+      <View style={styles.topRow}>
+        <AppLogo size={34} />
+        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+      </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
@@ -22,6 +26,11 @@ export function EditorialHeader({
 const styles = StyleSheet.create({
   wrap: {
     gap: 6,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   eyebrow: {
     color: colors.tertiary,

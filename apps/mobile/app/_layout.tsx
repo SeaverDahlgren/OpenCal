@@ -13,7 +13,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="signin" options={{ title: "Sign In" }} />
+        <Stack.Screen name="signin" options={{ headerShown: false }} />
         <Stack.Screen name="auth-callback" options={{ headerShown: false }} />
         <Stack.Screen name="chat" options={{ presentation: "modal", title: "OpenCal AI" }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

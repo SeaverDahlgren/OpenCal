@@ -1,21 +1,24 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AppLogo } from "../src/components/AppLogo";
 import { useSession } from "../src/state/session";
-import { colors, radii, spacing } from "../src/theme/tokens";
+import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function SignInScreen() {
   const { startAuth, loading } = useSession();
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.eyebrow}>OPENCAL PRIVATE BETA</Text>
-      <Text style={styles.title}>Sign in with your backend-owned Google account.</Text>
-      <Text style={styles.body}>
-        OpenCal uses your backend session for Calendar and Gmail access. The browser handoff will return a session token to the app.
-      </Text>
-      {loading ? <Text style={styles.loadingText}>Checking for an existing beta session...</Text> : null}
-      <TouchableOpacity style={styles.button} onPress={() => void startAuth()} disabled={loading}>
-        <Text style={styles.buttonText}>Continue with Google</Text>
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <AppLogo size={88} centered />
+        <Text style={styles.title}>Welcome to OpenCal!</Text>
+        <Text style={styles.subtitle}>Sign in to get started</Text>
+      </View>
+      <View style={styles.centerBlock}>
+        {loading ? <Text style={styles.loadingText}>Checking for an existing beta session...</Text> : null}
+        <TouchableOpacity style={styles.button} onPress={() => void startAuth()} disabled={loading}>
+          <Text style={styles.buttonText}>Sign in with Google</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -26,30 +29,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.xl,
     justifyContent: "center",
-    gap: spacing.md,
+    alignItems: "center",
+    gap: spacing.xxl,
   },
-  eyebrow: {
-    color: colors.tertiary,
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 2,
+  header: {
+    gap: spacing.sm,
+    alignItems: "center",
   },
   title: {
     color: colors.text,
-    fontSize: 32,
-    fontWeight: "800",
+    ...typography.title,
+    textAlign: "center",
   },
-  body: {
+  subtitle: {
     color: colors.textMuted,
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  centerBlock: {
+    width: "100%",
+    maxWidth: 320,
+    gap: spacing.md,
   },
   loadingText: {
     color: colors.tertiary,
     fontSize: 14,
+    textAlign: "center",
   },
   button: {
-    marginTop: spacing.lg,
     backgroundColor: colors.primary,
     borderRadius: radii.lg,
     paddingVertical: spacing.md,
