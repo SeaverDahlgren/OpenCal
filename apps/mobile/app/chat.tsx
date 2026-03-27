@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { EditorialHeader } from "../src/components/EditorialHeader";
 import { InlineNotice } from "../src/components/InlineNotice";
@@ -11,15 +11,35 @@ export default function ChatScreen() {
   const { prompt } = useLocalSearchParams<{ prompt?: string }>();
   const router = useRouter();
   const { chatHistory, pendingTurn, sendAgentAction } = useSession();
+  const listRef = useRef<FlatList<(typeof chatHistory)[number]>>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const scrollToLatest = useCallback((animated: boolean) => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated });
+    });
+  }, []);
 
   useEffect(() => {
     if (typeof prompt === "string" && prompt.trim() && !draft) {
       setDraft(prompt.trim());
     }
   }, [draft, prompt]);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollToLatest(false);
+    }, [scrollToLatest]),
+  );
+
+  useEffect(() => {
+    if (chatHistory.length === 0 && !pendingTurn) {
+      return;
+    }
+    scrollToLatest(false);
+  }, [chatHistory.length, pendingTurn, scrollToLatest]);
 
   async function submit(body: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) {
     setSending(true);
@@ -62,10 +82,12 @@ export default function ChatScreen() {
         </View>
         {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void submit({ message: draft.trim() })} /> : null}
         <FlatList
+          ref={listRef}
           data={chatHistory}
           keyExtractor={(item) => item.id}
           style={styles.listView}
           contentContainerStyle={styles.list}
+          onContentSizeChange={() => scrollToLatest(false)}
           renderItem={({ item }) => (
             <View style={[styles.bubble, item.role === "user" ? styles.userBubble : styles.assistantBubble]}>
               <Text style={[styles.message, item.role === "user" && styles.userMessage]}>{item.content}</Text>

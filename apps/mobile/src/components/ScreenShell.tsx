@@ -9,7 +9,7 @@ export function ScreenShell({
   children: ReactNode;
   scroll?: boolean;
 }) {
-  const content = <View style={styles.content}>{children}</View>;
+  const content = <View style={[styles.content, !scroll && styles.fillContent]}>{children}</View>;
 
   if (!scroll) {
     return <View style={styles.screen}>{content}</View>;
@@ -34,5 +34,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     gap: spacing.lg,
+  },
+  fillContent: {
+    flex: 1,
   },
 });
