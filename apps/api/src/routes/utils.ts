@@ -124,6 +124,7 @@ export function buildSessionRoutePayload(session: StoredSessionState, userMarkdo
       sessionId: session.sessionId,
       status: "authenticated",
       user: session.user,
+      expiresAt: session.expiresAt,
       timezone: resolveUserTimezone(userMarkdown) || resolveSystemTimezone(),
       hasBlockedTask: Boolean(session.taskState?.awaitingUserResponse || session.pendingConfirmation),
       activeTaskSummary: session.taskState?.taskSummary ?? "",

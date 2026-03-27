@@ -35,6 +35,7 @@ cp .env.example .env
 Then fill in the Google OAuth values and one provider key:
 
 ```env
+APP_ENV=development
 GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
 GOOGLE_OAUTH_REDIRECT_URI=http://127.0.0.1:42813/oauth/callback
@@ -50,6 +51,7 @@ GROQ_MODEL=llama-3.3-70b-versatile
 # GEMINI_MODEL=gemini-2.5-flash
 
 API_PORT=8787
+SESSION_TTL_DAYS=14
 TOOL_RESULT_VERBOSITY=compact
 ```
 
@@ -112,6 +114,13 @@ By default it listens on:
 http://127.0.0.1:8787
 ```
 
+Health probes:
+
+```text
+GET /api/v1/health/live
+GET /api/v1/health/ready
+```
+
 ### Mobile App
 
 Start Expo with:
@@ -155,6 +164,8 @@ EXPO_PUBLIC_API_BASE_URL=https://api.example.com/api/v1
 Then add that hosted callback URL to the Google OAuth client.
 
 The mobile flow stays the same: Google redirects to the backend callback, the backend creates the OpenCal session, and the backend redirects back into the app with the session token.
+
+Mobile/API sessions expire after `SESSION_TTL_DAYS`. Expired bearer tokens are rejected and need a fresh auth/bootstrap flow.
 
 ## How To Use OpenCal
 

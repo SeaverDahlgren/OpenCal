@@ -7,6 +7,7 @@ describe("api route utils", () => {
     const session: StoredSessionState = {
       sessionId: "sess-123",
       token: "token-123",
+      expiresAt: "2026-04-25T00:00:00.000Z",
       user: { name: "Avery", email: "avery@example.com" },
       provider: "groq",
       model: "llama-3.3-70b-versatile",
@@ -107,6 +108,7 @@ function baseSession(pendingConfirmation: StoredSessionState["pendingConfirmatio
   return {
     sessionId: "sess-123",
     token: "token-123",
+    expiresAt: "2026-04-25T00:00:00.000Z",
     user: { name: "Avery", email: "avery@example.com" },
     provider: "groq",
     model: "llama-3.3-70b-versatile",

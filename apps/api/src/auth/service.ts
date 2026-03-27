@@ -45,17 +45,16 @@ export class ApiAuthService {
 
       await auth.getAccessToken();
 
-      const current = await this.sessions.getCurrentSession();
-      if (current) {
-        return current;
-      }
-
       const oauth2 = google.oauth2({ version: "v2", auth });
       const profile = await oauth2.userinfo.get();
       const user = {
         name: profile.data.name ?? "OpenCal Beta User",
         email: profile.data.email ?? "unknown@example.com",
       };
+      const current = await this.sessions.getByUserEmail(user.email);
+      if (current) {
+        return current;
+      }
       return await this.sessions.createOrReplaceSession(user);
     } catch {
       return null;

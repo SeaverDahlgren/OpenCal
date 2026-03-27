@@ -3,6 +3,7 @@ import { createLlmProvider } from "../src/llm/factory.js";
 import type { AppConfig } from "../src/config/env.js";
 
 const baseConfig: AppConfig = {
+  appEnv: "development",
   llmProvider: "gemini",
   toolResultVerbosity: "compact",
   geminiApiKey: "gemini-key",
@@ -15,6 +16,7 @@ const baseConfig: AppConfig = {
   contextWindowLimit: 128000,
   maxOutputTokens: 2000,
   compactionThreshold: 0.8,
+  sessionTtlDays: 14,
   openAiModel: "gpt-5-mini",
   geminiModel: "gemini-2.5-flash",
   groqModel: "llama-3.3-70b-versatile",

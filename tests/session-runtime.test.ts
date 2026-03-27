@@ -94,6 +94,7 @@ describe("session runtime", () => {
 
 function createConfig(rootDir: string): AppConfig {
   return {
+    appEnv: "development",
     llmProvider: "groq",
     toolResultVerbosity: "compact",
     groqApiKey: "test-key",
@@ -104,6 +105,7 @@ function createConfig(rootDir: string): AppConfig {
     contextWindowLimit: 128000,
     maxOutputTokens: 2000,
     compactionThreshold: 0.8,
+    sessionTtlDays: 14,
     openAiModel: "gpt-5-mini",
     geminiModel: "gemini-2.5-flash",
     groqModel: "llama-3.3-70b-versatile",
@@ -116,6 +118,7 @@ function createStoredSession(): StoredSessionState {
   return {
     sessionId: "sess-123",
     token: "token-123",
+    expiresAt: "2026-04-25T00:00:00.000Z",
     user: { name: "Avery", email: "avery@example.com" },
     provider: "groq",
     model: "llama-3.3-70b-versatile",

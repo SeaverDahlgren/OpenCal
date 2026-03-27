@@ -52,6 +52,7 @@ read_when:
 
 - Google OAuth remains backend-owned.
 - The mobile app expects a backend-issued bearer token.
+- Sessions are resolved per user email and expire after the configured session TTL.
 - On cold start without a stored mobile bearer token, the session layer first tries `POST /api/v1/auth/google/reuse`.
 - `auth/google/reuse` is a private-beta bootstrap path:
   - if local Google auth is still valid, the backend reuses or creates the current mobile session
@@ -99,6 +100,9 @@ read_when:
 - Repeated route helpers now live in `apps/api/src/routes/utils.ts`.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
 - Settings writes user preference state into `USER.md`, including the editable `name` field surfaced in the mobile profile section.
+- Health probes are available at:
+  - `/api/v1/health/live`
+  - `/api/v1/health/ready`
 
 ## Notes
 

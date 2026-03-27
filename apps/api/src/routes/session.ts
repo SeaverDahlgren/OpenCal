@@ -8,7 +8,7 @@ export async function handleSessionRoute(ctx: SessionRouteContext) {
   }
 
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/session/reset") {
-    const reset = await ctx.sessions.resetCurrentSession();
+    const reset = await ctx.sessions.resetSession(ctx.session.sessionId);
     return await jsonRoute(ctx.res, 200, {
       ok: true,
       sessionId: reset?.sessionId ?? ctx.session.sessionId,

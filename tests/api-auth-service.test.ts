@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { google } from "googleapis";
 import { ApiAuthService } from "../apps/api/src/auth/service.js";
 import type { AppConfig } from "../src/config/env.js";
 import * as googleAuth from "../src/integrations/google/auth.js";
 
 const baseConfig: AppConfig = {
+  appEnv: "development",
   llmProvider: "groq",
   toolResultVerbosity: "compact",
   geminiApiKey: undefined,
@@ -16,6 +18,7 @@ const baseConfig: AppConfig = {
   contextWindowLimit: 128000,
   maxOutputTokens: 2000,
   compactionThreshold: 0.8,
+  sessionTtlDays: 14,
   openAiModel: "gpt-5-mini",
   geminiModel: "gemini-2.5-flash",
   groqModel: "llama-3.3-70b-versatile",
@@ -48,8 +51,18 @@ describe("api auth service", () => {
     vi.spyOn(googleAuth, "loadStoredGoogleAuthorization").mockResolvedValue({
       getAccessToken: async () => ({ token: "access-token" }),
     } as never);
+    vi.spyOn(google, "oauth2").mockReturnValue({
+      userinfo: {
+        get: async () => ({
+          data: {
+            name: "Avery",
+            email: "avery@example.com",
+          },
+        }),
+      },
+    } as never);
     const service = new ApiAuthService(baseConfig, {
-      getCurrentSession: async () => currentSession,
+      getByUserEmail: async () => currentSession,
     } as never);
 
     await expect(service.reuseAuthorizedSession()).resolves.toEqual(currentSession);

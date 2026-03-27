@@ -5,6 +5,7 @@ import { z } from "zod";
 loadDotEnv();
 
 const envSchema = z.object({
+  APP_ENV: z.enum(["development", "staging", "production"]).default("development"),
   LLM_PROVIDER: z.string().default("gemini"),
   TOOL_RESULT_VERBOSITY: z.enum(["compact", "verbose"]).default("compact"),
   GEMINI_API_KEY: z.string().optional(),
@@ -21,12 +22,14 @@ const envSchema = z.object({
   CONTEXT_WINDOW_LIMIT: z.coerce.number().positive().default(128000),
   MAX_OUTPUT_TOKENS: z.coerce.number().positive().default(2000),
   COMPACTION_THRESHOLD: z.coerce.number().gt(0).lt(1).default(0.8),
+  SESSION_TTL_DAYS: z.coerce.number().int().positive().default(14),
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
 });
 
 export type AppConfig = {
+  appEnv: "development" | "staging" | "production";
   llmProvider: string;
   toolResultVerbosity: "compact" | "verbose";
   geminiApiKey?: string;
@@ -39,6 +42,7 @@ export type AppConfig = {
   contextWindowLimit: number;
   maxOutputTokens: number;
   compactionThreshold: number;
+  sessionTtlDays: number;
   openAiModel: string;
   geminiModel: string;
   groqModel: string;
@@ -58,6 +62,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
   const env = parsed.data;
 
   return {
+    appEnv: env.APP_ENV,
     llmProvider: env.LLM_PROVIDER,
     toolResultVerbosity: env.TOOL_RESULT_VERBOSITY,
     geminiApiKey: env.GEMINI_API_KEY,
@@ -70,6 +75,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     contextWindowLimit: env.CONTEXT_WINDOW_LIMIT,
     maxOutputTokens: env.MAX_OUTPUT_TOKENS,
     compactionThreshold: env.COMPACTION_THRESHOLD,
+    sessionTtlDays: env.SESSION_TTL_DAYS,
     openAiModel: env.OPENAI_MODEL,
     geminiModel: env.GEMINI_MODEL,
     groqModel: env.GROQ_MODEL,

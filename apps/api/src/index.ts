@@ -9,7 +9,7 @@ import { handleAuthRoute } from "./routes/auth.js";
 import { handleCalendarRoute } from "./routes/calendar.js";
 import { handleSessionRoute } from "./routes/session.js";
 import { handleSettingsRoute } from "./routes/settings.js";
-import { jsonError, readBearerToken } from "./server/http.js";
+import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { SessionStore } from "./sessions/store.js";
 
 const config = loadConfig(process.cwd());
@@ -20,6 +20,22 @@ const server = http.createServer(async (req, res) => {
   try {
     await ensureWorkspace(config.rootDir);
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "127.0.0.1"}`);
+
+    if (req.method === "GET" && url.pathname === "/api/v1/health/live") {
+      return await jsonRoute(res, 200, {
+        status: "ok",
+        service: "opencal-api",
+        environment: config.appEnv,
+      });
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/v1/health/ready") {
+      return await jsonRoute(res, 200, {
+        status: "ready",
+        service: "opencal-api",
+        environment: config.appEnv,
+      });
+    }
 
     const publicHandled = await handleAuthRoute({
       req,

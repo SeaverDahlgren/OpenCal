@@ -16,43 +16,57 @@ export class SessionStore {
 
   async getCurrentSession() {
     const state = await this.readState();
-    return state.currentSessionId ? state.sessions[state.currentSessionId] ?? null : null;
+    const sessions = Object.values(state.sessions).sort((left, right) =>
+      right.updatedAt.localeCompare(left.updatedAt),
+    );
+    return sessions[0] ?? null;
+  }
+
+  async getByUserEmail(email: string) {
+    const state = await this.readState();
+    return (
+      Object.values(state.sessions)
+        .filter((session) => session.user.email === email)
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
+    );
   }
 
   async createOrReplaceSession(user: { name: string; email: string }) {
     const state = await this.readState();
     const now = new Date().toISOString();
-    const sessionId = `sess_${crypto.randomUUID()}`;
+    const current =
+      Object.values(state.sessions)
+        .filter((session) => session.user.email === user.email)
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null;
+    const sessionId = current?.sessionId ?? `sess_${crypto.randomUUID()}`;
     const session: StoredSessionState = {
       sessionId,
       token: crypto.randomBytes(24).toString("hex"),
+      expiresAt: buildExpiry(now, this.config.sessionTtlDays),
       user,
       provider: this.config.llmProvider,
       model: resolveModelName(this.config, this.config.llmProvider),
       toolResultVerbosity: this.config.toolResultVerbosity,
-      createdAt: now,
+      createdAt: current?.createdAt ?? now,
       updatedAt: now,
       messages: [],
       taskState: null,
       pendingConfirmation: null,
     };
-    state.currentSessionId = sessionId;
-    state.sessions = {
-      [sessionId]: session,
-    };
+    state.sessions[sessionId] = session;
     await this.writeState(state);
     return session;
   }
 
   async save(session: StoredSessionState) {
     const state = await this.readState();
-    state.currentSessionId = session.sessionId;
     state.sessions[session.sessionId] = session;
     await this.writeState(state);
   }
 
-  async resetCurrentSession() {
-    const current = await this.getCurrentSession();
+  async resetSession(sessionId: string) {
+    const state = await this.readState();
+    const current = state.sessions[sessionId];
     if (!current) {
       return null;
     }
@@ -67,7 +81,8 @@ export class SessionStore {
       taskState: null,
       pendingConfirmation: null,
     };
-    await this.save(reset);
+    state.sessions[sessionId] = reset;
+    await this.writeState(state);
     return reset;
   }
 
@@ -75,7 +90,12 @@ export class SessionStore {
     await fs.mkdir(this.config.privateDir, { recursive: true });
     const filePath = this.filePath();
     try {
-      return JSON.parse(await fs.readFile(filePath, "utf8")) as SessionStateFile;
+      const parsed = JSON.parse(await fs.readFile(filePath, "utf8")) as SessionStateFile;
+      const nextState = pruneExpiredSessions(parsed);
+      if (nextState !== parsed) {
+        await this.writeState(nextState);
+      }
+      return nextState;
     } catch {
       return {
         currentSessionId: undefined,
@@ -102,4 +122,35 @@ function resolveModelName(config: AppConfig, provider: string) {
     default:
       return config.geminiModel;
   }
+}
+
+function buildExpiry(nowIso: string, ttlDays: number) {
+  const expires = new Date(nowIso);
+  expires.setUTCDate(expires.getUTCDate() + ttlDays);
+  return expires.toISOString();
+}
+
+function pruneExpiredSessions(state: SessionStateFile) {
+  const now = new Date().toISOString();
+  let changed = false;
+  const sessions = Object.fromEntries(
+    Object.entries(state.sessions).filter(([, session]) => {
+      const active = session.expiresAt > now;
+      if (!active) {
+        changed = true;
+      }
+      return active;
+    }),
+  );
+
+  if (!changed) {
+    return state;
+  }
+
+  return {
+    ...state,
+    currentSessionId:
+      state.currentSessionId && sessions[state.currentSessionId] ? state.currentSessionId : undefined,
+    sessions,
+  };
 }

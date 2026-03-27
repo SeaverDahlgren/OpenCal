@@ -18,10 +18,12 @@ read_when:
 
 1. Copy `.env.example` to `.env`
 2. Fill:
+   - `APP_ENV`
    - `GOOGLE_OAUTH_CLIENT_ID`
    - `GOOGLE_OAUTH_CLIENT_SECRET`
    - `GOOGLE_OAUTH_REDIRECT_URI`
    - `GOOGLE_OAUTH_API_REDIRECT_URI`
+   - `SESSION_TTL_DAYS`
    - provider API key such as `GEMINI_API_KEY` or `GROQ_API_KEY`
 3. Run `npm install`
 4. Run `npm run dev`
@@ -67,12 +69,16 @@ read_when:
 ## Mobile / API Auth
 
 - Start the backend with `npm run api:dev`.
+- The API exposes health probes for hosted environments:
+  - `GET /api/v1/health/live`
+  - `GET /api/v1/health/ready`
 - If the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
 - If that route returns `GOOGLE_AUTH_REQUIRED`, the app stays on the sign-in screen and you need a fresh Google OAuth flow.
 - The mobile/API auth flow uses `GOOGLE_OAUTH_API_REDIRECT_URI`.
 - Google should redirect to:
   - `http://127.0.0.1:8787/api/v1/auth/google/callback`
 - The backend callback then creates the session and redirects back into Expo with `sessionToken` and `sessionId`.
+- Mobile/API sessions now expire based on `SESSION_TTL_DAYS`. Expired bearer tokens are pruned on read and must be re-established through auth.
 
 If the backend callback fails with an identity/authentication error after Google approval, the usual cause is that the stored token was granted before the app requested basic identity scopes. Re-run OAuth so Google grants the updated scope set.
 
