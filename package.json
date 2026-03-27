@@ -10,6 +10,7 @@
     "api:dev": "tsx apps/api/src/index.ts",
     "api:worker": "tsx apps/api/src/worker.ts",
     "api:worker:watch": "tsx apps/api/src/worker.ts --watch",
+    "beta:users": "tsx scripts/beta-users.ts",
     "deploy:check": "tsx scripts/deploy-check.ts",
     "mobile:start": "npm --prefix apps/mobile run start",
     "test": "vitest run",

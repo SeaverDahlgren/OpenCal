@@ -90,7 +90,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           client.getChatHistory(),
         ]);
         applySessionSnapshot(result.session, nextTaskState, history.messages);
-      } catch {
+      } catch (error) {
+        if (error instanceof ApiRequestError && error.code === "BETA_ACCESS_DENIED") {
+          setAuthError(error.message);
+        }
         setLoading(false);
         return;
       }

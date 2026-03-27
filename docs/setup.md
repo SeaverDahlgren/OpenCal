@@ -128,6 +128,11 @@ read_when:
 - Set `BETA_ACCESS_MODE=allowlist` for a real beta pool. The backend will only issue sessions for emails that exist in either `BETA_USER_EMAILS` or the admin-managed beta-user store.
 - If a user passes Google OAuth but is not in the backend beta pool, the callback returns `BETA_ACCESS_DENIED`.
 - Removing a beta user through `/api/v1/admin/beta-user` also revokes that user’s stored Google token and active mobile sessions.
+- For operator convenience there is also a helper script:
+  - `ADMIN_API_KEY=... npm run beta:users -- list`
+  - `ADMIN_API_KEY=... npm run beta:users -- add user@example.com "User Name"`
+  - `ADMIN_API_KEY=... npm run beta:users -- remove user@example.com`
+  - set `OPENCAL_API_BASE_URL` when targeting a hosted backend
 - In `development`, if the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
 - If that route returns `GOOGLE_AUTH_REQUIRED`, the app stays on the sign-in screen and you need a fresh Google OAuth flow.
 - In `staging` and `production`, `auth/google/reuse` is intentionally disabled and mobile should always go through the hosted OAuth flow.

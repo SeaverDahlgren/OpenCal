@@ -194,6 +194,16 @@ DELETE /api/v1/admin/beta-user?email=...
 Enable it by setting `ADMIN_API_KEY` and sending that value as `x-admin-key`. Responses are sanitized. Reset clears task/chat state while keeping the session record. Revoke deletes the session. Job endpoints let support inspect queued retries and requeue a stuck job immediately.
 The audit endpoint gives support a compact trail of auth, session, and admin recovery actions without parsing raw debug logs. The beta-user endpoint lets support add or remove emails from the backend beta pool. Removing a beta user also revokes that user’s stored Google token and active mobile sessions.
 
+For local or hosted admin use, there is also a helper CLI:
+
+```bash
+ADMIN_API_KEY=... npm run beta:users -- list
+ADMIN_API_KEY=... npm run beta:users -- add user@example.com "User Name"
+ADMIN_API_KEY=... npm run beta:users -- remove user@example.com
+```
+
+Override the target backend with `OPENCAL_API_BASE_URL=https://api.example.com/api/v1` when needed.
+
 For `POST /api/v1/agent/turn`, send an `Idempotency-Key` header on mobile retries or reconnects. The API caches successful responses per session so duplicate confirms do not create duplicate events or drafts.
 Retryable model failures on that route are also queued as background jobs for later worker replay.
 Jobs that hit `JOB_MAX_ATTEMPTS` now move to an explicit `exhausted` terminal state so support can distinguish dead-letter work from pending retries.
