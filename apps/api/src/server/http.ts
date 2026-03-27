@@ -1,5 +1,13 @@
 import http from "node:http";
 
+export function applySecurityHeaders(res: http.ServerResponse) {
+  res.setHeader("x-content-type-options", "nosniff");
+  res.setHeader("x-frame-options", "DENY");
+  res.setHeader("referrer-policy", "no-referrer");
+  res.setHeader("permissions-policy", "geolocation=(), microphone=(), camera=()");
+  res.setHeader("cache-control", "no-store");
+}
+
 export async function readJsonBody<T extends Record<string, unknown>>(req: http.IncomingMessage) {
   const chunks: Buffer[] = [];
   for await (const chunk of req) {

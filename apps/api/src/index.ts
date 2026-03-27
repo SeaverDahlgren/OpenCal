@@ -14,7 +14,7 @@ import { handleAuthRoute } from "./routes/auth.js";
 import { handleCalendarRoute } from "./routes/calendar.js";
 import { handleSessionRoute } from "./routes/session.js";
 import { handleSettingsRoute } from "./routes/settings.js";
-import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
+import { applySecurityHeaders, jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { buildReadyPayload } from "./server/health.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { updateSessionClientContext } from "./server/client-context.js";
@@ -29,6 +29,7 @@ const server = http.createServer(async (req, res) => {
   const requestId = crypto.randomUUID();
   res.setHeader("x-request-id", requestId);
   res.setHeader("x-opencal-api-version", config.apiVersion ?? "1.0.0");
+  applySecurityHeaders(res);
   const debugLogPath = path.join(config.rootDir, ".opencal", "logs", `${new Date().toISOString().slice(0, 10)}.log`);
 
   try {

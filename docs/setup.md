@@ -87,6 +87,10 @@ read_when:
   - active `jobBackend`
   - queued job counts by status
   - `degraded` status when exhausted jobs exist
+- API responses now default to `Cache-Control: no-store` with basic defensive headers such as:
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `Referrer-Policy: no-referrer`
 - If `ADMIN_API_KEY` is set, the API also exposes a support endpoint:
   - `GET /api/v1/admin/session`
   - filter with `?sessionId=...` or `?email=...`
