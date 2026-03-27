@@ -71,6 +71,7 @@ read_when:
 - The mobile app sends `x-opencal-app-version` on every API request.
 - Sessions are resolved per user email and expire after the configured session TTL.
 - Session and profile state can be encrypted at rest with `STATE_ENCRYPTION_KEY`.
+- Persisted session records now keep a hash of the bearer token instead of the raw token string.
 - API Google credentials are now stored per user instead of one shared machine token.
 - Signing out now revokes the current backend session before clearing the local mobile token.
 - On cold start without a stored mobile bearer token, the session layer first tries `POST /api/v1/auth/google/reuse`.

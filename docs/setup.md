@@ -99,6 +99,7 @@ read_when:
   - `http://127.0.0.1:8787/api/v1/auth/google/callback`
 - The backend callback then creates the session and redirects back into Expo with `sessionToken` and `sessionId`.
 - Mobile/API sessions now expire based on `SESSION_TTL_DAYS`. Expired bearer tokens are pruned on read and must be re-established through auth.
+- Persisted API session state stores a hash of each bearer token instead of the raw token value.
 - Mobile clients should send `Idempotency-Key` on retryable `POST /api/v1/agent/turn` requests to avoid duplicate event or draft mutations after reconnects/timeouts.
 - Retryable model failures now enqueue background jobs. Run `npm run api:worker` to process queued work in the current file-backed beta setup.
 - For a long-running worker process, run `npm run api:worker:watch`.

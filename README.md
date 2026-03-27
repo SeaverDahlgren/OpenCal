@@ -213,7 +213,7 @@ Then add that hosted callback URL to the Google OAuth client.
 
 The mobile flow stays the same: Google redirects to the backend callback, the backend creates the OpenCal session, and the backend redirects back into the app with the session token.
 
-Mobile/API sessions expire after `SESSION_TTL_DAYS`. Expired bearer tokens are rejected and need a fresh auth/bootstrap flow.
+Mobile/API sessions expire after `SESSION_TTL_DAYS`. Expired bearer tokens are rejected and need a fresh auth/bootstrap flow. Persisted API session records no longer keep raw bearer tokens at rest; the store keeps a derived hash instead.
 
 ## How To Use OpenCal
 

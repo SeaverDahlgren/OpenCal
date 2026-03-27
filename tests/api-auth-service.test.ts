@@ -82,12 +82,19 @@ describe("api auth service", () => {
     const tokenStore = {
       save: vi.fn(async () => undefined),
     };
+    const sessions = {
+      createOrReplaceSession: vi.fn(async () => currentSession),
+    };
     const service = new ApiAuthService(baseConfig, {
-      getByUserEmail: async () => currentSession,
+      ...sessions,
     } as never, tokenStore as never);
 
     await expect(service.reuseAuthorizedSession()).resolves.toEqual(currentSession);
     expect(tokenStore.save).toHaveBeenCalledWith("avery@example.com", expect.anything());
+    expect(sessions.createOrReplaceSession).toHaveBeenCalledWith({
+      name: "Avery",
+      email: "avery@example.com",
+    });
   });
 
   it("disables local auth reuse outside development", async () => {

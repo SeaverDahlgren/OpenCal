@@ -61,10 +61,6 @@ export class ApiAuthService {
         email: profile.data.email ?? "unknown@example.com",
       };
       await this.tokens.save(user.email, auth.credentials);
-      const current = await this.sessions.getByUserEmail(user.email);
-      if (current) {
-        return current;
-      }
       return await this.sessions.createOrReplaceSession(user);
     } catch {
       return null;

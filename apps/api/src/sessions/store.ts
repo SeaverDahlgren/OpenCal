@@ -13,7 +13,18 @@ export class SessionStore implements SessionRepository {
 
   async loadByToken(token: string) {
     const state = await this.readState();
-    return Object.values(state.sessions).find((session) => session.token === token) ?? null;
+    const tokenHash = hashSessionToken(this.config, token);
+    for (const [sessionId, session] of Object.entries(state.sessions)) {
+      if (session.tokenHash === tokenHash) {
+        return restoreSessionToken(session, token);
+      }
+      if (session.token === token) {
+        state.sessions[sessionId] = persistSession(this.config, session, token);
+        await this.writeState(state);
+        return restoreSessionToken(state.sessions[sessionId], token);
+      }
+    }
+    return null;
   }
 
   async getCurrentSession() {
@@ -54,6 +65,7 @@ export class SessionStore implements SessionRepository {
     const session: StoredSessionState = {
       sessionId,
       token: crypto.randomBytes(24).toString("hex"),
+      tokenHash: undefined,
       expiresAt: buildExpiry(now, this.config.sessionTtlDays),
       user,
       provider: this.config.llmProvider,
@@ -65,14 +77,14 @@ export class SessionStore implements SessionRepository {
       taskState: null,
       pendingConfirmation: null,
     };
-    state.sessions[sessionId] = session;
+    state.sessions[sessionId] = persistSession(this.config, session);
     await this.writeState(state);
     return session;
   }
 
   async save(session: StoredSessionState) {
     const state = await this.readState();
-    state.sessions[session.sessionId] = session;
+    state.sessions[session.sessionId] = persistSession(this.config, session, state.sessions[session.sessionId]?.tokenHash);
     await this.writeState(state);
   }
 
@@ -85,6 +97,7 @@ export class SessionStore implements SessionRepository {
 
     const reset: StoredSessionState = {
       ...current,
+      token: "",
       updatedAt: new Date().toISOString(),
       provider: current.provider,
       model: current.model,
@@ -179,5 +192,26 @@ function pruneExpiredSessions(state: SessionStateFile) {
     currentSessionId:
       state.currentSessionId && sessions[state.currentSessionId] ? state.currentSessionId : undefined,
     sessions,
+  };
+}
+
+function hashSessionToken(config: AppConfig, token: string) {
+  const secret = config.stateEncryptionKey || config.googleClientSecret;
+  return crypto.createHmac("sha256", secret).update(token).digest("hex");
+}
+
+function persistSession(config: AppConfig, session: StoredSessionState, fallbackTokenHash?: string): StoredSessionState {
+  const token = session.token.trim();
+  return {
+    ...session,
+    token: "",
+    tokenHash: token ? hashSessionToken(config, token) : session.tokenHash ?? fallbackTokenHash,
+  };
+}
+
+function restoreSessionToken(session: StoredSessionState, token: string): StoredSessionState {
+  return {
+    ...session,
+    token,
   };
 }

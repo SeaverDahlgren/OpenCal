@@ -71,6 +71,7 @@ export type PendingConfirmation = {
 export type StoredSessionState = {
   sessionId: string;
   token: string;
+  tokenHash?: string;
   expiresAt: string;
   user: {
     name: string;

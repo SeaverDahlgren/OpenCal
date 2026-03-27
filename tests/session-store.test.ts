@@ -37,6 +37,9 @@ describe("session store", () => {
     const byToken = await store.loadByToken(session.token);
     expect(byToken?.sessionId).toBe(session.sessionId);
     expect(await store.getByUserEmail("jordan@example.com")).toMatchObject({ sessionId: other.sessionId });
+    const raw = await fs.readFile(path.join(privateDir, "mobile-sessions.json"), "utf8");
+    expect(raw).not.toContain(session.token);
+    expect(raw).toContain("tokenHash");
 
     const updated = {
       ...session,

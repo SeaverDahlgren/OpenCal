@@ -43,6 +43,7 @@ describe("secure json storage", () => {
 
     const raw = await fs.readFile(path.join(privateDir, "mobile-sessions.json"), "utf8");
     expect(raw).not.toContain(session.token);
+    expect(raw).not.toContain("avery@example.com");
     expect(await store.loadByToken(session.token)).toMatchObject({ sessionId: session.sessionId });
   });
 });
