@@ -27,6 +27,9 @@ read_when:
    - `DATABASE_URL` when `STORAGE_BACKEND=postgres`
    - `REDIS_URL` when `JOB_BACKEND=redis`
    - `MAX_REQUEST_BODY_BYTES`
+   - `API_REQUEST_TIMEOUT_MS`
+   - `API_HEADERS_TIMEOUT_MS`
+   - `API_KEEP_ALIVE_TIMEOUT_MS`
    - `ADMIN_API_KEY` if you want the admin/support session endpoint enabled
    - `STATE_ENCRYPTION_KEY`
    - `GOOGLE_OAUTH_CLIENT_ID`
@@ -94,6 +97,10 @@ read_when:
   - `X-Frame-Options: DENY`
   - `Referrer-Policy: no-referrer`
 - JSON request bodies are capped by `MAX_REQUEST_BODY_BYTES`. Oversized auth, settings, or agent POSTs now fail fast with `413 REQUEST_TOO_LARGE`.
+- The API server now also applies explicit:
+  - request timeout via `API_REQUEST_TIMEOUT_MS`
+  - headers timeout via `API_HEADERS_TIMEOUT_MS`
+  - keep-alive timeout via `API_KEEP_ALIVE_TIMEOUT_MS`
 - If `ADMIN_API_KEY` is set, the API also exposes a support endpoint:
   - `GET /api/v1/admin/session`
   - filter with `?sessionId=...` or `?email=...`

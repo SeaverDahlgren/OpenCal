@@ -25,6 +25,7 @@ import {
 import { buildReadyPayload } from "./server/health.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { closeServer, registerAbortOnSignals } from "./server/shutdown.js";
+import { applyServerTimeouts } from "./server/timeouts.js";
 import { updateSessionClientContext } from "./server/client-context.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
 
@@ -303,6 +304,7 @@ const server = http.createServer(async (req, res) => {
     );
   }
 });
+applyServerTimeouts(server, config);
 
 const port = Number(process.env.API_PORT ?? 8787);
 server.listen(port, () => {

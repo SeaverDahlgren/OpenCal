@@ -136,6 +136,7 @@ The API and worker now boot their storage layer through one runtime factory. In 
 API responses now also ship with no-store caching plus basic security headers such as `X-Frame-Options` and `X-Content-Type-Options` so hosted beta deployments do not inherit permissive defaults.
 Both the API server and the background worker now handle `SIGINT` and `SIGTERM` gracefully so deploy restarts can drain cleanly instead of exiting mid-request or mid-loop.
 The API now also enforces a maximum JSON request size with a clean `413 REQUEST_TOO_LARGE` response, so hosted endpoints do not buffer arbitrarily large mobile or browser payloads.
+The hosted API now also uses explicit request, headers, and keep-alive timeouts instead of relying on Node defaults.
 
 By default it listens on:
 

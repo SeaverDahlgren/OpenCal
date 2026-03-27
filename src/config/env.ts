@@ -39,6 +39,9 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   MAX_REQUEST_BODY_BYTES: z.coerce.number().int().positive().default(1024 * 1024),
+  API_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  API_HEADERS_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  API_KEEP_ALIVE_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
@@ -75,6 +78,9 @@ export type AppConfig = {
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
   maxRequestBodyBytes: number;
+  apiRequestTimeoutMs: number;
+  apiHeadersTimeoutMs: number;
+  apiKeepAliveTimeoutMs: number;
   openAiModel: string;
   geminiModel: string;
   groqModel: string;
@@ -135,6 +141,9 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
     maxRequestBodyBytes: env.MAX_REQUEST_BODY_BYTES,
+    apiRequestTimeoutMs: env.API_REQUEST_TIMEOUT_MS,
+    apiHeadersTimeoutMs: env.API_HEADERS_TIMEOUT_MS,
+    apiKeepAliveTimeoutMs: env.API_KEEP_ALIVE_TIMEOUT_MS,
     openAiModel: env.OPENAI_MODEL,
     geminiModel: env.GEMINI_MODEL,
     groqModel: env.GROQ_MODEL,
