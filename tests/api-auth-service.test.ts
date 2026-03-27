@@ -34,7 +34,7 @@ describe("api auth service", () => {
   });
 
   it("builds Google auth URLs against the API callback by default", () => {
-    const service = new ApiAuthService(baseConfig, {} as never);
+    const service = new ApiAuthService(baseConfig, {} as never, {} as never);
     const url = new URL(service.buildAuthUrl("state-123"));
 
     expect(url.searchParams.get("redirect_uri")).toBe(baseConfig.googleApiRedirectUri);
@@ -51,6 +51,10 @@ describe("api auth service", () => {
       },
     };
     vi.spyOn(googleAuth, "loadStoredGoogleAuthorization").mockResolvedValue({
+      credentials: {
+        refresh_token: "refresh-token",
+        access_token: "access-token",
+      },
       getAccessToken: async () => ({ token: "access-token" }),
     } as never);
     vi.spyOn(google, "oauth2").mockReturnValue({
@@ -63,10 +67,27 @@ describe("api auth service", () => {
         }),
       },
     } as never);
+    const tokenStore = {
+      save: vi.fn(async () => undefined),
+    };
     const service = new ApiAuthService(baseConfig, {
       getByUserEmail: async () => currentSession,
-    } as never);
+    } as never, tokenStore as never);
 
     await expect(service.reuseAuthorizedSession()).resolves.toEqual(currentSession);
+    expect(tokenStore.save).toHaveBeenCalledWith("avery@example.com", expect.anything());
+  });
+
+  it("disables local auth reuse outside development", async () => {
+    const service = new ApiAuthService(
+      {
+        ...baseConfig,
+        appEnv: "production",
+      },
+      {} as never,
+      {} as never,
+    );
+
+    await expect(service.reuseAuthorizedSession()).resolves.toBeNull();
   });
 });

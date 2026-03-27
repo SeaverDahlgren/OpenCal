@@ -56,7 +56,8 @@ read_when:
 - Open it in the browser.
 - Approve Google identity, Gmail, and Calendar scopes.
 - The CLI waits for the callback on `127.0.0.1:42813`.
-- Tokens are stored under secure storage when available, else encrypted under `.opencal/`.
+- CLI tokens are stored under secure storage when available, else encrypted under `.opencal/`.
+- API/mobile Google credentials are stored per user under encrypted API state files.
 - After workspace bootstrap, the CLI offers 4 optional personalization questions.
 - Skipped answers are ignored.
 - Work hours, timezone, and personalized notes are persisted in the API profile store.
@@ -79,8 +80,9 @@ read_when:
   - `GET /api/v1/admin/session`
   - filter with `?sessionId=...` or `?email=...`
   - send `x-admin-key: <ADMIN_API_KEY>`
-- If the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
+- In `development`, if the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
 - If that route returns `GOOGLE_AUTH_REQUIRED`, the app stays on the sign-in screen and you need a fresh Google OAuth flow.
+- In `staging` and `production`, `auth/google/reuse` is intentionally disabled and mobile should always go through the hosted OAuth flow.
 - The mobile/API auth flow uses `GOOGLE_OAUTH_API_REDIRECT_URI`.
 - Google should redirect to:
   - `http://127.0.0.1:8787/api/v1/auth/google/callback`

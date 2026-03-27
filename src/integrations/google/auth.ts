@@ -61,6 +61,7 @@ export async function exchangeGoogleAuthorizationCode(
   config: AppConfig,
   code: string,
   redirectUri = config.googleRedirectUri,
+  options: { persist?: boolean } = {},
 ) {
   const client = new google.auth.OAuth2(
     config.googleClientId,
@@ -69,7 +70,9 @@ export async function exchangeGoogleAuthorizationCode(
   );
   const { tokens } = await client.getToken(code);
   client.setCredentials(tokens);
-  await storeToken(config, tokens);
+  if (options.persist !== false) {
+    await storeToken(config, tokens);
+  }
   return client;
 }
 

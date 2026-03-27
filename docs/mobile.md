@@ -58,11 +58,13 @@ read_when:
 - The mobile app expects a backend-issued bearer token.
 - Sessions are resolved per user email and expire after the configured session TTL.
 - Session and profile state can be encrypted at rest with `STATE_ENCRYPTION_KEY`.
+- API Google credentials are now stored per user instead of one shared machine token.
 - Signing out now revokes the current backend session before clearing the local mobile token.
 - On cold start without a stored mobile bearer token, the session layer first tries `POST /api/v1/auth/google/reuse`.
 - `auth/google/reuse` is a private-beta bootstrap path:
   - if local Google auth is still valid, the backend reuses or creates the current mobile session
   - if local Google auth is stale or missing, it returns `GOOGLE_AUTH_REQUIRED` and the app stays on the sign-in screen
+- `auth/google/reuse` is development-only. In staging/production, the API returns `GOOGLE_AUTH_REQUIRED` and the app should go through the normal OAuth browser flow.
 - The app includes an `auth-callback` route that can accept a `sessionToken` query param from your deep-link flow.
 - `POST /api/v1/auth/google/start` accepts `returnTo`, and the backend callback redirects back to that deep link with `sessionToken` and `sessionId` query params when provided.
 - The Google OAuth redirect used by the mobile/API path is:

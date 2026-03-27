@@ -2,16 +2,19 @@ import { google } from "googleapis";
 import type { AppConfig } from "../../../../src/config/env.js";
 import {
   buildGoogleAuthorizationUrl,
+  createGoogleOAuthClient,
   createGoogleClients,
   exchangeGoogleAuthorizationCode,
   loadStoredGoogleAuthorization,
 } from "../../../../src/integrations/google/auth.js";
 import { SessionStore } from "../sessions/store.js";
+import { GoogleTokenStore } from "./token-store.js";
 
 export class ApiAuthService {
   constructor(
     private readonly config: AppConfig,
     private readonly sessions: SessionStore,
+    private readonly tokens: GoogleTokenStore,
   ) {}
 
   buildAuthUrl(state?: string) {
@@ -26,6 +29,7 @@ export class ApiAuthService {
       this.config,
       code,
       this.config.googleApiRedirectUri,
+      { persist: false },
     );
     const oauth2 = google.oauth2({ version: "v2", auth });
     const profile = await oauth2.userinfo.get();
@@ -33,10 +37,15 @@ export class ApiAuthService {
       name: profile.data.name ?? "OpenCal Beta User",
       email: profile.data.email ?? "unknown@example.com",
     };
+    await this.tokens.save(user.email, auth.credentials);
     return await this.sessions.createOrReplaceSession(user);
   }
 
   async reuseAuthorizedSession() {
+    if (this.config.appEnv !== "development") {
+      return null;
+    }
+
     try {
       const auth = await loadStoredGoogleAuthorization(this.config);
       if (!auth) {
@@ -51,6 +60,7 @@ export class ApiAuthService {
         name: profile.data.name ?? "OpenCal Beta User",
         email: profile.data.email ?? "unknown@example.com",
       };
+      await this.tokens.save(user.email, auth.credentials);
       const current = await this.sessions.getByUserEmail(user.email);
       if (current) {
         return current;
@@ -61,13 +71,26 @@ export class ApiAuthService {
     }
   }
 
-  async loadAuthorizedGoogleClients() {
+  async loadAuthorizedGoogleClients(userEmail: string) {
     try {
+      const stored = await this.tokens.load(userEmail);
+      if (stored) {
+        const client = createGoogleOAuthClient(this.config);
+        client.setCredentials(stored);
+        await client.getAccessToken();
+        return createGoogleClients(client as never);
+      }
+
+      if (this.config.appEnv !== "development") {
+        return null;
+      }
+
       const auth = await loadStoredGoogleAuthorization(this.config);
       if (!auth) {
         return null;
       }
       await auth.getAccessToken();
+      await this.tokens.save(userEmail, auth.credentials);
       return createGoogleClients(auth);
     } catch {
       return null;

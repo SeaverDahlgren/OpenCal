@@ -16,12 +16,14 @@ import { handleSettingsRoute } from "./routes/settings.js";
 import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { SessionStore } from "./sessions/store.js";
+import { GoogleTokenStore } from "./auth/token-store.js";
 import { UserProfileStore } from "./users/store.js";
 
 const config = loadConfig(process.cwd());
 const sessions = new SessionStore(config);
 const profiles = new UserProfileStore(config);
-const auth = new ApiAuthService(config, sessions);
+const tokens = new GoogleTokenStore(config);
+const auth = new ApiAuthService(config, sessions, tokens);
 const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rateLimitMaxRequests);
 
 const server = http.createServer(async (req, res) => {
@@ -166,7 +168,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const googleClients = await auth.loadAuthorizedGoogleClients();
+    const googleClients = await auth.loadAuthorizedGoogleClients(session.user.email);
     if (!googleClients) {
       return await jsonError(res, 401, "GOOGLE_AUTH_REQUIRED", "Google authorization is required.", false);
     }
