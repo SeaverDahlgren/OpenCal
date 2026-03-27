@@ -22,7 +22,7 @@ OpenCal can read your calendar, find availability, create or update events, sear
 
 ## Prerequisites
 
-You need Node `>=20.11.0`, a Google Cloud project with Calendar and Gmail enabled, and at least one LLM API key for Gemini or Groq. If you want to run the mobile app, you also need Expo Go, an emulator, or the iOS Simulator.
+You need Node `>=20.11.0`, a Google Cloud project with Calendar and Gmail enabled, and at least one LLM API key for Gemini or Groq. If you want to run the mobile app locally, you also need Expo Go, an emulator, or the iOS Simulator. If you want to share it with friends, the intended path is now a hosted API plus an Expo EAS iOS build.
 
 ## Environment Setup
 
@@ -94,6 +94,12 @@ Install mobile dependencies:
 
 ```bash
 npm --prefix apps/mobile install
+```
+
+For hosted mobile builds, also copy:
+
+```bash
+cp apps/mobile/.env.example apps/mobile/.env
 ```
 
 ## Run Locally
@@ -239,6 +245,86 @@ EXPO_PUBLIC_API_BASE_URL=http://<host>:8787/api/v1 npm --prefix apps/mobile run 
 ```
 
 Use that when testing on a device or when the API is running somewhere else.
+
+## Share With Friends
+
+The lowest-friction path is:
+
+1. host the API yourself
+2. seed or manage the beta-user pool yourself
+3. ship the iOS app through TestFlight
+
+Your friends should only need to:
+
+1. install TestFlight once
+2. accept your TestFlight invite
+3. open OpenCal
+4. sign in with the Google account you added to the beta pool
+
+Everything else should stay on your side.
+
+### Hosted API Checklist
+
+Set the backend to a hosted beta posture:
+
+```env
+APP_ENV=staging
+BETA_ACCESS_MODE=allowlist
+BETA_USER_EMAILS=friend1@example.com,friend2@example.com
+ADMIN_API_KEY=...
+STATE_ENCRYPTION_KEY=...
+MIN_SUPPORTED_APP_VERSION=1.0.0
+GOOGLE_OAUTH_API_REDIRECT_URI=https://api.example.com/api/v1/auth/google/callback
+ALLOWED_RETURN_TO_PREFIXES=opencal://auth-callback
+```
+
+Then run:
+
+```bash
+npm run deploy:check
+npm run api:dev
+```
+
+For hosted beta-user management:
+
+```bash
+ADMIN_API_KEY=... OPENCAL_API_BASE_URL=https://api.example.com/api/v1 npm run beta:users -- add friend@example.com "Friend Name"
+```
+
+### Mobile Build Checklist
+
+Fill `apps/mobile/.env` with your hosted values:
+
+```env
+EXPO_PUBLIC_API_BASE_URL=https://api.example.com/api/v1
+EXPO_PUBLIC_BETA_HELP_EMAIL=you@example.com
+EXPO_PUBLIC_APP_NAME=OpenCal
+EXPO_PUBLIC_APP_SLUG=opencal
+EXPO_PUBLIC_APP_VERSION=1.0.0
+EXPO_PUBLIC_APP_SCHEME=opencal
+EXPO_OWNER=
+EXPO_PROJECT_ID=
+OPENCAL_IOS_BUNDLE_ID=com.opencal.app
+OPENCAL_ANDROID_PACKAGE=com.opencal.app
+OPENCAL_ASSOCIATED_DOMAINS=
+```
+
+Then from `apps/mobile`:
+
+```bash
+npx eas login
+npx eas build --platform ios --profile production
+npx eas submit --platform ios --profile production
+```
+
+Equivalent package scripts:
+
+```bash
+npm --prefix apps/mobile run build:ios:production
+npm --prefix apps/mobile run submit:ios:production
+```
+
+The app is now configured so beta users should not need to touch env vars, API URLs, or any local setup.
 
 ## Deploying the API for Remote Use
 

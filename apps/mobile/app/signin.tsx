@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { AppLogo } from "../src/components/AppLogo";
 import { useSession } from "../src/state/session";
@@ -5,17 +6,21 @@ import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function SignInScreen() {
   const { startAuth, loading, authError } = useSession();
+  const supportEmail = (Constants.expoConfig?.extra?.supportEmail as string | undefined)?.trim();
 
   return (
     <View style={styles.screen}>
       <View style={styles.header}>
         <AppLogo size={88} centered />
         <Text style={styles.title}>Welcome to OpenCal!</Text>
-        <Text style={styles.subtitle}>Sign in to get started</Text>
+        <Text style={styles.subtitle}>Sign in with the Google account you were invited with</Text>
       </View>
       <View style={styles.centerBlock}>
         {loading ? <Text style={styles.loadingText}>Checking for an existing beta session...</Text> : null}
         {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
+        {!loading && !authError && supportEmail ? (
+          <Text style={styles.helperText}>Need access? Contact {supportEmail} to join the beta.</Text>
+        ) : null}
         <TouchableOpacity style={styles.button} onPress={() => void startAuth()} disabled={loading}>
           <Text style={styles.buttonText}>Sign in with Google</Text>
         </TouchableOpacity>
@@ -62,6 +67,12 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 14,
     lineHeight: 20,
+    textAlign: "center",
+  },
+  helperText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
     textAlign: "center",
   },
   button: {

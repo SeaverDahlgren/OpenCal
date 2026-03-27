@@ -65,6 +65,10 @@ read_when:
   Validates hosted env assumptions and prints a deployment preflight report. It currently blocks true production rollout until `postgres` and `redis` runtime adapters land.
 - `npm run mobile:start`
   Runs `expo start` from `apps/mobile`.
+- `npm --prefix apps/mobile run build:ios:production`
+  Builds an iOS release with EAS for TestFlight distribution.
+- `npm --prefix apps/mobile run submit:ios:production`
+  Submits the production iOS build to App Store Connect / TestFlight.
 - The API and worker now handle `SIGINT` / `SIGTERM` gracefully so hosted restarts can drain without abrupt exits.
 
 ## Auth Model
@@ -96,6 +100,13 @@ read_when:
 
 ## Expo Runtime Notes
 
+- `apps/mobile/app.config.ts` is now the authoritative Expo config.
+- `apps/mobile/eas.json` defines development, preview, and production EAS profiles.
+- `apps/mobile/.env.example` is the template for hosted mobile build-time config such as:
+  - hosted API base URL
+  - support email shown on the sign-in screen
+  - bundle identifiers
+  - associated domains
 - Expo Go on SDK 53 expects Expo-aligned native navigation packages.
 - The mobile app depends on:
   - `react-native-screens`
@@ -103,6 +114,10 @@ read_when:
   - `react-native-gesture-handler`
   - `react-native-reanimated`
 - If the simulator shows `react-native-screens` prop-type crashes under Fabric/New Architecture, verify the installed versions match the Expo SDK instead of overriding `newArchEnabled`.
+- The sign-in screen now assumes a managed beta experience:
+  - users sign in with the invited Google account
+  - optional support contact text comes from `EXPO_PUBLIC_BETA_HELP_EMAIL`
+  - backend beta-pool denials show inline on the sign-in screen after OAuth returns
 
 ## Current Scope
 
