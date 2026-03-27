@@ -26,6 +26,7 @@ export default function CalendarScreen() {
   const monthCacheRef = useRef<Record<string, CalendarMonthDto>>({});
   const monthRequestRef = useRef(0);
   const dayRequestRef = useRef(0);
+  const syncedScheduleVersionRef = useRef<number>(scheduleVersion);
 
   const loadMonthData = useCallback(async (targetMonth: Date) => {
     if (!token) {
@@ -160,17 +161,25 @@ export default function CalendarScreen() {
         return;
       }
       if (hasLoadedRef.current) {
+        if (syncedScheduleVersionRef.current !== scheduleVersion) {
+          monthCacheRef.current = {};
+          syncedScheduleVersionRef.current = scheduleVersion;
+          void hydrateVisibleCalendar(visibleMonth, selectedDate);
+        }
         return;
       }
       hasLoadedRef.current = true;
+      syncedScheduleVersionRef.current = scheduleVersion;
       void hydrateVisibleCalendar(visibleMonth, selectedDate, { initial: true });
-    }, [hydrateVisibleCalendar, selectedDate, token, visibleMonth]),
+    }, [hydrateVisibleCalendar, scheduleVersion, selectedDate, token, visibleMonth]),
   );
 
   useEffect(() => {
     if (!token || !hasLoadedRef.current) {
       return;
     }
+    monthCacheRef.current = {};
+    syncedScheduleVersionRef.current = scheduleVersion;
     void hydrateVisibleCalendar(visibleMonth, selectedDate);
   }, [hydrateVisibleCalendar, scheduleVersion, selectedDate, token, visibleMonth]);
 
