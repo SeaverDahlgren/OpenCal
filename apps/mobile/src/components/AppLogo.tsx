@@ -13,6 +13,8 @@ export function AppLogo({
   const ringInset = Math.round(shellSize * 0.12);
   const tabWidth = Math.max(6, Math.round(shellSize * 0.18));
   const tabHeight = Math.max(8, Math.round(shellSize * 0.18));
+  const signalWidth = Math.max(12, Math.round(shellSize * 0.34));
+  const signalHeight = Math.max(4, Math.round(shellSize * 0.08));
 
   return (
     <View style={[styles.wrap, centered && styles.centered, { width: shellSize, height: shellSize }]}>
@@ -41,9 +43,9 @@ export function AppLogo({
             },
           ]}
         />
-        <View style={styles.sparkWrap}>
-          <View style={styles.sparkVertical} />
-          <View style={styles.sparkHorizontal} />
+        <View style={styles.signalWrap}>
+          <View style={[styles.signalBar, { width: signalWidth, height: signalHeight }]} />
+          <View style={[styles.signalBar, { width: Math.round(signalWidth * 0.68), height: signalHeight }]} />
         </View>
       </View>
     </View>
@@ -91,27 +93,14 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 0 },
   },
-  sparkWrap: {
+  signalWrap: {
     position: "absolute",
-    right: 7,
-    bottom: 7,
-    width: 10,
-    height: 10,
+    bottom: 9,
     alignItems: "center",
-    justifyContent: "center",
+    gap: 3,
   },
-  sparkVertical: {
-    position: "absolute",
-    width: 2,
-    height: 10,
+  signalBar: {
     borderRadius: 999,
-    backgroundColor: colors.tertiary,
-  },
-  sparkHorizontal: {
-    position: "absolute",
-    width: 10,
-    height: 2,
-    borderRadius: 999,
-    backgroundColor: colors.tertiary,
+    backgroundColor: "rgba(161, 250, 255, 0.92)",
   },
 });
