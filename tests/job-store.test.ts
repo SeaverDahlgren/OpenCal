@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { JobStore, buildNextRunAt } from "../apps/api/src/jobs/store.js";
+import type { JobRecord } from "../apps/api/src/jobs/types.js";
 import type { AppConfig } from "../src/config/env.js";
 
 const createdDirs: string[] = [];
@@ -89,6 +90,50 @@ describe("job store", () => {
       runAt: "2000-03-26T00:00:00.000Z",
     });
   });
+
+  it("prunes terminal jobs older than the retention window", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-job-store-"));
+    createdDirs.push(privateDir);
+    const store = new JobStore({ ...createConfig(privateDir), jobRetentionDays: 1 });
+
+    const job = await store.enqueue({
+      kind: "agent_turn_retry",
+      payload: {
+        sessionId: "sess-1",
+        action: { type: "message", message: "retry this" },
+      },
+      maxAttempts: 2,
+      runAt: "2000-03-26T00:00:00.000Z",
+    });
+
+    await store.reserveNext();
+    const completed = await store.complete(job.jobId, {
+      assistant: { message: "done" },
+      taskState: {
+        taskId: "task-1",
+        summary: "Retry this",
+        status: "idle",
+        hasBlockedPrompt: false,
+      },
+      clarification: null,
+      confirmation: null,
+      artifacts: [],
+      session: { hasBlockedTask: false },
+    });
+
+    const staleStatePath = path.join(privateDir, "jobs.json");
+    const raw = await fs.readFile(staleStatePath, "utf8");
+    const parsed = JSON.parse(raw) as { jobs: Record<string, JobRecord> };
+    parsed.jobs[job.jobId] = {
+      ...parsed.jobs[job.jobId],
+      status: "completed",
+      updatedAt: "2000-03-26T00:00:00.000Z",
+    };
+    await fs.writeFile(staleStatePath, JSON.stringify(parsed, null, 2), "utf8");
+
+    expect(await store.list()).toEqual([]);
+    expect(await store.load(job.jobId)).toBeNull();
+  });
 });
 
 function createConfig(privateDir: string): AppConfig {
@@ -123,6 +168,9 @@ function createConfig(privateDir: string): AppConfig {
     rateLimitWindowMs: 60000,
     rateLimitMaxRequests: 120,
     maxRequestBodyBytes: 1024 * 1024,
+    idempotencyMaxRecords: 5000,
+    jobRetentionDays: 14,
+    auditMaxEvents: 1000,
     apiRequestTimeoutMs: 30000,
     apiHeadersTimeoutMs: 30000,
     apiKeepAliveTimeoutMs: 5000,

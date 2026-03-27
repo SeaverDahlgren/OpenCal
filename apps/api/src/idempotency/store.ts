@@ -29,14 +29,18 @@ export class IdempotencyStore {
   async save(record: IdempotencyRecord) {
     const state = await this.readState();
     state.records[recordKey(record.sessionId, record.key)] = record;
-    await writeSecureJsonFile(this.filePath(), state, this.config.stateEncryptionKey);
+    await writeSecureJsonFile(
+      this.filePath(),
+      pruneRecords(state, this.config.idempotencyMaxRecords),
+      this.config.stateEncryptionKey,
+    );
   }
 
   private async readState(): Promise<IdempotencyState> {
     const current = (await readSecureJsonFile<IdempotencyState>(this.filePath(), this.config.stateEncryptionKey)) ?? {
       records: {},
     };
-    const next = pruneExpired(current);
+    const next = pruneRecords(current, this.config.idempotencyMaxRecords);
     if (next !== current) {
       await writeSecureJsonFile(this.filePath(), next, this.config.stateEncryptionKey);
     }
@@ -58,17 +62,22 @@ function recordKey(sessionId: string, key: string) {
   return `${sessionId}:${key}`;
 }
 
-function pruneExpired(state: IdempotencyState) {
+function pruneRecords(state: IdempotencyState, maxRecords: number) {
   const now = new Date().toISOString();
   let changed = false;
-  const records = Object.fromEntries(
-    Object.entries(state.records).filter(([, record]) => {
-      const active = record.expiresAt > now;
-      if (!active) {
-        changed = true;
-      }
-      return active;
-    }),
-  );
+  const activeRecords = Object.entries(state.records).filter(([, record]) => {
+    const active = record.expiresAt > now;
+    if (!active) {
+      changed = true;
+    }
+    return active;
+  });
+  const limitedRecords = activeRecords
+    .sort(([, left], [, right]) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, maxRecords);
+  if (limitedRecords.length !== activeRecords.length) {
+    changed = true;
+  }
+  const records = Object.fromEntries(limitedRecords);
   return changed ? { records } : state;
 }

@@ -117,9 +117,14 @@ export class JobStore {
   }
 
   private async readState(): Promise<JobState> {
-    return (
-      (await readSecureJsonFile<JobState>(this.filePath(), this.config.stateEncryptionKey)) ?? { jobs: {} }
-    );
+    const current = (await readSecureJsonFile<JobState>(this.filePath(), this.config.stateEncryptionKey)) ?? {
+      jobs: {},
+    };
+    const next = pruneJobs(current, this.config.jobRetentionDays);
+    if (next !== current) {
+      await this.writeState(next);
+    }
+    return next;
   }
 
   private async writeState(state: JobState) {
@@ -133,4 +138,22 @@ export class JobStore {
 
 export function buildNextRunAt(delayMs: number, nowIso = new Date().toISOString()) {
   return new Date(new Date(nowIso).getTime() + delayMs).toISOString();
+}
+
+function pruneJobs(state: JobState, retentionDays: number) {
+  const cutoff = new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate() - retentionDays);
+  const cutoffIso = cutoff.toISOString();
+  let changed = false;
+  const jobs = Object.fromEntries(
+    Object.entries(state.jobs).filter(([, job]) => {
+      const terminal = job.status === "completed" || job.status === "exhausted" || job.status === "failed";
+      const retain = !terminal || job.updatedAt >= cutoffIso;
+      if (!retain) {
+        changed = true;
+      }
+      return retain;
+    }),
+  );
+  return changed ? { jobs } : state;
 }

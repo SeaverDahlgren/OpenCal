@@ -27,6 +27,9 @@ read_when:
    - `DATABASE_URL` when `STORAGE_BACKEND=postgres`
    - `REDIS_URL` when `JOB_BACKEND=redis`
    - `MAX_REQUEST_BODY_BYTES`
+   - `IDEMPOTENCY_MAX_RECORDS`
+   - `JOB_RETENTION_DAYS`
+   - `AUDIT_MAX_EVENTS`
    - `API_REQUEST_TIMEOUT_MS`
    - `API_HEADERS_TIMEOUT_MS`
    - `API_KEEP_ALIVE_TIMEOUT_MS`
@@ -138,7 +141,10 @@ read_when:
 - `WORKER_POLL_INTERVAL_MS` controls how often the watch worker checks for queued jobs.
 - The API server and worker now trap `SIGINT` / `SIGTERM` and shut down cleanly. That matters in hosted environments where deploys or autoscaling can interrupt a long-running process.
 - Jobs that hit `JOB_MAX_ATTEMPTS` now land in an `exhausted` terminal state. Support can inspect them through `/api/v1/admin/job?status=exhausted` and requeue them manually if needed.
+- Old completed/exhausted jobs are pruned automatically after `JOB_RETENTION_DAYS`.
+- File-backed idempotency responses are bounded by `IDEMPOTENCY_MAX_RECORDS` so retry caches do not grow without limit during the beta.
 - The API now also persists a compact audit trail for auth reuse/completion, user session reset/revoke, and admin recovery actions. Use `/api/v1/admin/audit` when you need support history without digging through raw `.opencal/logs`.
+- Audit history is capped by `AUDIT_MAX_EVENTS`.
 - The API and worker both resolve storage from the same runtime bootstrap factory. Today that means file-backed repositories and a file-backed job queue. `STORAGE_BACKEND` and `JOB_BACKEND` are already reserved for future Postgres and Redis adapters.
 - Mobile clients now send `x-opencal-app-version`. If `MIN_SUPPORTED_APP_VERSION` is set and the app is older, the API responds with `CLIENT_UPGRADE_REQUIRED`.
 - In `staging` and `production`, `STATE_ENCRYPTION_KEY` is required and `.opencal/` session/profile files are encrypted at rest.

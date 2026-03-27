@@ -39,6 +39,9 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   MAX_REQUEST_BODY_BYTES: z.coerce.number().int().positive().default(1024 * 1024),
+  IDEMPOTENCY_MAX_RECORDS: z.coerce.number().int().positive().default(5000),
+  JOB_RETENTION_DAYS: z.coerce.number().int().positive().default(14),
+  AUDIT_MAX_EVENTS: z.coerce.number().int().positive().default(1000),
   API_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   API_HEADERS_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
   API_KEEP_ALIVE_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
@@ -78,6 +81,9 @@ export type AppConfig = {
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
   maxRequestBodyBytes: number;
+  idempotencyMaxRecords: number;
+  jobRetentionDays: number;
+  auditMaxEvents: number;
   apiRequestTimeoutMs: number;
   apiHeadersTimeoutMs: number;
   apiKeepAliveTimeoutMs: number;
@@ -141,6 +147,9 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
     maxRequestBodyBytes: env.MAX_REQUEST_BODY_BYTES,
+    idempotencyMaxRecords: env.IDEMPOTENCY_MAX_RECORDS,
+    jobRetentionDays: env.JOB_RETENTION_DAYS,
+    auditMaxEvents: env.AUDIT_MAX_EVENTS,
     apiRequestTimeoutMs: env.API_REQUEST_TIMEOUT_MS,
     apiHeadersTimeoutMs: env.API_HEADERS_TIMEOUT_MS,
     apiKeepAliveTimeoutMs: env.API_KEEP_ALIVE_TIMEOUT_MS,

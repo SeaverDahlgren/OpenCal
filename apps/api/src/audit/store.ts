@@ -20,7 +20,7 @@ export class AuditStore {
       ...input,
     };
     state.events.unshift(event);
-    state.events = state.events.slice(0, 1000);
+    state.events = state.events.slice(0, this.config.auditMaxEvents);
     await this.writeState(state);
     return event;
   }

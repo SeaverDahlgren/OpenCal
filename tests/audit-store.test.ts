@@ -33,6 +33,32 @@ describe("audit store", () => {
     expect(events[0]?.type).toBe("session.revoke");
     expect(events[1]?.type).toBe("session.reset");
   });
+
+  it("uses the configured max event cap", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-audit-store-"));
+    createdDirs.push(privateDir);
+    const store = new AuditStore({ ...createConfig(privateDir), auditMaxEvents: 2 });
+
+    await store.append({
+      type: "session.reset",
+      sessionId: "sess-1",
+      userEmail: "avery@example.com",
+    });
+    await store.append({
+      type: "session.revoke",
+      sessionId: "sess-1",
+      userEmail: "avery@example.com",
+    });
+    await store.append({
+      type: "admin.session.reset",
+      sessionId: "sess-1",
+      userEmail: "avery@example.com",
+    });
+
+    const events = await store.list();
+    expect(events).toHaveLength(2);
+    expect(events.map((event) => event.type)).toEqual(["admin.session.reset", "session.revoke"]);
+  });
 });
 
 function createConfig(privateDir: string): AppConfig {
@@ -67,6 +93,9 @@ function createConfig(privateDir: string): AppConfig {
     rateLimitWindowMs: 60000,
     rateLimitMaxRequests: 120,
     maxRequestBodyBytes: 1024 * 1024,
+    idempotencyMaxRecords: 5000,
+    jobRetentionDays: 14,
+    auditMaxEvents: 1000,
     apiRequestTimeoutMs: 30000,
     apiHeadersTimeoutMs: 30000,
     apiKeepAliveTimeoutMs: 5000,

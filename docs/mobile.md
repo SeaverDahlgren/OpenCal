@@ -128,6 +128,7 @@ read_when:
 - `POST /api/v1/agent/turn` supports `Idempotency-Key` for retry-safe mobile submits.
 - Retryable LLM failures on `POST /api/v1/agent/turn` now enqueue an `agent_turn_retry` background job for worker processing.
 - Queued jobs that exceed `JOB_MAX_ATTEMPTS` move to `exhausted`, which the admin job endpoint exposes as a terminal state for support recovery.
+- Old completed/exhausted jobs are pruned after `JOB_RETENTION_DAYS` so the file-backed beta queue stays bounded.
 - `STORAGE_BACKEND` and `JOB_BACKEND` now select the runtime repository layer. The current supported production path is still `file`, but the API no longer hardcodes file-backed stores at route startup.
 - The API can enforce a minimum supported mobile build via `MIN_SUPPORTED_APP_VERSION`.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
@@ -146,6 +147,7 @@ read_when:
   - `/api/v1/admin/job`
   - `/api/v1/admin/audit`
 - The audit endpoint exposes recent auth, session, and admin recovery events with filters for `sessionId`, `email`, and `event`.
+- File-backed support state is bounded: idempotency caches respect `IDEMPOTENCY_MAX_RECORDS`, and audit history respects `AUDIT_MAX_EVENTS`.
 - API error payloads now include request ids for support/debugging correlation.
 
 ## Notes

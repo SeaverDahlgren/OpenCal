@@ -138,6 +138,7 @@ In staging and production, the API also emits `Strict-Transport-Security` so bro
 Both the API server and the background worker now handle `SIGINT` and `SIGTERM` gracefully so deploy restarts can drain cleanly instead of exiting mid-request or mid-loop.
 The API now also enforces a maximum JSON request size with a clean `413 REQUEST_TOO_LARGE` response, so hosted endpoints do not buffer arbitrarily large mobile or browser payloads.
 The hosted API now also uses explicit request, headers, and keep-alive timeouts instead of relying on Node defaults.
+File-backed beta state is now bounded too: idempotency keys are capped by `IDEMPOTENCY_MAX_RECORDS`, terminal jobs are pruned after `JOB_RETENTION_DAYS`, and support audit history is capped by `AUDIT_MAX_EVENTS`.
 
 By default it listens on:
 
@@ -181,6 +182,7 @@ The audit endpoint gives support a compact trail of auth, session, and admin rec
 For `POST /api/v1/agent/turn`, send an `Idempotency-Key` header on mobile retries or reconnects. The API caches successful responses per session so duplicate confirms do not create duplicate events or drafts.
 Retryable model failures on that route are also queued as background jobs for later worker replay.
 Jobs that hit `JOB_MAX_ATTEMPTS` now move to an explicit `exhausted` terminal state so support can distinguish dead-letter work from pending retries.
+Old completed or exhausted jobs are pruned automatically after `JOB_RETENTION_DAYS` so the beta queue store does not grow forever.
 Mobile clients also send app-version metadata, and the API records the last seen client build and platform on each session for support/debugging.
 
 ### Mobile App
