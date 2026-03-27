@@ -115,6 +115,20 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
   if (env.JOB_BACKEND !== "file" && !env.REDIS_URL) {
     throw new Error("Invalid environment configuration:\nREDIS_URL is required when JOB_BACKEND is not file");
   }
+  if (env.APP_ENV === "production" && env.STORAGE_BACKEND === "file") {
+    throw new Error("Invalid environment configuration:\nSTORAGE_BACKEND=file is not allowed in production");
+  }
+  if (env.APP_ENV === "production" && env.JOB_BACKEND === "file") {
+    throw new Error("Invalid environment configuration:\nJOB_BACKEND=file is not allowed in production");
+  }
+  if (env.APP_ENV === "production" && !env.MIN_SUPPORTED_APP_VERSION) {
+    throw new Error("Invalid environment configuration:\nMIN_SUPPORTED_APP_VERSION is required in production");
+  }
+  if (env.APP_ENV !== "development" && !isHostedHttpsUrl(env.GOOGLE_OAUTH_API_REDIRECT_URI)) {
+    throw new Error(
+      "Invalid environment configuration:\nGOOGLE_OAUTH_API_REDIRECT_URI must be an https URL outside development",
+    );
+  }
 
   return {
     appEnv: env.APP_ENV,
@@ -162,4 +176,20 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     rootDir,
     privateDir: path.join(rootDir, ".opencal"),
   };
+}
+
+function isHostedHttpsUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") {
+      return false;
+    }
+    return !isLocalHostname(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isLocalHostname(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }

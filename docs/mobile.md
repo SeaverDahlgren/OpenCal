@@ -143,6 +143,7 @@ read_when:
 - JSON POST bodies are capped by `MAX_REQUEST_BODY_BYTES`, so malformed or oversized client submissions fail with a deterministic `413` instead of unbounded buffering.
 - The in-memory beta rate limiter also bounds its own key count with `RATE_LIMIT_MAX_KEYS` and now emits limit/remaining/reset headers on responses.
 - The hosted API now also uses explicit request, headers, and keep-alive timeouts from env config rather than inheriting Node defaults.
+- `loadConfig()` now also blocks unsafe production boots, including file-backed core storage or a localhost/non-HTTPS API OAuth callback.
 - When `ADMIN_API_KEY` is configured, support tooling can inspect sessions through:
   - `/api/v1/admin/session`
   - `/api/v1/admin/job`

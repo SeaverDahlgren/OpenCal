@@ -151,6 +151,7 @@ read_when:
 - In `staging` and `production`, `STATE_ENCRYPTION_KEY` is required and `.opencal/` session/profile files are encrypted at rest.
 - API errors now include a request id when available to simplify support/debugging.
 - The in-memory rate limiter now also caps its tracked key count with `RATE_LIMIT_MAX_KEYS` and emits `x-rate-limit-limit`, `x-rate-limit-remaining`, and `x-rate-limit-reset` headers on responses.
+- Production boots now fail fast if `STORAGE_BACKEND=file`, `JOB_BACKEND=file`, `MIN_SUPPORTED_APP_VERSION` is missing, or `GOOGLE_OAUTH_API_REDIRECT_URI` is still a localhost/non-HTTPS callback.
 
 If the backend callback fails with an identity/authentication error after Google approval, the usual cause is that the stored token was granted before the app requested basic identity scopes. Re-run OAuth so Google grants the updated scope set.
 
