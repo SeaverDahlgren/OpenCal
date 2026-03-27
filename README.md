@@ -132,6 +132,12 @@ Run the worker continuously with:
 npm run api:worker:watch
 ```
 
+Run a hosted deploy preflight with:
+
+```bash
+npm run deploy:check
+```
+
 The API and worker now boot their storage layer through one runtime factory. In the current beta, that resolves to encrypted file-backed repositories and a file-backed job queue. The config already reserves `postgres` and `redis` as future production backends, so deployment config can move without changing route code.
 API responses now also ship with no-store caching plus basic security headers such as `X-Frame-Options` and `X-Content-Type-Options` so hosted beta deployments do not inherit permissive defaults.
 In staging and production, the API also emits `Strict-Transport-Security` so browsers and shared edges learn to stick to HTTPS.
@@ -141,6 +147,7 @@ The hosted API now also uses explicit request, headers, and keep-alive timeouts 
 File-backed beta state is now bounded too: idempotency keys are capped by `IDEMPOTENCY_MAX_RECORDS`, terminal jobs are pruned after `JOB_RETENTION_DAYS`, and support audit history is capped by `AUDIT_MAX_EVENTS`.
 The in-memory beta rate limiter is bounded too: expired buckets are swept automatically, live buckets are capped by `RATE_LIMIT_MAX_KEYS`, and responses include `x-rate-limit-limit`, `x-rate-limit-remaining`, and `x-rate-limit-reset`.
 `loadConfig()` now also fails fast in production if you try to boot with file-backed core storage, a localhost/non-HTTPS API OAuth callback, or no `MIN_SUPPORTED_APP_VERSION`.
+`npm run deploy:check` turns those checks into a release-oriented report with explicit errors, warnings, and notes before you cut a beta deploy.
 
 By default it listens on:
 
