@@ -6,6 +6,8 @@ import * as googleAuth from "../src/integrations/google/auth.js";
 
 const baseConfig: AppConfig = {
   appEnv: "development",
+  betaAccessMode: "open",
+  betaUserEmails: [],
   storageBackend: "file",
   jobBackend: "file",
   llmProvider: "groq",
@@ -94,9 +96,12 @@ describe("api auth service", () => {
     const sessions = {
       createOrReplaceSession: vi.fn(async () => currentSession),
     };
+    const betaUsers = {
+      isAllowed: vi.fn(async () => true),
+    };
     const service = new ApiAuthService(baseConfig, {
       ...sessions,
-    } as never, tokenStore as never);
+    } as never, tokenStore as never, betaUsers as never);
 
     await expect(service.reuseAuthorizedSession()).resolves.toEqual(currentSession);
     expect(tokenStore.save).toHaveBeenCalledWith("avery@example.com", expect.anything());
@@ -114,8 +119,42 @@ describe("api auth service", () => {
       },
       {} as never,
       {} as never,
+      {} as never,
     );
 
     await expect(service.reuseAuthorizedSession()).resolves.toBeNull();
+  });
+
+  it("rejects users outside the beta allowlist", async () => {
+    vi.spyOn(googleAuth, "loadStoredGoogleAuthorization").mockResolvedValue({
+      credentials: {
+        refresh_token: "refresh-token",
+        access_token: "access-token",
+      },
+      getAccessToken: async () => ({ token: "access-token" }),
+    } as never);
+    vi.spyOn(google, "oauth2").mockReturnValue({
+      userinfo: {
+        get: async () => ({
+          data: {
+            name: "Blocked User",
+            email: "blocked@example.com",
+          },
+        }),
+      },
+    } as never);
+    const service = new ApiAuthService(
+      {
+        ...baseConfig,
+        betaAccessMode: "allowlist",
+      },
+      {} as never,
+      {} as never,
+      {
+        isAllowed: vi.fn(async () => false),
+      } as never,
+    );
+
+    await expect(service.reuseAuthorizedSession()).rejects.toThrow(/not in the beta access pool/i);
   });
 });

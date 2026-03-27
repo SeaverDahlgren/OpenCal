@@ -7,8 +7,8 @@ import { registerAbortOnSignals } from "./server/shutdown.js";
 
 async function main() {
   const config = loadConfig(process.cwd());
-  const { sessions, profiles, tokens, audit, jobs } = createRuntimeStores(config);
-  const auth = new ApiAuthService(config, sessions, tokens, audit);
+  const { sessions, profiles, tokens, betaUsers, audit, jobs } = createRuntimeStores(config);
+  const auth = new ApiAuthService(config, sessions, tokens, betaUsers, audit);
   const processor = new JobProcessor({
     config,
     auth,

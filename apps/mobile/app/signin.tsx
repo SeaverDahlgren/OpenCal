@@ -4,7 +4,7 @@ import { useSession } from "../src/state/session";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function SignInScreen() {
-  const { startAuth, loading } = useSession();
+  const { startAuth, loading, authError } = useSession();
 
   return (
     <View style={styles.screen}>
@@ -15,6 +15,7 @@ export default function SignInScreen() {
       </View>
       <View style={styles.centerBlock}>
         {loading ? <Text style={styles.loadingText}>Checking for an existing beta session...</Text> : null}
+        {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
         <TouchableOpacity style={styles.button} onPress={() => void startAuth()} disabled={loading}>
           <Text style={styles.buttonText}>Sign in with Google</Text>
         </TouchableOpacity>
@@ -55,6 +56,12 @@ const styles = StyleSheet.create({
   loadingText: {
     color: colors.tertiary,
     fontSize: 14,
+    textAlign: "center",
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: "center",
   },
   button: {

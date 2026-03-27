@@ -95,6 +95,8 @@ describe("session runtime", () => {
 function createConfig(rootDir: string): AppConfig {
   return {
     appEnv: "development",
+    betaAccessMode: "open",
+    betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
     llmProvider: "groq",

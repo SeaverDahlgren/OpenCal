@@ -9,6 +9,7 @@ describe("runtime bootstrap", () => {
     expect(stores.sessions).toBeTruthy();
     expect(stores.profiles).toBeTruthy();
     expect(stores.tokens).toBeTruthy();
+    expect(stores.betaUsers).toBeTruthy();
     expect(stores.idempotency).toBeTruthy();
     expect(stores.jobs).toBeTruthy();
   });
@@ -26,6 +27,8 @@ describe("runtime bootstrap", () => {
 function createConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     appEnv: "development",
+    betaAccessMode: "open",
+    betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
     llmProvider: "groq",

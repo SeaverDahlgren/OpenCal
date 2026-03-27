@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { buildMobileReturnUrl, decodeAuthState, encodeAuthState } from "../auth/state.js";
+import { buildMobileErrorUrl, buildMobileReturnUrl, decodeAuthState, encodeAuthState } from "../auth/state.js";
+import { BetaAccessDeniedError } from "../auth/service.js";
 import { jsonError, jsonRoute, readJsonBody } from "../server/http.js";
 import type { PublicRouteContext } from "./types.js";
 
@@ -16,7 +17,21 @@ export async function handleAuthRoute(ctx: PublicRouteContext) {
   }
 
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/auth/google/reuse") {
-    const session = await ctx.auth.reuseAuthorizedSession();
+    let session;
+    try {
+      session = await ctx.auth.reuseAuthorizedSession();
+    } catch (error) {
+      if (error instanceof BetaAccessDeniedError) {
+        return await jsonError(
+          ctx.res,
+          403,
+          "BETA_ACCESS_DENIED",
+          "This Google account is not enabled for the OpenCal beta.",
+          false,
+        );
+      }
+      throw error;
+    }
     if (!session) {
       return await jsonError(
         ctx.res,
@@ -39,8 +54,31 @@ export async function handleAuthRoute(ctx: PublicRouteContext) {
     if (!code) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "Missing OAuth code.", false);
     }
-    const session = await ctx.auth.completeAuthorization(code);
     const state = decodeAuthState(ctx.config, ctx.url.searchParams.get("state"));
+    let session;
+    try {
+      session = await ctx.auth.completeAuthorization(code);
+    } catch (error) {
+      if (error instanceof BetaAccessDeniedError) {
+        const returnUrl = buildMobileErrorUrl(ctx.config, state.returnTo, {
+          code: "BETA_ACCESS_DENIED",
+          message: "This Google account is not enabled for the OpenCal beta.",
+        });
+        if (returnUrl) {
+          ctx.res.writeHead(302, { location: returnUrl });
+          ctx.res.end();
+          return;
+        }
+        return await jsonError(
+          ctx.res,
+          403,
+          "BETA_ACCESS_DENIED",
+          "This Google account is not enabled for the OpenCal beta.",
+          false,
+        );
+      }
+      throw error;
+    }
     const returnUrl = buildMobileReturnUrl(ctx.config, state.returnTo, session);
     if (returnUrl) {
       ctx.res.writeHead(302, { location: returnUrl });

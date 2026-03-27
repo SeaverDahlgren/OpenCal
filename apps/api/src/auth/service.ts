@@ -8,7 +8,7 @@ import {
   loadStoredGoogleAuthorization,
 } from "../../../../src/integrations/google/auth.js";
 import { GoogleTokenStore } from "./token-store.js";
-import type { AuditRepository, GoogleTokenRepository, SessionRepository } from "../storage/types.js";
+import type { AuditRepository, BetaUserRepository, GoogleTokenRepository, SessionRepository } from "../storage/types.js";
 
 const noopAudit: AuditRepository = {
   async append() {
@@ -23,11 +23,43 @@ const noopAudit: AuditRepository = {
   },
 };
 
+const openBetaUsers: BetaUserRepository = {
+  async list() {
+    return [];
+  },
+  async isAllowed() {
+    return true;
+  },
+  async add(input) {
+    return {
+      email: input.email.trim().toLowerCase(),
+      name: input.name,
+      addedAt: new Date(0).toISOString(),
+      addedBy: input.addedBy,
+      source: "admin",
+    };
+  },
+  async remove() {
+    return null;
+  },
+};
+
+export class BetaAccessDeniedError extends Error {
+  constructor(
+    readonly user: { name: string; email: string },
+    readonly mode: "open" | "allowlist",
+  ) {
+    super(`User ${user.email} is not in the beta access pool.`);
+    this.name = "BetaAccessDeniedError";
+  }
+}
+
 export class ApiAuthService {
   constructor(
     private readonly config: AppConfig,
     private readonly sessions: SessionRepository,
     private readonly tokens: GoogleTokenRepository,
+    private readonly betaUsers: BetaUserRepository = openBetaUsers,
     private readonly audit: AuditRepository = noopAudit,
   ) {}
 
@@ -51,6 +83,7 @@ export class ApiAuthService {
       name: profile.data.name ?? "OpenCal Beta User",
       email: profile.data.email ?? "unknown@example.com",
     };
+    await this.assertBetaAccess(user);
     await this.tokens.save(user.email, auth.credentials);
     const session = await this.sessions.createOrReplaceSession(user);
     await this.audit.append({
@@ -83,6 +116,7 @@ export class ApiAuthService {
         name: profile.data.name ?? "OpenCal Beta User",
         email: profile.data.email ?? "unknown@example.com",
       };
+      await this.assertBetaAccess(user);
       await this.tokens.save(user.email, auth.credentials);
       const session = await this.sessions.createOrReplaceSession(user);
       await this.audit.append({
@@ -94,7 +128,10 @@ export class ApiAuthService {
         },
       });
       return session;
-    } catch {
+    } catch (error) {
+      if (error instanceof BetaAccessDeniedError) {
+        throw error;
+      }
       return null;
     }
   }
@@ -123,5 +160,23 @@ export class ApiAuthService {
     } catch {
       return null;
     }
+  }
+
+  private async assertBetaAccess(user: { name: string; email: string }) {
+    if (this.config.betaAccessMode !== "allowlist") {
+      return;
+    }
+    if (await this.betaUsers.isAllowed(user.email)) {
+      return;
+    }
+    await this.audit.append({
+      type: "auth.beta.denied",
+      userEmail: user.email,
+      metadata: {
+        appEnv: this.config.appEnv,
+        mode: this.config.betaAccessMode,
+      },
+    });
+    throw new BetaAccessDeniedError(user, this.config.betaAccessMode);
   }
 }

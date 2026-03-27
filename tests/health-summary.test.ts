@@ -46,6 +46,8 @@ function createJob(status: "pending" | "running" | "completed" | "failed" | "exh
 function createConfig(): AppConfig {
   return {
     appEnv: "staging",
+    betaAccessMode: "allowlist",
+    betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
     llmProvider: "groq",

@@ -5,14 +5,25 @@ import { useSession } from "../src/state/session";
 import { colors } from "../src/theme/tokens";
 
 export default function AuthCallbackScreen() {
-  const { sessionToken } = useLocalSearchParams<{ sessionToken?: string }>();
-  const { setToken } = useSession();
+  const { sessionToken, errorCode, errorMessage } = useLocalSearchParams<{
+    sessionToken?: string;
+    errorCode?: string;
+    errorMessage?: string;
+  }>();
+  const { setToken, setAuthError } = useSession();
 
   useEffect(() => {
     if (typeof sessionToken === "string" && sessionToken.length > 0) {
       void setToken(sessionToken);
     }
-  }, [sessionToken, setToken]);
+    if (typeof errorCode === "string" && errorCode.length > 0) {
+      setAuthError(
+        typeof errorMessage === "string" && errorMessage.length > 0
+          ? errorMessage
+          : "Sign-in failed.",
+      );
+    }
+  }, [errorCode, errorMessage, sessionToken, setAuthError, setToken]);
 
   if (typeof sessionToken === "string" && sessionToken.length > 0) {
     return (

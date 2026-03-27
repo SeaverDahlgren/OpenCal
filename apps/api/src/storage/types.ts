@@ -3,6 +3,7 @@ import type { Credentials } from "google-auth-library";
 import type { UserProfile } from "../users/profile.js";
 import type { AuditEvent } from "../audit/types.js";
 import type { JobRecord } from "../jobs/types.js";
+import type { BetaUserRecord } from "../beta-users/store.js";
 
 export interface SessionRepository {
   loadByToken(token: string): Promise<StoredSessionState | null>;
@@ -25,6 +26,14 @@ export interface UserProfileRepository {
 export interface GoogleTokenRepository {
   load(email: string): Promise<Credentials | null>;
   save(email: string, credentials: Credentials): Promise<void>;
+  delete(email: string): Promise<void>;
+}
+
+export interface BetaUserRepository {
+  list(): Promise<BetaUserRecord[]>;
+  isAllowed(email: string): Promise<boolean>;
+  add(input: { email: string; name?: string; addedBy?: string }): Promise<BetaUserRecord>;
+  remove(email: string): Promise<BetaUserRecord | null>;
 }
 
 export interface IdempotencyRepository {

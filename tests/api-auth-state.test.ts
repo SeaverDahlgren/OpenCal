@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildMobileErrorUrl,
   buildMobileReturnUrl,
   decodeAuthState,
   encodeAuthState,
@@ -30,6 +31,15 @@ describe("api auth state", () => {
     });
 
     expect(url).toBe("opencal://auth-callback?sessionToken=token-123&sessionId=sess-123");
+  });
+
+  it("builds a deep link return url with auth errors", () => {
+    const url = buildMobileErrorUrl(stateConfig, "opencal://auth-callback", {
+      code: "BETA_ACCESS_DENIED",
+      message: "Blocked",
+    });
+
+    expect(url).toBe("opencal://auth-callback?errorCode=BETA_ACCESS_DENIED&errorMessage=Blocked");
   });
 
   it("rejects invalid or expired auth state and invalid return urls", () => {

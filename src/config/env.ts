@@ -6,6 +6,8 @@ loadDotEnv();
 
 const envSchema = z.object({
   APP_ENV: z.enum(["development", "staging", "production"]).default("development"),
+  BETA_ACCESS_MODE: z.enum(["open", "allowlist"]).default("open"),
+  BETA_USER_EMAILS: z.string().optional(),
   STORAGE_BACKEND: z.enum(["file", "postgres"]).default("file"),
   JOB_BACKEND: z.enum(["file", "redis"]).default("file"),
   LLM_PROVIDER: z.string().default("gemini"),
@@ -53,6 +55,8 @@ const envSchema = z.object({
 
 export type AppConfig = {
   appEnv: "development" | "staging" | "production";
+  betaAccessMode: "open" | "allowlist";
+  betaUserEmails: string[];
   storageBackend: "file" | "postgres";
   jobBackend: "file" | "redis";
   llmProvider: string;
@@ -109,6 +113,9 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
   if (env.APP_ENV !== "development" && !env.STATE_ENCRYPTION_KEY) {
     throw new Error("Invalid environment configuration:\nSTATE_ENCRYPTION_KEY is required outside development");
   }
+  if (env.APP_ENV === "production" && env.BETA_ACCESS_MODE !== "allowlist") {
+    throw new Error("Invalid environment configuration:\nBETA_ACCESS_MODE=allowlist is required in production");
+  }
   if (env.STORAGE_BACKEND !== "file" && !env.DATABASE_URL) {
     throw new Error("Invalid environment configuration:\nDATABASE_URL is required when STORAGE_BACKEND is not file");
   }
@@ -132,6 +139,11 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
 
   return {
     appEnv: env.APP_ENV,
+    betaAccessMode: env.BETA_ACCESS_MODE,
+    betaUserEmails:
+      env.BETA_USER_EMAILS?.split(",")
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean) ?? [],
     storageBackend: env.STORAGE_BACKEND,
     jobBackend: env.JOB_BACKEND,
     llmProvider: env.LLM_PROVIDER,

@@ -71,6 +71,7 @@ read_when:
 
 - Google OAuth remains backend-owned.
 - The mobile app expects a backend-issued bearer token.
+- Hosted beta access can now be enforced separately from Google test-user access via `BETA_ACCESS_MODE=allowlist` and the beta-user admin store.
 - The mobile app sends `x-opencal-app-version` on every API request.
 - The mobile app now also sends `x-opencal-platform`, and the API stores the latest app version/platform metadata on the backend session for support/debugging.
 - Sessions are resolved per user email and expire after the configured session TTL.
@@ -85,6 +86,7 @@ read_when:
   - if local Google auth is stale or missing, it returns `GOOGLE_AUTH_REQUIRED` and the app stays on the sign-in screen
 - `auth/google/reuse` is development-only. In staging/production, the API returns `GOOGLE_AUTH_REQUIRED` and the app should go through the normal OAuth browser flow.
 - The app includes an `auth-callback` route that can accept a `sessionToken` query param from your deep-link flow.
+- The `auth-callback` route now also handles `errorCode` / `errorMessage`, which the backend uses for beta-pool denials such as `BETA_ACCESS_DENIED`.
 - `POST /api/v1/auth/google/start` accepts `returnTo`, and the backend callback redirects back to that deep link with `sessionToken` and `sessionId` query params when provided.
 - The backend signs and time-bounds the OAuth `state` payload before redirecting to Google, so the deep-link return target is only trusted when the callback carries a valid recent state token.
 - The backend also allowlists return-target prefixes. Defaults are `opencal://`, `exp://`, `exps://`, plus localhost HTTP in development. Hosted universal-link prefixes can be added with `ALLOWED_RETURN_TO_PREFIXES`.
@@ -150,7 +152,10 @@ read_when:
   - `/api/v1/admin/session`
   - `/api/v1/admin/job`
   - `/api/v1/admin/audit`
+- Support tooling can also manage the backend beta pool through:
+  - `/api/v1/admin/beta-user`
 - The audit endpoint exposes recent auth, session, and admin recovery events with filters for `sessionId`, `email`, and `event`.
+- Removing a beta user revokes that user’s stored Google token and active mobile sessions immediately.
 - File-backed support state is bounded: idempotency caches respect `IDEMPOTENCY_MAX_RECORDS`, and audit history respects `AUDIT_MAX_EVENTS`.
 - API error payloads now include request ids for support/debugging correlation.
 

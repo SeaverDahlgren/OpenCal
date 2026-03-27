@@ -19,6 +19,7 @@ describe("deploy preflight", () => {
     const report = buildPreflightReport(
       createConfig({
         appEnv: "staging",
+        betaAccessMode: "allowlist",
         storageBackend: "postgres",
         jobBackend: "redis",
         allowedReturnToPrefixes: [],
@@ -31,6 +32,7 @@ describe("deploy preflight", () => {
       expect.arrayContaining([
         "ADMIN_API_KEY is unset. Support endpoints remain disabled.",
         "ALLOWED_RETURN_TO_PREFIXES is empty. Hosted deep-link return targets are not configured.",
+        "BETA_ACCESS_MODE=allowlist is set, but BETA_USER_EMAILS is empty.",
       ]),
     );
   });
@@ -61,6 +63,8 @@ describe("deploy preflight", () => {
 function createConfig(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     appEnv: "development",
+    betaAccessMode: "open",
+    betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
     llmProvider: "groq",

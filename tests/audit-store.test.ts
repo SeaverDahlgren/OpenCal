@@ -64,6 +64,8 @@ describe("audit store", () => {
 function createConfig(privateDir: string): AppConfig {
   return {
     appEnv: "development",
+    betaAccessMode: "open",
+    betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
     llmProvider: "groq",

@@ -54,6 +54,28 @@ export function buildMobileReturnUrl(
   returnTo: string | undefined,
   session: { token: string; sessionId: string },
 ) {
+  return buildAllowedReturnUrl(config, returnTo, (url) => {
+    url.searchParams.set("sessionToken", session.token);
+    url.searchParams.set("sessionId", session.sessionId);
+  });
+}
+
+export function buildMobileErrorUrl(
+  config: Pick<AppConfig, "appEnv" | "allowedReturnToPrefixes">,
+  returnTo: string | undefined,
+  error: { code: string; message: string },
+) {
+  return buildAllowedReturnUrl(config, returnTo, (url) => {
+    url.searchParams.set("errorCode", error.code);
+    url.searchParams.set("errorMessage", error.message);
+  });
+}
+
+function buildAllowedReturnUrl(
+  config: Pick<AppConfig, "appEnv" | "allowedReturnToPrefixes">,
+  returnTo: string | undefined,
+  mutate: (url: URL) => void,
+) {
   if (!returnTo) {
     return null;
   }
@@ -63,8 +85,7 @@ export function buildMobileReturnUrl(
     if (!isAllowedReturnTarget(config, url)) {
       return null;
     }
-    url.searchParams.set("sessionToken", session.token);
-    url.searchParams.set("sessionId", session.sessionId);
+    mutate(url);
     return url.toString();
   } catch {
     return null;

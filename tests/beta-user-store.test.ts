@@ -2,56 +2,63 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { readSecureJsonFile, writeSecureJsonFile } from "../apps/api/src/storage/secure-json.js";
-import { SessionStore } from "../apps/api/src/sessions/store.js";
+import { BetaUserStore } from "../apps/api/src/beta-users/store.js";
 import type { AppConfig } from "../src/config/env.js";
 
 const createdDirs: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(
-    createdDirs.splice(0).map(async (dir) => {
-      await fs.rm(dir, { recursive: true, force: true });
-    }),
-  );
+  await Promise.all(createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
 });
 
-describe("secure json storage", () => {
-  it("round-trips encrypted state files", async () => {
-    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-secure-json-"));
-    createdDirs.push(rootDir);
-    const filePath = path.join(rootDir, "state.json");
-
-    await writeSecureJsonFile(filePath, { hello: "world" }, "secret-key");
-
-    const raw = await fs.readFile(filePath, "utf8");
-    expect(raw).not.toContain("world");
-    await expect(readSecureJsonFile<{ hello: string }>(filePath, "secret-key")).resolves.toEqual({
-      hello: "world",
-    });
-  });
-
-  it("encrypts persisted session state when a key is configured", async () => {
-    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-secure-session-store-"));
+describe("beta user store", () => {
+  it("seeds env allowlist users and persists admin-added users", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-beta-user-store-"));
     createdDirs.push(privateDir);
-    const store = new SessionStore(createConfig(privateDir, "secret-key"));
+    const store = new BetaUserStore(
+      createConfig(privateDir, { betaUserEmails: ["avery@example.com", "jordan@example.com"] }),
+    );
 
-    const session = await store.createOrReplaceSession({
-      name: "Avery",
-      email: "avery@example.com",
+    expect(await store.isAllowed("avery@example.com")).toBe(true);
+    expect(await store.isAllowed("jordan@example.com")).toBe(true);
+
+    const added = await store.add({
+      email: "sam@example.com",
+      name: "Sam",
+      addedBy: "admin",
     });
 
-    const raw = await fs.readFile(path.join(privateDir, "mobile-sessions.json"), "utf8");
-    expect(raw).not.toContain(session.token);
-    expect(raw).not.toContain("avery@example.com");
-    expect(await store.loadByToken(session.token)).toMatchObject({ sessionId: session.sessionId });
+    expect(added).toMatchObject({
+      email: "sam@example.com",
+      name: "Sam",
+      source: "admin",
+    });
+    expect(await store.isAllowed("sam@example.com")).toBe(true);
+  });
+
+  it("removes beta users by normalized email", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-beta-user-store-"));
+    createdDirs.push(privateDir);
+    const store = new BetaUserStore(createConfig(privateDir));
+
+    await store.add({
+      email: "Sam@Example.com",
+      name: "Sam",
+      addedBy: "admin",
+    });
+
+    const removed = await store.remove("sam@example.com");
+    expect(removed).toMatchObject({
+      email: "sam@example.com",
+    });
+    expect(await store.isAllowed("sam@example.com")).toBe(false);
   });
 });
 
-function createConfig(privateDir: string, stateEncryptionKey?: string): AppConfig {
+function createConfig(privateDir: string, overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     appEnv: "development",
-    betaAccessMode: "open",
+    betaAccessMode: "allowlist",
     betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
@@ -61,7 +68,7 @@ function createConfig(privateDir: string, stateEncryptionKey?: string): AppConfi
     groqApiKey: "test-key",
     openAiApiKey: undefined,
     adminApiKey: undefined,
-    stateEncryptionKey,
+    stateEncryptionKey: undefined,
     apiVersion: "1.0.0",
     minSupportedAppVersion: undefined,
     allowedReturnToPrefixes: [],
@@ -94,5 +101,6 @@ function createConfig(privateDir: string, stateEncryptionKey?: string): AppConfi
     groqModel: "llama-3.3-70b-versatile",
     rootDir: privateDir,
     privateDir,
+    ...overrides,
   };
 }

@@ -2,8 +2,11 @@ import fs from "node:fs/promises";
 import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { AuditStore } from "../apps/api/src/audit/store.js";
+import { BetaUserStore } from "../apps/api/src/beta-users/store.js";
+import { GoogleTokenStore } from "../apps/api/src/auth/token-store.js";
 import { JobStore } from "../apps/api/src/jobs/store.js";
 import { handleAdminRoute } from "../apps/api/src/routes/admin.js";
 import { SessionStore } from "../apps/api/src/sessions/store.js";
@@ -53,6 +56,8 @@ describe("admin-ready session store helpers", () => {
     createdDirs.push(privateDir);
     const store = new SessionStore(createConfig(privateDir));
     const audit = new AuditStore(createConfig(privateDir));
+    const betaUsers = new BetaUserStore(createConfig(privateDir));
+    const tokens = new GoogleTokenStore(createConfig(privateDir));
     const session = await store.createOrReplaceSession({
       name: "Avery",
       email: "avery@example.com",
@@ -71,6 +76,8 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: store,
       profiles: {} as never,
+      betaUsers,
+      tokens,
       audit,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
@@ -94,6 +101,8 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: store,
       profiles: {} as never,
+      betaUsers,
+      tokens,
       audit,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
@@ -114,6 +123,8 @@ describe("admin-ready session store helpers", () => {
     createdDirs.push(privateDir);
     const jobs = new JobStore(createConfig(privateDir));
     const audit = new AuditStore(createConfig(privateDir));
+    const betaUsers = new BetaUserStore(createConfig(privateDir));
+    const tokens = new GoogleTokenStore(createConfig(privateDir));
     const queued = await jobs.enqueue({
       kind: "agent_turn_retry",
       payload: {
@@ -133,6 +144,8 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: new SessionStore(createConfig(privateDir)),
       profiles: {} as never,
+      betaUsers,
+      tokens,
       audit,
       idempotency: {} as never,
       jobs,
@@ -157,6 +170,8 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: new SessionStore(createConfig(privateDir)),
       profiles: {} as never,
+      betaUsers,
+      tokens,
       audit,
       idempotency: {} as never,
       jobs,
@@ -177,6 +192,8 @@ describe("admin-ready session store helpers", () => {
     createdDirs.push(privateDir);
     const jobs = new JobStore(createConfig(privateDir));
     const audit = new AuditStore(createConfig(privateDir));
+    const betaUsers = new BetaUserStore(createConfig(privateDir));
+    const tokens = new GoogleTokenStore(createConfig(privateDir));
     const queued = await jobs.enqueue({
       kind: "agent_turn_retry",
       payload: {
@@ -198,6 +215,8 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: new SessionStore(createConfig(privateDir)),
       profiles: {} as never,
+      betaUsers,
+      tokens,
       audit,
       idempotency: {} as never,
       jobs,
@@ -219,6 +238,8 @@ describe("admin-ready session store helpers", () => {
     const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-audit-store-"));
     createdDirs.push(privateDir);
     const audit = new AuditStore(createConfig(privateDir));
+    const betaUsers = new BetaUserStore(createConfig(privateDir));
+    const tokens = new GoogleTokenStore(createConfig(privateDir));
     await audit.append({
       type: "auth.google.completed",
       sessionId: "sess-1",
@@ -240,6 +261,8 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: new SessionStore(createConfig(privateDir)),
       profiles: {} as never,
+      betaUsers,
+      tokens,
       audit,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
@@ -255,11 +278,77 @@ describe("admin-ready session store helpers", () => {
       ],
     });
   });
+
+  it("adds and removes beta users through the admin route", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-beta-user-store-"));
+    createdDirs.push(privateDir);
+    const config = createConfig(privateDir, { betaAccessMode: "allowlist" });
+    const betaUsers = new BetaUserStore(config);
+    const tokens = new GoogleTokenStore(config);
+    const sessions = new SessionStore(config);
+    const audit = new AuditStore(config);
+    await tokens.save("sam@example.com", { refresh_token: "refresh-token" });
+    await sessions.createOrReplaceSession({
+      name: "Sam",
+      email: "sam@example.com",
+    });
+
+    const add = createResponse();
+    await handleAdminRoute({
+      req: createRequest("POST", "/api/v1/admin/beta-user", JSON.stringify({ email: "sam@example.com", name: "Sam" })),
+      res: add.res,
+      url: new URL("http://127.0.0.1:8787/api/v1/admin/beta-user"),
+      config,
+      auth: {} as never,
+      sessions,
+      profiles: {} as never,
+      betaUsers,
+      tokens,
+      audit,
+      idempotency: {} as never,
+      jobs: new JobStore(config),
+    });
+    expect(JSON.parse(add.body())).toMatchObject({
+      ok: true,
+      action: "add",
+      user: {
+        email: "sam@example.com",
+      },
+    });
+
+    const remove = createResponse();
+    await handleAdminRoute({
+      req: createRequest("DELETE", "/api/v1/admin/beta-user?email=sam@example.com"),
+      res: remove.res,
+      url: new URL("http://127.0.0.1:8787/api/v1/admin/beta-user?email=sam@example.com"),
+      config,
+      auth: {} as never,
+      sessions,
+      profiles: {} as never,
+      betaUsers,
+      tokens,
+      audit,
+      idempotency: {} as never,
+      jobs: new JobStore(config),
+    });
+    expect(JSON.parse(remove.body())).toMatchObject({
+      ok: true,
+      action: "remove",
+      user: {
+        email: "sam@example.com",
+      },
+      revokedSessionCount: 1,
+    });
+    expect(await sessions.getByUserEmail("sam@example.com")).toBeNull();
+    expect(await tokens.load("sam@example.com")).toBeNull();
+  });
 });
 
-function createConfig(privateDir: string): AppConfig {
+function createConfig(privateDir: string, overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     appEnv: "development",
+    betaAccessMode: "open",
+    betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
     llmProvider: "groq",
@@ -301,17 +390,20 @@ function createConfig(privateDir: string): AppConfig {
     groqModel: "llama-3.3-70b-versatile",
     rootDir: privateDir,
     privateDir,
+    ...overrides,
   };
 }
 
-function createRequest(method: string, url: string) {
-  return ({
+function createRequest(method: string, url: string, body?: string) {
+  const req = Object.assign(body ? Readable.from([body]) : new Readable({ read() {} }), {
     method,
     url,
     headers: {
+      "content-type": "application/json",
       "x-admin-key": "admin-secret",
     },
-  } as unknown) as http.IncomingMessage;
+  });
+  return req as unknown as http.IncomingMessage;
 }
 
 function createResponse() {

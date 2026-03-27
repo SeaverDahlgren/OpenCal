@@ -1,8 +1,12 @@
-import { jsonError, jsonRoute, readAdminKey } from "../server/http.js";
+import { jsonError, jsonRoute, readAdminKey, readJsonBody } from "../server/http.js";
 import type { PublicRouteContext } from "./types.js";
 
 export async function handleAdminRoute(ctx: PublicRouteContext) {
-  if (!ctx.url.pathname.startsWith("/api/v1/admin/session") && !ctx.url.pathname.startsWith("/api/v1/admin/job")) {
+  if (
+    !ctx.url.pathname.startsWith("/api/v1/admin/session") &&
+    !ctx.url.pathname.startsWith("/api/v1/admin/job") &&
+    !ctx.url.pathname.startsWith("/api/v1/admin/beta-user")
+  ) {
     if (ctx.url.pathname !== "/api/v1/admin/audit") {
       return false;
     }
@@ -90,6 +94,66 @@ export async function handleAdminRoute(ctx: PublicRouteContext) {
 
     return await jsonRoute(ctx.res, 200, {
       events: events.map(summarizeAuditEvent),
+    });
+  }
+
+  if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/admin/beta-user") {
+    const email = ctx.url.searchParams.get("email");
+    const users = (await ctx.betaUsers.list()).filter((user) => !email || user.email === email.toLowerCase());
+    return await jsonRoute(ctx.res, 200, {
+      users,
+      mode: ctx.config.betaAccessMode,
+    });
+  }
+
+  if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/admin/beta-user") {
+    const body = await readJsonBody<{ email?: string; name?: string }>(ctx.req, ctx.config.maxRequestBodyBytes);
+    if (!body.email?.trim()) {
+      return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "email is required.", false);
+    }
+    const user = await ctx.betaUsers.add({
+      email: body.email,
+      name: body.name,
+      addedBy: "admin",
+    });
+    await ctx.audit.append({
+      type: "admin.beta_user.added",
+      userEmail: user.email,
+      metadata: {
+        source: user.source,
+      },
+    });
+    return await jsonRoute(ctx.res, 200, {
+      ok: true,
+      action: "add",
+      user,
+    });
+  }
+
+  if (ctx.req.method === "DELETE" && ctx.url.pathname === "/api/v1/admin/beta-user") {
+    const email = ctx.url.searchParams.get("email");
+    if (!email?.trim()) {
+      return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "email is required.", false);
+    }
+    const removed = await ctx.betaUsers.remove(email);
+    if (!removed) {
+      return await jsonError(ctx.res, 404, "NOT_FOUND", "Beta user not found.", false);
+    }
+    const sessions = (await ctx.sessions.listSessions()).filter((session) => session.user.email === removed.email);
+    await Promise.all(sessions.map((session) => ctx.sessions.deleteSession(session.sessionId)));
+    await ctx.tokens.delete(removed.email);
+    await ctx.audit.append({
+      type: "admin.beta_user.removed",
+      userEmail: removed.email,
+      metadata: {
+        revokedSessionCount: sessions.length,
+      },
+    });
+    return await jsonRoute(ctx.res, 200, {
+      ok: true,
+      action: "remove",
+      user: removed,
+      revokedSessionCount: sessions.length,
     });
   }
 

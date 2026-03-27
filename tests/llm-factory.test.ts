@@ -4,6 +4,8 @@ import type { AppConfig } from "../src/config/env.js";
 
 const baseConfig: AppConfig = {
   appEnv: "development",
+  betaAccessMode: "open",
+  betaUserEmails: [],
   storageBackend: "file",
   jobBackend: "file",
   llmProvider: "gemini",

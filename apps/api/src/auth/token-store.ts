@@ -23,6 +23,12 @@ export class GoogleTokenStore implements GoogleTokenRepository {
     await writeSecureJsonFile(this.filePath(), state, this.config.stateEncryptionKey);
   }
 
+  async delete(email: string) {
+    const state = await this.readState();
+    delete state.tokens[tokenKey(email)];
+    await writeSecureJsonFile(this.filePath(), state, this.config.stateEncryptionKey);
+  }
+
   private async readState(): Promise<GoogleTokenState> {
     return (
       (await readSecureJsonFile<GoogleTokenState>(this.filePath(), this.config.stateEncryptionKey)) ?? { tokens: {} }

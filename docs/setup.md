@@ -19,6 +19,8 @@ read_when:
 1. Copy `.env.example` to `.env`
 2. Fill:
    - `APP_ENV`
+   - `BETA_ACCESS_MODE`
+   - `BETA_USER_EMAILS` if you want to seed the beta pool from env
    - `API_VERSION`
    - `MIN_SUPPORTED_APP_VERSION` if you want the API to enforce a minimum mobile build
    - `ALLOWED_RETURN_TO_PREFIXES` for hosted deep-link or universal-link return targets
@@ -118,7 +120,14 @@ read_when:
   - `POST /api/v1/admin/job/retry`
   - `GET /api/v1/admin/audit`
   - filter with `?sessionId=...`, `?email=...`, `?event=...`, or `?limit=...`
+  - `GET /api/v1/admin/beta-user`
+  - filter with `?email=...`
+  - `POST /api/v1/admin/beta-user`
+  - `DELETE /api/v1/admin/beta-user?email=...`
   - send `x-admin-key: <ADMIN_API_KEY>`
+- Set `BETA_ACCESS_MODE=allowlist` for a real beta pool. The backend will only issue sessions for emails that exist in either `BETA_USER_EMAILS` or the admin-managed beta-user store.
+- If a user passes Google OAuth but is not in the backend beta pool, the callback returns `BETA_ACCESS_DENIED`.
+- Removing a beta user through `/api/v1/admin/beta-user` also revokes that user’s stored Google token and active mobile sessions.
 - In `development`, if the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
 - If that route returns `GOOGLE_AUTH_REQUIRED`, the app stays on the sign-in screen and you need a fresh Google OAuth flow.
 - In `staging` and `production`, `auth/google/reuse` is intentionally disabled and mobile should always go through the hosted OAuth flow.

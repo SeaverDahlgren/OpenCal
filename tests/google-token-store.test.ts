@@ -44,6 +44,8 @@ describe("google token store", () => {
 function createConfig(privateDir: string, stateEncryptionKey?: string): AppConfig {
   return {
     appEnv: "development",
+    betaAccessMode: "open",
+    betaUserEmails: [],
     storageBackend: "file",
     jobBackend: "file",
     llmProvider: "groq",

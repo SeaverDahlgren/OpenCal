@@ -9,6 +9,8 @@ import type { GoogleCalendarService } from "../../../../src/integrations/google/
 import type { UserProfile } from "../users/profile.js";
 import type {
   AuditRepository,
+  BetaUserRepository,
+  GoogleTokenRepository,
   IdempotencyRepository,
   JobRepository,
   SessionRepository,
@@ -23,6 +25,8 @@ export type PublicRouteContext = {
   auth: ApiAuthService;
   sessions: SessionRepository;
   profiles: UserProfileRepository;
+  betaUsers: BetaUserRepository;
+  tokens: GoogleTokenRepository;
   audit: AuditRepository;
   idempotency: IdempotencyRepository;
   jobs: JobRepository;

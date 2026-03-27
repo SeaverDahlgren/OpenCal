@@ -29,6 +29,9 @@ export function buildPreflightReport(config: AppConfig): PreflightReport {
     }
   } else if (config.appEnv === "staging") {
     notes.push("Staging mode enabled.");
+    if (config.betaAccessMode !== "allowlist") {
+      warnings.push("Staging should use BETA_ACCESS_MODE=allowlist for a controlled beta pool.");
+    }
     if (config.storageBackend === "file") {
       warnings.push("Staging is still using file-backed storage.");
     }
@@ -39,6 +42,9 @@ export function buildPreflightReport(config: AppConfig): PreflightReport {
     notes.push("Development mode enabled.");
   }
 
+  if (config.betaAccessMode === "allowlist" && config.betaUserEmails.length === 0) {
+    warnings.push("BETA_ACCESS_MODE=allowlist is set, but BETA_USER_EMAILS is empty.");
+  }
   if (!config.adminApiKey) {
     warnings.push("ADMIN_API_KEY is unset. Support endpoints remain disabled.");
   }
@@ -56,6 +62,7 @@ export function buildPreflightReport(config: AppConfig): PreflightReport {
   }
 
   notes.push(`API version: ${config.apiVersion}`);
+  notes.push(`Beta access mode: ${config.betaAccessMode}`);
   notes.push(`Storage backend: ${config.storageBackend}`);
   notes.push(`Job backend: ${config.jobBackend}`);
 

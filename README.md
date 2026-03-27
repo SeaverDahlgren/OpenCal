@@ -6,7 +6,7 @@ OpenCal is a calendar and Gmail assistant with three runtimes:
 2. a local or hosted HTTP API
 3. an Expo mobile app
 
-The current product shape is a single-user private beta. Google OAuth and LLM provider keys stay on the backend.
+The current product shape is a hosted private beta. Google OAuth and LLM provider keys stay on the backend.
 
 ## What OpenCal Does
 
@@ -36,6 +36,8 @@ Then fill in the Google OAuth values and one provider key:
 
 ```env
 APP_ENV=development
+BETA_ACCESS_MODE=allowlist
+BETA_USER_EMAILS=avery@example.com,jordan@example.com
 API_VERSION=1.0.0
 MIN_SUPPORTED_APP_VERSION=
 STORAGE_BACKEND=file
@@ -76,7 +78,7 @@ http://127.0.0.1:42813/oauth/callback
 http://127.0.0.1:8787/api/v1/auth/google/callback
 ```
 
-Use an `External` consent screen in testing mode and add your Google account as a test user.
+Use an `External` consent screen in testing mode and add your Google account as a test user. OpenCal also enforces its own backend beta pool. Google test-user access gets users through OAuth, and OpenCal beta-user access controls whether the backend will issue a session after OAuth completes.
 
 If Google shows `redirect_uri_mismatch`, one of those URIs is missing or does not match your `.env`.
 
@@ -147,7 +149,7 @@ The hosted API now also uses explicit request, headers, and keep-alive timeouts 
 File-backed beta state is now bounded too: idempotency keys are capped by `IDEMPOTENCY_MAX_RECORDS`, terminal jobs are pruned after `JOB_RETENTION_DAYS`, and support audit history is capped by `AUDIT_MAX_EVENTS`.
 The in-memory beta rate limiter is bounded too: expired buckets are swept automatically, live buckets are capped by `RATE_LIMIT_MAX_KEYS`, and responses include `x-rate-limit-limit`, `x-rate-limit-remaining`, and `x-rate-limit-reset`.
 `loadConfig()` now also fails fast in production if you try to boot with file-backed core storage, a localhost/non-HTTPS API OAuth callback, or no `MIN_SUPPORTED_APP_VERSION`.
-`npm run deploy:check` turns those checks into a release-oriented report with explicit errors, warnings, and notes before you cut a beta deploy. Right now it also truthfully blocks a real production rollout because the `postgres` and `redis` adapters are still planned, not implemented.
+`npm run deploy:check` turns those checks into a release-oriented report with explicit errors, warnings, and notes before you cut a beta deploy. Right now it also truthfully blocks a real production rollout because the `postgres` and `redis` adapters are still planned, not implemented. It also reports beta-access posture, including whether `BETA_ACCESS_MODE=allowlist` is active and whether any seeded beta users are configured.
 
 By default it listens on:
 
@@ -183,16 +185,21 @@ GET /api/v1/admin/audit
 GET /api/v1/admin/audit?sessionId=...
 GET /api/v1/admin/audit?email=...
 GET /api/v1/admin/audit?event=auth.google.completed
+GET /api/v1/admin/beta-user
+GET /api/v1/admin/beta-user?email=...
+POST /api/v1/admin/beta-user
+DELETE /api/v1/admin/beta-user?email=...
 ```
 
 Enable it by setting `ADMIN_API_KEY` and sending that value as `x-admin-key`. Responses are sanitized. Reset clears task/chat state while keeping the session record. Revoke deletes the session. Job endpoints let support inspect queued retries and requeue a stuck job immediately.
-The audit endpoint gives support a compact trail of auth, session, and admin recovery actions without parsing raw debug logs.
+The audit endpoint gives support a compact trail of auth, session, and admin recovery actions without parsing raw debug logs. The beta-user endpoint lets support add or remove emails from the backend beta pool. Removing a beta user also revokes that user’s stored Google token and active mobile sessions.
 
 For `POST /api/v1/agent/turn`, send an `Idempotency-Key` header on mobile retries or reconnects. The API caches successful responses per session so duplicate confirms do not create duplicate events or drafts.
 Retryable model failures on that route are also queued as background jobs for later worker replay.
 Jobs that hit `JOB_MAX_ATTEMPTS` now move to an explicit `exhausted` terminal state so support can distinguish dead-letter work from pending retries.
 Old completed or exhausted jobs are pruned automatically after `JOB_RETENTION_DAYS` so the beta queue store does not grow forever.
 Mobile clients also send app-version metadata, and the API records the last seen client build and platform on each session for support/debugging.
+If a user completes Google OAuth but is not in the backend beta pool, the callback now returns `BETA_ACCESS_DENIED`. Mobile deep links route that back to the sign-in screen with an inline error message.
 
 ### Mobile App
 
