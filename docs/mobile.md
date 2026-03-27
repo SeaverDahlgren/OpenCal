@@ -63,6 +63,7 @@ read_when:
   Runs the worker in a polling loop for queued jobs.
 - `npm run mobile:start`
   Runs `expo start` from `apps/mobile`.
+- The API and worker now handle `SIGINT` / `SIGTERM` gracefully so hosted restarts can drain without abrupt exits.
 
 ## Auth Model
 

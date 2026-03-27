@@ -5,19 +5,20 @@ export type WorkerOptions = {
   pollIntervalMs: number;
 };
 
-export async function runWorker(processor: JobProcessor, options: WorkerOptions) {
+export async function runWorker(processor: JobProcessor, options: WorkerOptions, signal?: AbortSignal) {
   if (!options.watch) {
     return await processor.processNext();
   }
 
-  while (true) {
+  while (!signal?.aborted) {
     const result = await processor.processNext();
     if (result) {
       console.log(`Processed job ${result.jobId}: ${result.status}`);
       continue;
     }
-    await sleep(options.pollIntervalMs);
+    await sleep(options.pollIntervalMs, signal);
   }
+  return null;
 }
 
 export function parseWorkerOptions(argv: string[], pollIntervalMs: number): WorkerOptions {
@@ -27,6 +28,19 @@ export function parseWorkerOptions(argv: string[], pollIntervalMs: number): Work
   };
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal) {
+  if (signal?.aborted) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        resolve(undefined);
+      },
+      { once: true },
+    );
+  });
 }

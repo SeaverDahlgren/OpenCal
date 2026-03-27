@@ -17,6 +17,7 @@ import { handleSettingsRoute } from "./routes/settings.js";
 import { applySecurityHeaders, jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { buildReadyPayload } from "./server/health.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
+import { closeServer, registerAbortOnSignals } from "./server/shutdown.js";
 import { updateSessionClientContext } from "./server/client-context.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
 
@@ -287,4 +288,17 @@ const server = http.createServer(async (req, res) => {
 const port = Number(process.env.API_PORT ?? 8787);
 server.listen(port, () => {
   console.log(`openCal API listening on http://127.0.0.1:${port}`);
+});
+
+const shutdownController = new AbortController();
+registerAbortOnSignals(shutdownController, (signal) => {
+  console.log(`Stopping OpenCal API on ${signal}...`);
+  void closeServer(server)
+    .catch((error) => {
+      console.error(error instanceof Error ? error.message : String(error));
+      process.exitCode = 1;
+    })
+    .finally(() => {
+      process.exit();
+    });
 });

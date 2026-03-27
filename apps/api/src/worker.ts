@@ -3,6 +3,7 @@ import { ApiAuthService } from "./auth/service.js";
 import { createRuntimeStores } from "./bootstrap/runtime.js";
 import { JobProcessor } from "./jobs/processor.js";
 import { parseWorkerOptions, runWorker } from "./jobs/worker-runner.js";
+import { registerAbortOnSignals } from "./server/shutdown.js";
 
 async function main() {
   const config = loadConfig(process.cwd());
@@ -16,8 +17,13 @@ async function main() {
     jobs,
   });
   const options = parseWorkerOptions(process.argv.slice(2), config.workerPollIntervalMs);
+  const controller = new AbortController();
+  const unregister = registerAbortOnSignals(controller, (signal) => {
+    console.log(`Stopping worker on ${signal}...`);
+  });
 
-  const result = await runWorker(processor, options);
+  const result = await runWorker(processor, options, controller.signal);
+  unregister();
   if (!result) {
     console.log("No pending jobs.");
     return;

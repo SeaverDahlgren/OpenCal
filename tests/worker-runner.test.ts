@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseWorkerOptions } from "../apps/api/src/jobs/worker-runner.js";
+import { parseWorkerOptions, runWorker } from "../apps/api/src/jobs/worker-runner.js";
 
 describe("worker runner", () => {
   it("parses one-shot mode by default", () => {
@@ -14,5 +14,22 @@ describe("worker runner", () => {
       watch: true,
       pollIntervalMs: 2500,
     });
+  });
+
+  it("stops watch mode when the abort signal is already set", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await runWorker(
+      {
+        processNext: async () => {
+          throw new Error("should not run");
+        },
+      } as never,
+      { watch: true, pollIntervalMs: 2500 },
+      controller.signal,
+    );
+
+    expect(result).toBeNull();
   });
 });

@@ -134,6 +134,7 @@ npm run api:worker:watch
 
 The API and worker now boot their storage layer through one runtime factory. In the current beta, that resolves to encrypted file-backed repositories and a file-backed job queue. The config already reserves `postgres` and `redis` as future production backends, so deployment config can move without changing route code.
 API responses now also ship with no-store caching plus basic security headers such as `X-Frame-Options` and `X-Content-Type-Options` so hosted beta deployments do not inherit permissive defaults.
+Both the API server and the background worker now handle `SIGINT` and `SIGTERM` gracefully so deploy restarts can drain cleanly instead of exiting mid-request or mid-loop.
 
 By default it listens on:
 

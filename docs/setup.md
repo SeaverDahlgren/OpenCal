@@ -116,6 +116,7 @@ read_when:
 - Retryable model failures now enqueue background jobs. Run `npm run api:worker` to process queued work in the current file-backed beta setup.
 - For a long-running worker process, run `npm run api:worker:watch`.
 - `WORKER_POLL_INTERVAL_MS` controls how often the watch worker checks for queued jobs.
+- The API server and worker now trap `SIGINT` / `SIGTERM` and shut down cleanly. That matters in hosted environments where deploys or autoscaling can interrupt a long-running process.
 - Jobs that hit `JOB_MAX_ATTEMPTS` now land in an `exhausted` terminal state. Support can inspect them through `/api/v1/admin/job?status=exhausted` and requeue them manually if needed.
 - The API now also persists a compact audit trail for auth reuse/completion, user session reset/revoke, and admin recovery actions. Use `/api/v1/admin/audit` when you need support history without digging through raw `.opencal/logs`.
 - The API and worker both resolve storage from the same runtime bootstrap factory. Today that means file-backed repositories and a file-backed job queue. `STORAGE_BACKEND` and `JOB_BACKEND` are already reserved for future Postgres and Redis adapters.
