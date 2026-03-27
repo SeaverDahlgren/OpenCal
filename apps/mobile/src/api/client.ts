@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 import type {
   AgentTurnDto,
   ApiErrorDto,
@@ -106,6 +107,7 @@ export class ApiClient {
       headers: {
         "content-type": "application/json",
         "x-opencal-app-version": APP_VERSION,
+        "x-opencal-platform": Platform.OS,
         ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
         ...(init.headers ?? {}),
       },

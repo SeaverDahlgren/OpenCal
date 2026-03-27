@@ -101,6 +101,7 @@ read_when:
 - Mobile/API sessions now expire based on `SESSION_TTL_DAYS`. Expired bearer tokens are pruned on read and must be re-established through auth.
 - Persisted API session state stores a hash of each bearer token instead of the raw token value.
 - Mobile clients should send `Idempotency-Key` on retryable `POST /api/v1/agent/turn` requests to avoid duplicate event or draft mutations after reconnects/timeouts.
+- Mobile clients should also send `x-opencal-app-version`. If available, `x-opencal-platform` is recorded too so support can inspect the last seen client build and platform on a session.
 - Retryable model failures now enqueue background jobs. Run `npm run api:worker` to process queued work in the current file-backed beta setup.
 - For a long-running worker process, run `npm run api:worker:watch`.
 - `WORKER_POLL_INTERVAL_MS` controls how often the watch worker checks for queued jobs.

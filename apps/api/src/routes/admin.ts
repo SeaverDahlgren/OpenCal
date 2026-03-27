@@ -136,6 +136,13 @@ function summarizeSession(session: Awaited<ReturnType<PublicRouteContext["sessio
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
     expiresAt: session.expiresAt,
+    client: session.client
+      ? {
+          appVersion: session.client.appVersion,
+          platform: session.client.platform,
+          lastSeenAt: session.client.lastSeenAt,
+        }
+      : null,
     hasMessages: session.messages.length > 0,
     messageCount: session.messages.length,
     hasTaskState: Boolean(session.taskState),

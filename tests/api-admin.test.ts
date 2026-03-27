@@ -23,6 +23,15 @@ describe("admin-ready session store helpers", () => {
       name: "Avery",
       email: "avery@example.com",
     });
+    await store.save({
+      ...first,
+      client: {
+        appVersion: "1.2.3",
+        platform: "ios",
+        userAgent: "ExpoGo/1",
+        lastSeenAt: "2026-03-26T20:00:00.000Z",
+      },
+    });
     const second = await store.createOrReplaceSession({
       name: "Jordan",
       email: "jordan@example.com",
@@ -31,7 +40,10 @@ describe("admin-ready session store helpers", () => {
     const sessions = await store.listSessions();
 
     expect(sessions).toHaveLength(2);
-    expect(await store.loadBySessionId(first.sessionId)).toMatchObject({ user: { email: "avery@example.com" } });
+    expect(await store.loadBySessionId(first.sessionId)).toMatchObject({
+      user: { email: "avery@example.com" },
+      client: { appVersion: "1.2.3", platform: "ios" },
+    });
     expect(await store.loadBySessionId(second.sessionId)).toMatchObject({ user: { email: "jordan@example.com" } });
   });
 

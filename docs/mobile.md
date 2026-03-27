@@ -69,6 +69,7 @@ read_when:
 - Google OAuth remains backend-owned.
 - The mobile app expects a backend-issued bearer token.
 - The mobile app sends `x-opencal-app-version` on every API request.
+- The mobile app now also sends `x-opencal-platform`, and the API stores the latest app version/platform metadata on the backend session for support/debugging.
 - Sessions are resolved per user email and expire after the configured session TTL.
 - Session and profile state can be encrypted at rest with `STATE_ENCRYPTION_KEY`.
 - Persisted session records now keep a hash of the bearer token instead of the raw token string.

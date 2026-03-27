@@ -82,6 +82,12 @@ export type StoredSessionState = {
   toolResultVerbosity: "compact" | "verbose";
   createdAt: string;
   updatedAt: string;
+  client?: {
+    appVersion?: string;
+    platform?: string;
+    userAgent?: string;
+    lastSeenAt: string;
+  };
   messages: ConversationMessage[];
   taskState: TaskState | null;
   pendingConfirmation: PendingConfirmation | null;

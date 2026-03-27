@@ -169,6 +169,7 @@ Enable it by setting `ADMIN_API_KEY` and sending that value as `x-admin-key`. Re
 For `POST /api/v1/agent/turn`, send an `Idempotency-Key` header on mobile retries or reconnects. The API caches successful responses per session so duplicate confirms do not create duplicate events or drafts.
 Retryable model failures on that route are also queued as background jobs for later worker replay.
 Jobs that hit `JOB_MAX_ATTEMPTS` now move to an explicit `exhausted` terminal state so support can distinguish dead-letter work from pending retries.
+Mobile clients also send app-version metadata, and the API records the last seen client build and platform on each session for support/debugging.
 
 ### Mobile App
 

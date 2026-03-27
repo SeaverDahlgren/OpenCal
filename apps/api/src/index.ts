@@ -16,6 +16,7 @@ import { handleSessionRoute } from "./routes/session.js";
 import { handleSettingsRoute } from "./routes/settings.js";
 import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
+import { updateSessionClientContext } from "./server/client-context.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
 
 const config = loadConfig(process.cwd());
@@ -154,9 +155,14 @@ const server = http.createServer(async (req, res) => {
       return await jsonError(res, 401, "UNAUTHORIZED", "Missing bearer token.", false);
     }
 
-    const session = await sessions.loadByToken(token);
+    let session = await sessions.loadByToken(token);
     if (!session) {
       return await jsonError(res, 401, "SESSION_EXPIRED", "Session is invalid or expired.", false);
+    }
+    const touchedSession = updateSessionClientContext(session, req);
+    if (touchedSession !== session) {
+      await sessions.save(touchedSession);
+      session = touchedSession;
     }
 
     const workspace = await loadWorkspaceFiles(config.rootDir, new Date().toISOString().slice(0, 10));
