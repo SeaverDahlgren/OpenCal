@@ -84,6 +84,7 @@ read_when:
 - `auth/google/reuse` is development-only. In staging/production, the API returns `GOOGLE_AUTH_REQUIRED` and the app should go through the normal OAuth browser flow.
 - The app includes an `auth-callback` route that can accept a `sessionToken` query param from your deep-link flow.
 - `POST /api/v1/auth/google/start` accepts `returnTo`, and the backend callback redirects back to that deep link with `sessionToken` and `sessionId` query params when provided.
+- The backend signs and time-bounds the OAuth `state` payload before redirecting to Google, so the deep-link return target is only trusted when the callback carries a valid recent state token.
 - The Google OAuth redirect used by the mobile/API path is:
   - `GOOGLE_OAUTH_API_REDIRECT_URI`
   - default: `http://127.0.0.1:8787/api/v1/auth/google/callback`

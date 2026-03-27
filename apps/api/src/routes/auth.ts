@@ -11,7 +11,7 @@ export async function handleAuthRoute(ctx: PublicRouteContext) {
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/auth/google/start") {
     const body = authStartSchema.parse(await readJsonBody<{ returnTo?: string }>(ctx.req));
     return await jsonRoute(ctx.res, 200, {
-      authUrl: ctx.auth.buildAuthUrl(encodeAuthState({ returnTo: body.returnTo })),
+      authUrl: ctx.auth.buildAuthUrl(encodeAuthState(ctx.config, { returnTo: body.returnTo })),
     });
   }
 
@@ -40,7 +40,7 @@ export async function handleAuthRoute(ctx: PublicRouteContext) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "Missing OAuth code.", false);
     }
     const session = await ctx.auth.completeAuthorization(code);
-    const state = decodeAuthState(ctx.url.searchParams.get("state"));
+    const state = decodeAuthState(ctx.config, ctx.url.searchParams.get("state"));
     const returnUrl = buildMobileReturnUrl(state.returnTo, session);
     if (returnUrl) {
       ctx.res.writeHead(302, { location: returnUrl });

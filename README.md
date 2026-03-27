@@ -223,6 +223,7 @@ EXPO_PUBLIC_API_BASE_URL=https://api.example.com/api/v1
 Then add that hosted callback URL to the Google OAuth client.
 
 The mobile flow stays the same: Google redirects to the backend callback, the backend creates the OpenCal session, and the backend redirects back into the app with the session token.
+The backend now signs and time-bounds the OAuth `state` payload before sending users to Google, so the mobile return target is not trusted unless the callback carries a valid recent state token.
 
 Mobile/API sessions expire after `SESSION_TTL_DAYS`. Active sessions now renew when they get close to expiry, so normal beta usage does not force unnecessary reauth. Expired bearer tokens are rejected and need a fresh auth/bootstrap flow. Persisted API session records no longer keep raw bearer tokens at rest; the store keeps a derived hash instead.
 
