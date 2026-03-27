@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { InlineNotice } from "../src/components/InlineNotice";
 import { ScreenShell } from "../src/components/ScreenShell";
 import { useSession } from "../src/state/session";
@@ -154,7 +154,11 @@ export default function ChatScreen() {
                     </Text>
                   </TouchableOpacity>
                   {showDraftPreview ? (
-                    <View style={styles.previewCard}>
+                    <ScrollView
+                      style={styles.previewCard}
+                      contentContainerStyle={styles.previewCardContent}
+                      nestedScrollEnabled
+                    >
                       {pendingTurn.confirmation.payloadPreview.subject ? (
                         <Text style={styles.previewSubject}>
                           Subject: {pendingTurn.confirmation.payloadPreview.subject}
@@ -168,7 +172,7 @@ export default function ChatScreen() {
                       <Text style={styles.previewBody}>
                         {pendingTurn.confirmation.payloadPreview.body}
                       </Text>
-                    </View>
+                    </ScrollView>
                   ) : null}
                 </>
               ) : null}
@@ -262,6 +266,9 @@ const styles = StyleSheet.create({
   previewCard: {
     backgroundColor: colors.surfaceHighest,
     borderRadius: radii.md,
+    maxHeight: 240,
+  },
+  previewCardContent: {
     padding: spacing.md,
     gap: spacing.sm,
   },
