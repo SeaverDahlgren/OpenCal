@@ -13,6 +13,8 @@
     "beta:users": "tsx scripts/beta-users.ts",
     "deploy:check": "tsx scripts/deploy-check.ts",
     "mobile:start": "npm --prefix apps/mobile run start",
+    "web:start": "npm --prefix apps/web run dev",
+    "web:build": "npm --prefix apps/web run build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

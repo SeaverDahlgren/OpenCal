@@ -23,6 +23,7 @@ import {
   RequestTooLargeError,
 } from "./server/http.js";
 import { buildReadyPayload } from "./server/health.js";
+import { applyCorsHeaders } from "./server/cors.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { closeServer, registerAbortOnSignals } from "./server/shutdown.js";
 import { applyServerTimeouts } from "./server/timeouts.js";
@@ -43,6 +44,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader("x-request-id", requestId);
   res.setHeader("x-opencal-api-version", config.apiVersion ?? "1.0.0");
   applySecurityHeaders(res, config.appEnv);
+  const corsAllowed = applyCorsHeaders(req, res, config);
   const debugLogPath = path.join(config.rootDir, ".opencal", "logs", `${new Date().toISOString().slice(0, 10)}.log`);
 
   try {
@@ -53,6 +55,18 @@ const server = http.createServer(async (req, res) => {
       method: req.method,
       path: url.pathname,
     });
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(corsAllowed ? 204 : 403);
+      res.end();
+      await appendDebugLog(debugLogPath, "api.request.complete", {
+        requestId,
+        method: req.method,
+        path: url.pathname,
+        status: res.statusCode,
+      });
+      return;
+    }
 
     if (req.method === "GET" && url.pathname === "/api/v1/health/live") {
       const result = await jsonRoute(res, 200, {

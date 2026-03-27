@@ -1,10 +1,11 @@
 # openCal
 
-OpenCal is a calendar and Gmail assistant with three runtimes:
+OpenCal is a calendar and Gmail assistant with four runnable surfaces:
 
 1. a CLI
 2. a local or hosted HTTP API
 3. an Expo mobile app
+4. a React web review app
 
 The current product shape is a hosted private beta. Google OAuth and LLM provider keys stay on the backend.
 
@@ -20,9 +21,11 @@ OpenCal can read your calendar, find availability, create or update events, sear
 
 `apps/mobile` contains the Expo app with Today, Calendar, Settings, and AI chat.
 
+`apps/web` contains the React reviewer app that is intended for a hosted demo URL.
+
 ## Prerequisites
 
-You need Node `>=20.11.0`, a Google Cloud project with Calendar and Gmail enabled, and at least one LLM API key for Gemini or Groq. If you want to run the mobile app locally, you also need Expo Go, an emulator, or the iOS Simulator. If you want to share it with friends, the intended path is now a hosted API plus an Expo EAS iOS build.
+You need Node `>=20.11.0`, a Google Cloud project with Calendar and Gmail enabled, and at least one LLM API key for Gemini or Groq. If you want to run the mobile app locally, you also need Expo Go, an emulator, or the iOS Simulator. If you want a reviewer-friendly live URL, the intended path is a hosted API plus the React web app on Vercel.
 
 ## Environment Setup
 
@@ -40,6 +43,7 @@ BETA_ACCESS_MODE=allowlist
 BETA_USER_EMAILS=avery@example.com,jordan@example.com
 API_VERSION=1.0.0
 MIN_SUPPORTED_APP_VERSION=
+ALLOWED_WEB_ORIGINS=
 STORAGE_BACKEND=file
 JOB_BACKEND=file
 DATABASE_URL=
@@ -94,6 +98,12 @@ Install mobile dependencies:
 
 ```bash
 npm --prefix apps/mobile install
+```
+
+Install web dependencies:
+
+```bash
+npm --prefix apps/web install
 ```
 
 For hosted mobile builds, also copy:
@@ -245,6 +255,72 @@ EXPO_PUBLIC_API_BASE_URL=http://<host>:8787/api/v1 npm --prefix apps/mobile run 
 ```
 
 Use that when testing on a device or when the API is running somewhere else.
+
+### Web Review App
+
+Start the React review app with:
+
+```bash
+npm run web:start
+```
+
+It defaults to:
+
+```text
+http://127.0.0.1:5173
+```
+
+Create `apps/web/.env` when the API lives elsewhere:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+```
+
+Then set:
+
+```env
+VITE_API_BASE_URL=https://api.example.com/api/v1
+VITE_APP_VERSION=1.0.0
+VITE_SUPPORT_EMAIL=you@example.com
+```
+
+Build the production bundle with:
+
+```bash
+npm run web:build
+```
+
+## Hosted Review Window
+
+For a free review-window deployment:
+
+1. host the API on an Oracle Cloud Always Free VM
+2. terminate HTTPS with a reverse proxy
+3. host `apps/web` on Vercel
+4. add the Vercel origin to both:
+   - `ALLOWED_RETURN_TO_PREFIXES`
+   - `ALLOWED_WEB_ORIGINS`
+5. point `GOOGLE_OAUTH_API_REDIRECT_URI` at the hosted API callback
+
+Example staging env:
+
+```env
+APP_ENV=staging
+BETA_ACCESS_MODE=allowlist
+BETA_USER_EMAILS=demo@example.com
+STATE_ENCRYPTION_KEY=...
+ADMIN_API_KEY=...
+GOOGLE_OAUTH_API_REDIRECT_URI=https://api.example.com/api/v1/auth/google/callback
+ALLOWED_RETURN_TO_PREFIXES=https://opencal-demo.vercel.app
+ALLOWED_WEB_ORIGINS=https://opencal-demo.vercel.app
+```
+
+The review flow is:
+
+1. reviewer opens the Vercel URL
+2. reviewer signs in with the invited Google account
+3. the API completes OAuth and redirects back to the web app
+4. reviewer uses Today, Calendar, Settings, and AI chat in the browser
 
 ## Share With Friends
 

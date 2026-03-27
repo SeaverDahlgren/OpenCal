@@ -51,6 +51,9 @@ export function buildPreflightReport(config: AppConfig): PreflightReport {
   if (config.allowedReturnToPrefixes.length === 0 && config.appEnv !== "development") {
     warnings.push("ALLOWED_RETURN_TO_PREFIXES is empty. Hosted deep-link return targets are not configured.");
   }
+  if ((config.allowedWebOrigins?.length ?? 0) === 0 && config.appEnv !== "development") {
+    warnings.push("ALLOWED_WEB_ORIGINS is empty. Hosted browser clients will fail CORS checks.");
+  }
   if (config.googleApiRedirectUri.includes("127.0.0.1") || config.googleApiRedirectUri.includes("localhost")) {
     warnings.push("GOOGLE_OAUTH_API_REDIRECT_URI still points at localhost.");
   }

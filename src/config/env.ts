@@ -20,6 +20,7 @@ const envSchema = z.object({
   API_VERSION: z.string().default("1.0.0"),
   MIN_SUPPORTED_APP_VERSION: z.string().optional(),
   ALLOWED_RETURN_TO_PREFIXES: z.string().optional(),
+  ALLOWED_WEB_ORIGINS: z.string().optional(),
   DATABASE_URL: z.string().optional(),
   REDIS_URL: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(1, "GOOGLE_OAUTH_CLIENT_ID is required"),
@@ -69,6 +70,7 @@ export type AppConfig = {
   apiVersion?: string;
   minSupportedAppVersion?: string;
   allowedReturnToPrefixes: string[];
+  allowedWebOrigins?: string[];
   databaseUrl?: string;
   redisUrl?: string;
   googleClientId: string;
@@ -156,6 +158,9 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     apiVersion: env.API_VERSION,
     minSupportedAppVersion: env.MIN_SUPPORTED_APP_VERSION,
     allowedReturnToPrefixes: env.ALLOWED_RETURN_TO_PREFIXES?.split(",")
+      .map((value) => value.trim())
+      .filter(Boolean) ?? [],
+    allowedWebOrigins: env.ALLOWED_WEB_ORIGINS?.split(",")
       .map((value) => value.trim())
       .filter(Boolean) ?? [],
     databaseUrl: env.DATABASE_URL,

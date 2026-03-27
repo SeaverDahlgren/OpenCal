@@ -23,6 +23,7 @@ describe("deploy preflight", () => {
         storageBackend: "postgres",
         jobBackend: "redis",
         allowedReturnToPrefixes: [],
+        allowedWebOrigins: [],
         adminApiKey: undefined,
       }),
     );
@@ -32,6 +33,7 @@ describe("deploy preflight", () => {
       expect.arrayContaining([
         "ADMIN_API_KEY is unset. Support endpoints remain disabled.",
         "ALLOWED_RETURN_TO_PREFIXES is empty. Hosted deep-link return targets are not configured.",
+        "ALLOWED_WEB_ORIGINS is empty. Hosted browser clients will fail CORS checks.",
         "BETA_ACCESS_MODE=allowlist is set, but BETA_USER_EMAILS is empty.",
       ]),
     );

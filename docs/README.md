@@ -17,6 +17,8 @@ read_when:
   Runtime logs, task-state traces, and debugging steps for CLI and mobile/API flows.
 - [mobile.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/mobile.md)
   Expo app and HTTP API layout, refactored module boundaries, and mobile/backend contract notes.
+- [web.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/web.md)
+  React reviewer app, browser auth flow, and hosted deploy notes.
 - [skills/README.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/skills/README.md)
   Planner-visible semantic skill manifests and their doc paths.
 

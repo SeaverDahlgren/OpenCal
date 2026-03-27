@@ -24,6 +24,7 @@ read_when:
    - `API_VERSION`
    - `MIN_SUPPORTED_APP_VERSION` if you want the API to enforce a minimum mobile build
    - `ALLOWED_RETURN_TO_PREFIXES` for hosted deep-link or universal-link return targets
+   - `ALLOWED_WEB_ORIGINS` for hosted browser clients such as the Vercel review app
    - `STORAGE_BACKEND`
    - `JOB_BACKEND`
    - `DATABASE_URL` when `STORAGE_BACKEND=postgres`
@@ -148,6 +149,8 @@ read_when:
   - localhost HTTP/HTTPS in `development`
 - Add hosted mobile return targets with `ALLOWED_RETURN_TO_PREFIXES`, for example:
   - `ALLOWED_RETURN_TO_PREFIXES=https://app.example.com/auth,https://beta.example.com/auth`
+- Hosted browser clients also need explicit CORS origins, for example:
+  - `ALLOWED_WEB_ORIGINS=https://opencal-demo.vercel.app`
 - Mobile/API sessions now expire based on `SESSION_TTL_DAYS`. Active sessions renew when they get close to expiry, while truly expired bearer tokens are pruned on read and must be re-established through auth.
 - Persisted API session state stores a hash of each bearer token instead of the raw token value.
 - Mobile clients should send `Idempotency-Key` on retryable `POST /api/v1/agent/turn` requests to avoid duplicate event or draft mutations after reconnects/timeouts.
