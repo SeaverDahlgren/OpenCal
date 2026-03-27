@@ -21,8 +21,8 @@ import { updateSessionClientContext } from "./server/client-context.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
 
 const config = loadConfig(process.cwd());
-const { sessions, profiles, tokens, idempotency, jobs } = createRuntimeStores(config);
-const auth = new ApiAuthService(config, sessions, tokens);
+const { sessions, profiles, tokens, audit, idempotency, jobs } = createRuntimeStores(config);
+const auth = new ApiAuthService(config, sessions, tokens, audit);
 const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rateLimitMaxRequests);
 
 const server = http.createServer(async (req, res) => {
@@ -117,6 +117,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      audit,
       idempotency,
       jobs,
     });
@@ -138,6 +139,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      audit,
       idempotency,
       jobs,
     });
@@ -176,6 +178,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      audit,
       idempotency,
       jobs,
       session,
@@ -204,6 +207,7 @@ const server = http.createServer(async (req, res) => {
       auth,
       sessions,
       profiles,
+      audit,
       idempotency,
       jobs,
       session,

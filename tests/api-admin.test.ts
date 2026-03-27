@@ -3,6 +3,7 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { AuditStore } from "../apps/api/src/audit/store.js";
 import { JobStore } from "../apps/api/src/jobs/store.js";
 import { handleAdminRoute } from "../apps/api/src/routes/admin.js";
 import { SessionStore } from "../apps/api/src/sessions/store.js";
@@ -51,6 +52,7 @@ describe("admin-ready session store helpers", () => {
     const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-session-store-"));
     createdDirs.push(privateDir);
     const store = new SessionStore(createConfig(privateDir));
+    const audit = new AuditStore(createConfig(privateDir));
     const session = await store.createOrReplaceSession({
       name: "Avery",
       email: "avery@example.com",
@@ -69,6 +71,7 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: store,
       profiles: {} as never,
+      audit,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
     });
@@ -91,6 +94,7 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: store,
       profiles: {} as never,
+      audit,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
     });
@@ -109,6 +113,7 @@ describe("admin-ready session store helpers", () => {
     const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-job-store-"));
     createdDirs.push(privateDir);
     const jobs = new JobStore(createConfig(privateDir));
+    const audit = new AuditStore(createConfig(privateDir));
     const queued = await jobs.enqueue({
       kind: "agent_turn_retry",
       payload: {
@@ -128,6 +133,7 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: new SessionStore(createConfig(privateDir)),
       profiles: {} as never,
+      audit,
       idempotency: {} as never,
       jobs,
     });
@@ -151,6 +157,7 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: new SessionStore(createConfig(privateDir)),
       profiles: {} as never,
+      audit,
       idempotency: {} as never,
       jobs,
     });
@@ -169,6 +176,7 @@ describe("admin-ready session store helpers", () => {
     const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-job-store-"));
     createdDirs.push(privateDir);
     const jobs = new JobStore(createConfig(privateDir));
+    const audit = new AuditStore(createConfig(privateDir));
     const queued = await jobs.enqueue({
       kind: "agent_turn_retry",
       payload: {
@@ -190,6 +198,7 @@ describe("admin-ready session store helpers", () => {
       auth: {} as never,
       sessions: new SessionStore(createConfig(privateDir)),
       profiles: {} as never,
+      audit,
       idempotency: {} as never,
       jobs,
     });
@@ -201,6 +210,47 @@ describe("admin-ready session store helpers", () => {
           status: "exhausted",
           isTerminal: true,
           sessionId: "sess-999",
+        },
+      ],
+    });
+  });
+
+  it("lists recent audit events through the admin route", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-audit-store-"));
+    createdDirs.push(privateDir);
+    const audit = new AuditStore(createConfig(privateDir));
+    await audit.append({
+      type: "auth.google.completed",
+      sessionId: "sess-1",
+      userEmail: "avery@example.com",
+      metadata: { appEnv: "development" },
+    });
+    await audit.append({
+      type: "admin.job.retry",
+      sessionId: "sess-2",
+      metadata: { jobId: "job-2" },
+    });
+
+    const list = createResponse();
+    await handleAdminRoute({
+      req: createRequest("GET", "/api/v1/admin/audit?email=avery@example.com"),
+      res: list.res,
+      url: new URL("http://127.0.0.1:8787/api/v1/admin/audit?email=avery@example.com"),
+      config: createConfig(privateDir),
+      auth: {} as never,
+      sessions: new SessionStore(createConfig(privateDir)),
+      profiles: {} as never,
+      audit,
+      idempotency: {} as never,
+      jobs: new JobStore(createConfig(privateDir)),
+    });
+
+    expect(JSON.parse(list.body())).toMatchObject({
+      events: [
+        {
+          type: "auth.google.completed",
+          sessionId: "sess-1",
+          userEmail: "avery@example.com",
         },
       ],
     });

@@ -136,6 +136,8 @@ read_when:
 - When `ADMIN_API_KEY` is configured, support tooling can inspect sessions through:
   - `/api/v1/admin/session`
   - `/api/v1/admin/job`
+  - `/api/v1/admin/audit`
+- The audit endpoint exposes recent auth, session, and admin recovery events with filters for `sessionId`, `email`, and `event`.
 - API error payloads now include request ids for support/debugging correlation.
 
 ## Notes

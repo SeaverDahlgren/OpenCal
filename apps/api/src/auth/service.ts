@@ -8,13 +8,27 @@ import {
   loadStoredGoogleAuthorization,
 } from "../../../../src/integrations/google/auth.js";
 import { GoogleTokenStore } from "./token-store.js";
-import type { GoogleTokenRepository, SessionRepository } from "../storage/types.js";
+import type { AuditRepository, GoogleTokenRepository, SessionRepository } from "../storage/types.js";
+
+const noopAudit: AuditRepository = {
+  async append() {
+    return {
+      eventId: "noop",
+      type: "auth.google.completed",
+      createdAt: new Date(0).toISOString(),
+    };
+  },
+  async list() {
+    return [];
+  },
+};
 
 export class ApiAuthService {
   constructor(
     private readonly config: AppConfig,
     private readonly sessions: SessionRepository,
     private readonly tokens: GoogleTokenRepository,
+    private readonly audit: AuditRepository = noopAudit,
   ) {}
 
   buildAuthUrl(state?: string) {
@@ -38,7 +52,16 @@ export class ApiAuthService {
       email: profile.data.email ?? "unknown@example.com",
     };
     await this.tokens.save(user.email, auth.credentials);
-    return await this.sessions.createOrReplaceSession(user);
+    const session = await this.sessions.createOrReplaceSession(user);
+    await this.audit.append({
+      type: "auth.google.completed",
+      sessionId: session.sessionId,
+      userEmail: user.email,
+      metadata: {
+        appEnv: this.config.appEnv,
+      },
+    });
+    return session;
   }
 
   async reuseAuthorizedSession() {
@@ -61,7 +84,16 @@ export class ApiAuthService {
         email: profile.data.email ?? "unknown@example.com",
       };
       await this.tokens.save(user.email, auth.credentials);
-      return await this.sessions.createOrReplaceSession(user);
+      const session = await this.sessions.createOrReplaceSession(user);
+      await this.audit.append({
+        type: "auth.google.reused",
+        sessionId: session.sessionId,
+        userEmail: user.email,
+        metadata: {
+          appEnv: this.config.appEnv,
+        },
+      });
+      return session;
     } catch {
       return null;
     }

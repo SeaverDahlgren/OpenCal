@@ -1,6 +1,7 @@
 import type { StoredSessionState } from "../../../../src/app/session-types.js";
 import type { Credentials } from "google-auth-library";
 import type { UserProfile } from "../users/profile.js";
+import type { AuditEvent } from "../audit/types.js";
 import type { JobRecord } from "../jobs/types.js";
 
 export interface SessionRepository {
@@ -39,4 +40,9 @@ export interface JobRepository {
   complete(jobId: string, result: JobRecord["result"]): Promise<JobRecord | null>;
   fail(jobId: string, error: string, nextRunAt?: string): Promise<JobRecord | null>;
   retry(jobId: string, runAt?: string): Promise<JobRecord | null>;
+}
+
+export interface AuditRepository {
+  append(input: Omit<AuditEvent, "eventId" | "createdAt">): Promise<AuditEvent>;
+  list(): Promise<AuditEvent[]>;
 }

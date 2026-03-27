@@ -95,6 +95,8 @@ read_when:
   - `GET /api/v1/admin/job`
   - filter with `?jobId=...`, `?status=...`, or `?sessionId=...`
   - `POST /api/v1/admin/job/retry`
+  - `GET /api/v1/admin/audit`
+  - filter with `?sessionId=...`, `?email=...`, `?event=...`, or `?limit=...`
   - send `x-admin-key: <ADMIN_API_KEY>`
 - In `development`, if the machine already has reusable local Google auth, the mobile app will try `POST /api/v1/auth/google/reuse` before opening the browser.
 - If that route returns `GOOGLE_AUTH_REQUIRED`, the app stays on the sign-in screen and you need a fresh Google OAuth flow.
@@ -111,6 +113,7 @@ read_when:
 - For a long-running worker process, run `npm run api:worker:watch`.
 - `WORKER_POLL_INTERVAL_MS` controls how often the watch worker checks for queued jobs.
 - Jobs that hit `JOB_MAX_ATTEMPTS` now land in an `exhausted` terminal state. Support can inspect them through `/api/v1/admin/job?status=exhausted` and requeue them manually if needed.
+- The API now also persists a compact audit trail for auth reuse/completion, user session reset/revoke, and admin recovery actions. Use `/api/v1/admin/audit` when you need support history without digging through raw `.opencal/logs`.
 - The API and worker both resolve storage from the same runtime bootstrap factory. Today that means file-backed repositories and a file-backed job queue. `STORAGE_BACKEND` and `JOB_BACKEND` are already reserved for future Postgres and Redis adapters.
 - Mobile clients now send `x-opencal-app-version`. If `MIN_SUPPORTED_APP_VERSION` is set and the app is older, the API responds with `CLIENT_UPGRADE_REQUIRED`.
 - In `staging` and `production`, `STATE_ENCRYPTION_KEY` is required and `.opencal/` session/profile files are encrypted at rest.

@@ -3,7 +3,9 @@ import type { PublicRouteContext } from "./types.js";
 
 export async function handleAdminRoute(ctx: PublicRouteContext) {
   if (!ctx.url.pathname.startsWith("/api/v1/admin/session") && !ctx.url.pathname.startsWith("/api/v1/admin/job")) {
-    return false;
+    if (ctx.url.pathname !== "/api/v1/admin/audit") {
+      return false;
+    }
   }
 
   if (!ctx.config.adminApiKey) {
@@ -66,6 +68,31 @@ export async function handleAdminRoute(ctx: PublicRouteContext) {
     });
   }
 
+  if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/admin/audit") {
+    const sessionId = ctx.url.searchParams.get("sessionId");
+    const email = ctx.url.searchParams.get("email");
+    const event = ctx.url.searchParams.get("event");
+    const limit = Number(ctx.url.searchParams.get("limit") ?? 50);
+    const events = (await ctx.audit.list())
+      .filter((auditEvent) => {
+        if (sessionId && auditEvent.sessionId !== sessionId) {
+          return false;
+        }
+        if (email && auditEvent.userEmail !== email) {
+          return false;
+        }
+        if (event && auditEvent.type !== event) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, Math.max(1, Math.min(limit, 200)));
+
+    return await jsonRoute(ctx.res, 200, {
+      events: events.map(summarizeAuditEvent),
+    });
+  }
+
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/admin/session/reset") {
     const session = await resolveTargetSession(
       ctx,
@@ -77,6 +104,11 @@ export async function handleAdminRoute(ctx: PublicRouteContext) {
     }
 
     const reset = await ctx.sessions.resetSession(session.sessionId);
+    await ctx.audit.append({
+      type: "admin.session.reset",
+      sessionId: session.sessionId,
+      userEmail: session.user.email,
+    });
     return await jsonRoute(ctx.res, 200, {
       ok: true,
       action: "reset",
@@ -95,6 +127,11 @@ export async function handleAdminRoute(ctx: PublicRouteContext) {
     }
 
     const revoked = await ctx.sessions.deleteSession(session.sessionId);
+    await ctx.audit.append({
+      type: "admin.session.revoke",
+      sessionId: session.sessionId,
+      userEmail: session.user.email,
+    });
     return await jsonRoute(ctx.res, 200, {
       ok: true,
       action: "revoke",
@@ -112,6 +149,13 @@ export async function handleAdminRoute(ctx: PublicRouteContext) {
     if (!retried) {
       return await jsonError(ctx.res, 404, "NOT_FOUND", "Job not found.", false);
     }
+    await ctx.audit.append({
+      type: "admin.job.retry",
+      sessionId: retried.payload.sessionId,
+      metadata: {
+        jobId: retried.jobId,
+      },
+    });
 
     return await jsonRoute(ctx.res, 200, {
       ok: true,
@@ -121,6 +165,17 @@ export async function handleAdminRoute(ctx: PublicRouteContext) {
   }
 
   return await jsonError(ctx.res, 405, "METHOD_NOT_ALLOWED", "Method not allowed.", false);
+}
+
+function summarizeAuditEvent(event: Awaited<ReturnType<PublicRouteContext["audit"]["list"]>>[number]) {
+  return {
+    eventId: event.eventId,
+    type: event.type,
+    createdAt: event.createdAt,
+    sessionId: event.sessionId,
+    userEmail: event.userEmail,
+    metadata: event.metadata,
+  };
 }
 
 function summarizeSession(session: Awaited<ReturnType<PublicRouteContext["sessions"]["getCurrentSession"]>> | null) {

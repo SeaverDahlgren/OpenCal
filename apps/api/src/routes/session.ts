@@ -9,6 +9,11 @@ export async function handleSessionRoute(ctx: SessionRouteContext) {
 
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/session/reset") {
     const reset = await ctx.sessions.resetSession(ctx.session.sessionId);
+    await ctx.audit.append({
+      type: "session.reset",
+      sessionId: ctx.session.sessionId,
+      userEmail: ctx.session.user.email,
+    });
     return await jsonRoute(ctx.res, 200, {
       ok: true,
       sessionId: reset?.sessionId ?? ctx.session.sessionId,
@@ -17,6 +22,11 @@ export async function handleSessionRoute(ctx: SessionRouteContext) {
 
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/session/revoke") {
     const revoked = await ctx.sessions.deleteSession(ctx.session.sessionId);
+    await ctx.audit.append({
+      type: "session.revoke",
+      sessionId: ctx.session.sessionId,
+      userEmail: ctx.session.user.email,
+    });
     return await jsonRoute(ctx.res, 200, {
       ok: true,
       sessionId: revoked?.sessionId ?? ctx.session.sessionId,

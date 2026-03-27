@@ -6,8 +6,8 @@ import { parseWorkerOptions, runWorker } from "./jobs/worker-runner.js";
 
 async function main() {
   const config = loadConfig(process.cwd());
-  const { sessions, profiles, tokens, jobs } = createRuntimeStores(config);
-  const auth = new ApiAuthService(config, sessions, tokens);
+  const { sessions, profiles, tokens, audit, jobs } = createRuntimeStores(config);
+  const auth = new ApiAuthService(config, sessions, tokens, audit);
   const processor = new JobProcessor({
     config,
     auth,
