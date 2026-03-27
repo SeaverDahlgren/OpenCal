@@ -38,6 +38,10 @@ Then fill in the Google OAuth values and one provider key:
 APP_ENV=development
 API_VERSION=1.0.0
 MIN_SUPPORTED_APP_VERSION=
+STORAGE_BACKEND=file
+JOB_BACKEND=file
+DATABASE_URL=
+REDIS_URL=
 ADMIN_API_KEY=
 STATE_ENCRYPTION_KEY=
 GOOGLE_OAUTH_CLIENT_ID=...
@@ -61,6 +65,7 @@ TOOL_RESULT_VERBOSITY=compact
 
 In `staging` or `production`, `STATE_ENCRYPTION_KEY` is required. The API uses it to encrypt persisted session and user-profile state under `.opencal/`.
 Set `MIN_SUPPORTED_APP_VERSION` when you want the backend to reject stale mobile builds with `CLIENT_UPGRADE_REQUIRED`.
+`STORAGE_BACKEND` and `JOB_BACKEND` currently default to `file`. `postgres` and `redis` are now explicit config seams for the next production storage adapters. When you switch those backends on, `DATABASE_URL` and `REDIS_URL` become required.
 
 ## Google OAuth Setup
 
@@ -126,6 +131,8 @@ Run the worker continuously with:
 ```bash
 npm run api:worker:watch
 ```
+
+The API and worker now boot their storage layer through one runtime factory. In the current beta, that resolves to encrypted file-backed repositories and a file-backed job queue. The config already reserves `postgres` and `redis` as future production backends, so deployment config can move without changing route code.
 
 By default it listens on:
 

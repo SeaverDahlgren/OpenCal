@@ -7,6 +7,7 @@ import { appendDebugLog } from "../../../src/memory/logs.js";
 import { ensureWorkspace, loadWorkspaceFiles } from "../../../src/memory/workspace.js";
 import { GoogleCalendarService } from "../../../src/integrations/google/calendar.js";
 import { ApiAuthService } from "./auth/service.js";
+import { createRuntimeStores } from "./bootstrap/runtime.js";
 import { handleAdminRoute } from "./routes/admin.js";
 import { handleAgentRoute } from "./routes/agent.js";
 import { handleAuthRoute } from "./routes/auth.js";
@@ -16,19 +17,9 @@ import { handleSettingsRoute } from "./routes/settings.js";
 import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
-import { SessionStore } from "./sessions/store.js";
-import { GoogleTokenStore } from "./auth/token-store.js";
-import { UserProfileStore } from "./users/store.js";
-import { IdempotencyStore } from "./idempotency/store.js";
-import { JobStore } from "./jobs/store.js";
-import type { GoogleTokenRepository, IdempotencyRepository, JobRepository, SessionRepository, UserProfileRepository } from "./storage/types.js";
 
 const config = loadConfig(process.cwd());
-const sessions: SessionRepository = new SessionStore(config);
-const profiles: UserProfileRepository = new UserProfileStore(config);
-const tokens: GoogleTokenRepository = new GoogleTokenStore(config);
-const idempotency: IdempotencyRepository = new IdempotencyStore(config);
-const jobs: JobRepository = new JobStore(config);
+const { sessions, profiles, tokens, idempotency, jobs } = createRuntimeStores(config);
 const auth = new ApiAuthService(config, sessions, tokens);
 const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rateLimitMaxRequests);
 

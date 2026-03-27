@@ -2,8 +2,8 @@ import { appendDebugLog } from "../../../../src/memory/logs.js";
 import { loadWorkspaceFiles } from "../../../../src/memory/workspace.js";
 import { executeAgentTurn } from "../agent/execute-turn.js";
 import type { ApiAuthService } from "../auth/service.js";
-import type { JobStore } from "./store.js";
-import type { SessionRepository, UserProfileRepository } from "../storage/types.js";
+import type { JobRecord } from "./types.js";
+import type { JobRepository, SessionRepository, UserProfileRepository } from "../storage/types.js";
 import { buildNextRunAt } from "./store.js";
 
 type JobProcessorDeps = {
@@ -11,7 +11,7 @@ type JobProcessorDeps = {
   auth: ApiAuthService;
   sessions: SessionRepository;
   profiles: UserProfileRepository;
-  jobs: JobStore;
+  jobs: JobRepository;
 };
 
 export class JobProcessor {
@@ -43,7 +43,7 @@ export class JobProcessor {
     }
   }
 
-  private async processAgentTurnRetry(job: Awaited<ReturnType<JobStore["reserveNext"]>>) {
+  private async processAgentTurnRetry(job: JobRecord | null) {
     if (!job) {
       return;
     }

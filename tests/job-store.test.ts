@@ -84,6 +84,8 @@ describe("job store", () => {
 function createConfig(privateDir: string): AppConfig {
   return {
     appEnv: "development",
+    storageBackend: "file",
+    jobBackend: "file",
     llmProvider: "groq",
     toolResultVerbosity: "compact",
     geminiApiKey: undefined,
@@ -93,6 +95,8 @@ function createConfig(privateDir: string): AppConfig {
     stateEncryptionKey: undefined,
     apiVersion: "1.0.0",
     minSupportedAppVersion: undefined,
+    databaseUrl: undefined,
+    redisUrl: undefined,
     googleClientId: "google-client-id",
     googleClientSecret: "google-client-secret",
     googleRedirectUri: "http://127.0.0.1:42813/oauth/callback",

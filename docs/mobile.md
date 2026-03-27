@@ -40,6 +40,8 @@ read_when:
   Per-user persisted profile storage for API settings and timezone reads.
 - `apps/api/src/storage/types.ts`
   Repository interfaces that let the API swap file-backed storage for database-backed adapters without changing route code.
+- `apps/api/src/bootstrap/runtime.ts`
+  Central runtime factory that resolves the active session/profile/token/idempotency/job backends from env config.
 - `apps/api/src/jobs/store.ts`
   Persistent file-backed job queue for retryable API work.
 - `apps/api/src/jobs/processor.ts`
@@ -119,6 +121,7 @@ read_when:
 - Repeated route helpers now live in `apps/api/src/routes/utils.ts`.
 - `POST /api/v1/agent/turn` supports `Idempotency-Key` for retry-safe mobile submits.
 - Retryable LLM failures on `POST /api/v1/agent/turn` now enqueue an `agent_turn_retry` background job for worker processing.
+- `STORAGE_BACKEND` and `JOB_BACKEND` now select the runtime repository layer. The current supported production path is still `file`, but the API no longer hardcodes file-backed stores at route startup.
 - The API can enforce a minimum supported mobile build via `MIN_SUPPORTED_APP_VERSION`.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
 - Settings reads and writes per-user profile state from the API profile store.

@@ -6,6 +6,8 @@ loadDotEnv();
 
 const envSchema = z.object({
   APP_ENV: z.enum(["development", "staging", "production"]).default("development"),
+  STORAGE_BACKEND: z.enum(["file", "postgres"]).default("file"),
+  JOB_BACKEND: z.enum(["file", "redis"]).default("file"),
   LLM_PROVIDER: z.string().default("gemini"),
   TOOL_RESULT_VERBOSITY: z.enum(["compact", "verbose"]).default("compact"),
   GEMINI_API_KEY: z.string().optional(),
@@ -15,6 +17,8 @@ const envSchema = z.object({
   STATE_ENCRYPTION_KEY: z.string().optional(),
   API_VERSION: z.string().default("1.0.0"),
   MIN_SUPPORTED_APP_VERSION: z.string().optional(),
+  DATABASE_URL: z.string().optional(),
+  REDIS_URL: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(1, "GOOGLE_OAUTH_CLIENT_ID is required"),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1, "GOOGLE_OAUTH_CLIENT_SECRET is required"),
   GOOGLE_OAUTH_REDIRECT_URI: z
@@ -40,6 +44,8 @@ const envSchema = z.object({
 
 export type AppConfig = {
   appEnv: "development" | "staging" | "production";
+  storageBackend: "file" | "postgres";
+  jobBackend: "file" | "redis";
   llmProvider: string;
   toolResultVerbosity: "compact" | "verbose";
   geminiApiKey?: string;
@@ -49,6 +55,8 @@ export type AppConfig = {
   stateEncryptionKey?: string;
   apiVersion?: string;
   minSupportedAppVersion?: string;
+  databaseUrl?: string;
+  redisUrl?: string;
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
@@ -83,9 +91,17 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
   if (env.APP_ENV !== "development" && !env.STATE_ENCRYPTION_KEY) {
     throw new Error("Invalid environment configuration:\nSTATE_ENCRYPTION_KEY is required outside development");
   }
+  if (env.STORAGE_BACKEND !== "file" && !env.DATABASE_URL) {
+    throw new Error("Invalid environment configuration:\nDATABASE_URL is required when STORAGE_BACKEND is not file");
+  }
+  if (env.JOB_BACKEND !== "file" && !env.REDIS_URL) {
+    throw new Error("Invalid environment configuration:\nREDIS_URL is required when JOB_BACKEND is not file");
+  }
 
   return {
     appEnv: env.APP_ENV,
+    storageBackend: env.STORAGE_BACKEND,
+    jobBackend: env.JOB_BACKEND,
     llmProvider: env.LLM_PROVIDER,
     toolResultVerbosity: env.TOOL_RESULT_VERBOSITY,
     geminiApiKey: env.GEMINI_API_KEY,
@@ -95,6 +111,8 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     stateEncryptionKey: env.STATE_ENCRYPTION_KEY,
     apiVersion: env.API_VERSION,
     minSupportedAppVersion: env.MIN_SUPPORTED_APP_VERSION,
+    databaseUrl: env.DATABASE_URL,
+    redisUrl: env.REDIS_URL,
     googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
     googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
     googleRedirectUri: env.GOOGLE_OAUTH_REDIRECT_URI,

@@ -21,6 +21,10 @@ read_when:
    - `APP_ENV`
    - `API_VERSION`
    - `MIN_SUPPORTED_APP_VERSION` if you want the API to enforce a minimum mobile build
+   - `STORAGE_BACKEND`
+   - `JOB_BACKEND`
+   - `DATABASE_URL` when `STORAGE_BACKEND=postgres`
+   - `REDIS_URL` when `JOB_BACKEND=redis`
    - `ADMIN_API_KEY` if you want the admin/support session endpoint enabled
    - `STATE_ENCRYPTION_KEY`
    - `GOOGLE_OAUTH_CLIENT_ID`
@@ -99,6 +103,7 @@ read_when:
 - Retryable model failures now enqueue background jobs. Run `npm run api:worker` to process queued work in the current file-backed beta setup.
 - For a long-running worker process, run `npm run api:worker:watch`.
 - `WORKER_POLL_INTERVAL_MS` controls how often the watch worker checks for queued jobs.
+- The API and worker both resolve storage from the same runtime bootstrap factory. Today that means file-backed repositories and a file-backed job queue. `STORAGE_BACKEND` and `JOB_BACKEND` are already reserved for future Postgres and Redis adapters.
 - Mobile clients now send `x-opencal-app-version`. If `MIN_SUPPORTED_APP_VERSION` is set and the app is older, the API responds with `CLIENT_UPGRADE_REQUIRED`.
 - In `staging` and `production`, `STATE_ENCRYPTION_KEY` is required and `.opencal/` session/profile files are encrypted at rest.
 - API errors now include a request id when available to simplify support/debugging.
