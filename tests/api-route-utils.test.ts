@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChatHistoryRoutePayload, buildUtcDayBounds } from "../apps/api/src/routes/utils.js";
+import { buildChatHistoryRoutePayload, buildTaskStateRoutePayload, buildUtcDayBounds } from "../apps/api/src/routes/utils.js";
 import type { StoredSessionState } from "../src/app/session-types.js";
 
 describe("api route utils", () => {
@@ -47,4 +47,69 @@ describe("api route utils", () => {
       timeMax: "2026-03-25T23:59:59.999Z",
     });
   });
+
+  it("builds specific confirmation prompts for create_event", () => {
+    const session = baseSession({
+      toolName: "create_event",
+      arguments: {
+        title: "Lunch with Joe",
+        start: "2026-03-27T12:00:00-07:00",
+      },
+    });
+
+    expect(buildTaskStateRoutePayload(session).confirmation).toMatchObject({
+      prompt: 'Please confirm: should I create "Lunch with Joe" starting at 2026-03-27T12:00:00-07:00?',
+      payloadPreview: {
+        summary: 'create "Lunch with Joe" starting at 2026-03-27T12:00:00-07:00',
+      },
+    });
+  });
+
+  it("builds specific confirmation prompts for write_draft", () => {
+    const session = baseSession({
+      toolName: "write_draft",
+      arguments: {
+        subject: "Reschedule request",
+      },
+    });
+
+    expect(buildTaskStateRoutePayload(session).confirmation).toMatchObject({
+      prompt: 'Please confirm: should I create the draft "Reschedule request"?',
+      payloadPreview: {
+        summary: 'create the draft "Reschedule request"',
+      },
+    });
+  });
+
+  it("builds specific confirmation prompts for delete_event", () => {
+    const session = baseSession({
+      toolName: "delete_event",
+      arguments: {
+        title: "Swim Practice",
+      },
+    });
+
+    expect(buildTaskStateRoutePayload(session).confirmation).toMatchObject({
+      prompt: 'Please confirm: should I delete "Swim Practice"?',
+      payloadPreview: {
+        summary: 'delete "Swim Practice"',
+      },
+    });
+  });
 });
+
+function baseSession(pendingConfirmation: StoredSessionState["pendingConfirmation"]): StoredSessionState {
+  return {
+    sessionId: "sess-123",
+    token: "token-123",
+    user: { name: "Seaver", email: "seaver@example.com" },
+    provider: "groq",
+    model: "llama-3.3-70b-versatile",
+    toolResultVerbosity: "compact",
+    createdAt: "2026-03-25T00:00:00.000Z",
+    updatedAt: "2026-03-25T00:00:00.000Z",
+    messages: [],
+    taskState: null,
+    pendingConfirmation,
+  };
+}
