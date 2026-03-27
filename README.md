@@ -139,6 +139,7 @@ Both the API server and the background worker now handle `SIGINT` and `SIGTERM` 
 The API now also enforces a maximum JSON request size with a clean `413 REQUEST_TOO_LARGE` response, so hosted endpoints do not buffer arbitrarily large mobile or browser payloads.
 The hosted API now also uses explicit request, headers, and keep-alive timeouts instead of relying on Node defaults.
 File-backed beta state is now bounded too: idempotency keys are capped by `IDEMPOTENCY_MAX_RECORDS`, terminal jobs are pruned after `JOB_RETENTION_DAYS`, and support audit history is capped by `AUDIT_MAX_EVENTS`.
+The in-memory beta rate limiter is bounded too: expired buckets are swept automatically, live buckets are capped by `RATE_LIMIT_MAX_KEYS`, and responses include `x-rate-limit-limit`, `x-rate-limit-remaining`, and `x-rate-limit-reset`.
 
 By default it listens on:
 

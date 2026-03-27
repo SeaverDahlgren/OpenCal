@@ -38,6 +38,7 @@ const envSchema = z.object({
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+  RATE_LIMIT_MAX_KEYS: z.coerce.number().int().positive().default(10000),
   MAX_REQUEST_BODY_BYTES: z.coerce.number().int().positive().default(1024 * 1024),
   IDEMPOTENCY_MAX_RECORDS: z.coerce.number().int().positive().default(5000),
   JOB_RETENTION_DAYS: z.coerce.number().int().positive().default(14),
@@ -80,6 +81,7 @@ export type AppConfig = {
   workerPollIntervalMs: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
+  rateLimitMaxKeys: number;
   maxRequestBodyBytes: number;
   idempotencyMaxRecords: number;
   jobRetentionDays: number;
@@ -146,6 +148,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     workerPollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
+    rateLimitMaxKeys: env.RATE_LIMIT_MAX_KEYS,
     maxRequestBodyBytes: env.MAX_REQUEST_BODY_BYTES,
     idempotencyMaxRecords: env.IDEMPOTENCY_MAX_RECORDS,
     jobRetentionDays: env.JOB_RETENTION_DAYS,

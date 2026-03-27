@@ -32,7 +32,11 @@ import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning
 const config = loadConfig(process.cwd());
 const { sessions, profiles, tokens, audit, idempotency, jobs } = createRuntimeStores(config);
 const auth = new ApiAuthService(config, sessions, tokens, audit);
-const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rateLimitMaxRequests);
+const rateLimiter = new InMemoryRateLimiter(
+  config.rateLimitWindowMs,
+  config.rateLimitMaxRequests,
+  config.rateLimitMaxKeys,
+);
 
 const server = http.createServer(async (req, res) => {
   const requestId = crypto.randomUUID();
@@ -96,6 +100,7 @@ const server = http.createServer(async (req, res) => {
     const token = readBearerToken(req);
     const rateLimitKey = token || `${req.socket.remoteAddress ?? "unknown"}:${url.pathname}`;
     const rateLimit = rateLimiter.check(rateLimitKey);
+    res.setHeader("x-rate-limit-limit", String(rateLimit.limit));
     res.setHeader("x-rate-limit-remaining", String(rateLimit.remaining));
     res.setHeader("x-rate-limit-reset", new Date(rateLimit.resetAt).toISOString());
     if (!rateLimit.allowed) {

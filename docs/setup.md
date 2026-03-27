@@ -27,6 +27,7 @@ read_when:
    - `DATABASE_URL` when `STORAGE_BACKEND=postgres`
    - `REDIS_URL` when `JOB_BACKEND=redis`
    - `MAX_REQUEST_BODY_BYTES`
+   - `RATE_LIMIT_MAX_KEYS`
    - `IDEMPOTENCY_MAX_RECORDS`
    - `JOB_RETENTION_DAYS`
    - `AUDIT_MAX_EVENTS`
@@ -149,6 +150,7 @@ read_when:
 - Mobile clients now send `x-opencal-app-version`. If `MIN_SUPPORTED_APP_VERSION` is set and the app is older, the API responds with `CLIENT_UPGRADE_REQUIRED`.
 - In `staging` and `production`, `STATE_ENCRYPTION_KEY` is required and `.opencal/` session/profile files are encrypted at rest.
 - API errors now include a request id when available to simplify support/debugging.
+- The in-memory rate limiter now also caps its tracked key count with `RATE_LIMIT_MAX_KEYS` and emits `x-rate-limit-limit`, `x-rate-limit-remaining`, and `x-rate-limit-reset` headers on responses.
 
 If the backend callback fails with an identity/authentication error after Google approval, the usual cause is that the stored token was granted before the app requested basic identity scopes. Re-run OAuth so Google grants the updated scope set.
 

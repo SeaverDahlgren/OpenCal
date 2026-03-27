@@ -74,6 +74,7 @@ function createConfig(): AppConfig {
     workerPollIntervalMs: 5000,
     rateLimitWindowMs: 60000,
     rateLimitMaxRequests: 120,
+    rateLimitMaxKeys: 10000,
     maxRequestBodyBytes: 1024 * 1024,
     idempotencyMaxRecords: 5000,
     jobRetentionDays: 14,
