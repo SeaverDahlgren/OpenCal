@@ -221,7 +221,7 @@ export default function CalendarScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.weekdays}>
-          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
             <Text key={label} style={styles.weekday}>
               {label}
             </Text>

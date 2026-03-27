@@ -148,7 +148,7 @@ function formatTimeRange(start: string, end: string, timezone: string) {
 function startOfCalendarGrid(date: Date) {
   const copy = new Date(date);
   const day = copy.getUTCDay();
-  const offset = day === 0 ? -6 : 1 - day;
+  const offset = -day;
   copy.setUTCDate(copy.getUTCDate() + offset);
   return copy;
 }
