@@ -37,6 +37,7 @@ const envSchema = z.object({
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+  MAX_REQUEST_BODY_BYTES: z.coerce.number().int().positive().default(1024 * 1024),
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
   GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
   GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
@@ -71,6 +72,7 @@ export type AppConfig = {
   workerPollIntervalMs: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
+  maxRequestBodyBytes: number;
   openAiModel: string;
   geminiModel: string;
   groqModel: string;
@@ -127,6 +129,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     workerPollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
+    maxRequestBodyBytes: env.MAX_REQUEST_BODY_BYTES,
     openAiModel: env.OPENAI_MODEL,
     geminiModel: env.GEMINI_MODEL,
     groqModel: env.GROQ_MODEL,

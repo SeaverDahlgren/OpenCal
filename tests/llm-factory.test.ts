@@ -31,6 +31,7 @@ const baseConfig: AppConfig = {
   workerPollIntervalMs: 5000,
   rateLimitWindowMs: 60000,
   rateLimitMaxRequests: 120,
+  maxRequestBodyBytes: 1024 * 1024,
   openAiModel: "gpt-5-mini",
   geminiModel: "gemini-2.5-flash",
   groqModel: "llama-3.3-70b-versatile",

@@ -25,6 +25,7 @@ read_when:
    - `JOB_BACKEND`
    - `DATABASE_URL` when `STORAGE_BACKEND=postgres`
    - `REDIS_URL` when `JOB_BACKEND=redis`
+   - `MAX_REQUEST_BODY_BYTES`
    - `ADMIN_API_KEY` if you want the admin/support session endpoint enabled
    - `STATE_ENCRYPTION_KEY`
    - `GOOGLE_OAUTH_CLIENT_ID`
@@ -91,6 +92,7 @@ read_when:
   - `X-Content-Type-Options: nosniff`
   - `X-Frame-Options: DENY`
   - `Referrer-Policy: no-referrer`
+- JSON request bodies are capped by `MAX_REQUEST_BODY_BYTES`. Oversized auth, settings, or agent POSTs now fail fast with `413 REQUEST_TOO_LARGE`.
 - If `ADMIN_API_KEY` is set, the API also exposes a support endpoint:
   - `GET /api/v1/admin/session`
   - filter with `?sessionId=...` or `?email=...`

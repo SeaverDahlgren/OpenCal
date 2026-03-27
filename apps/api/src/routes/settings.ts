@@ -49,7 +49,7 @@ export async function handleSettingsRoute(ctx: AuthedRouteContext) {
   }
 
   if (ctx.req.method === "PATCH" && ctx.url.pathname === "/api/v1/settings") {
-    const body = settingsPatchSchema.parse(await readJsonBody(ctx.req));
+    const body = settingsPatchSchema.parse(await readJsonBody(ctx.req, ctx.config.maxRequestBodyBytes));
     const nextProfile = updateUserProfile(ctx.profile, {
       name: body.profile?.name,
       ...(body.preferences ?? {}),

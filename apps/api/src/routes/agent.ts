@@ -19,7 +19,7 @@ const agentTurnSchema = z
 
 export async function handleAgentRoute(ctx: AuthedRouteContext) {
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/agent/turn") {
-    const requestBody = await readJsonBody(ctx.req);
+    const requestBody = await readJsonBody(ctx.req, ctx.config.maxRequestBodyBytes);
     const body = agentTurnSchema.safeParse(requestBody);
     if (!body.success) {
       return await jsonError(ctx.res, 400, "VALIDATION_ERROR", "A message or action is required.", false);

@@ -1,5 +1,12 @@
 import http from "node:http";
 
+export class RequestTooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`Request body exceeded ${maxBytes} bytes.`);
+    this.name = "RequestTooLargeError";
+  }
+}
+
 export function applySecurityHeaders(res: http.ServerResponse) {
   res.setHeader("x-content-type-options", "nosniff");
   res.setHeader("x-frame-options", "DENY");
@@ -8,10 +15,16 @@ export function applySecurityHeaders(res: http.ServerResponse) {
   res.setHeader("cache-control", "no-store");
 }
 
-export async function readJsonBody<T extends Record<string, unknown>>(req: http.IncomingMessage) {
+export async function readJsonBody<T extends Record<string, unknown>>(req: http.IncomingMessage, maxBytes = 1024 * 1024) {
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.byteLength;
+    if (totalBytes > maxBytes) {
+      throw new RequestTooLargeError(maxBytes);
+    }
+    chunks.push(buffer);
   }
   if (chunks.length === 0) {
     return {} as T;

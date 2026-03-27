@@ -9,7 +9,7 @@ const authStartSchema = z.object({
 
 export async function handleAuthRoute(ctx: PublicRouteContext) {
   if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/auth/google/start") {
-    const body = authStartSchema.parse(await readJsonBody<{ returnTo?: string }>(ctx.req));
+    const body = authStartSchema.parse(await readJsonBody<{ returnTo?: string }>(ctx.req, ctx.config.maxRequestBodyBytes));
     return await jsonRoute(ctx.res, 200, {
       authUrl: ctx.auth.buildAuthUrl(encodeAuthState(ctx.config, { returnTo: body.returnTo })),
     });
