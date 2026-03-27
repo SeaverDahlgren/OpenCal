@@ -15,6 +15,7 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [showDraftPreview, setShowDraftPreview] = useState(false);
 
   const scrollToLatest = useCallback((animated: boolean) => {
     requestAnimationFrame(() => {
@@ -27,6 +28,10 @@ export default function ChatScreen() {
       setDraft(prompt.trim());
     }
   }, [draft, prompt]);
+
+  useEffect(() => {
+    setShowDraftPreview(false);
+  }, [pendingTurn?.confirmation?.payloadPreview.body, pendingTurn?.confirmation?.prompt]);
 
   useFocusEffect(
     useCallback(() => {
@@ -142,6 +147,36 @@ export default function ChatScreen() {
               <Text style={styles.inlineBody}>
                 {pendingTurn.confirmation.payloadPreview.summary ?? pendingTurn.confirmation.payloadPreview.kind}
               </Text>
+              {pendingTurn.confirmation.payloadPreview.kind === "write_draft" &&
+              pendingTurn.confirmation.payloadPreview.body ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.previewToggle}
+                    onPress={() => setShowDraftPreview((value) => !value)}
+                  >
+                    <Text style={styles.previewToggleText}>
+                      {showDraftPreview ? "Hide Full Email" : "Preview Full Email"}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDraftPreview ? (
+                    <View style={styles.previewCard}>
+                      {pendingTurn.confirmation.payloadPreview.subject ? (
+                        <Text style={styles.previewSubject}>
+                          Subject: {pendingTurn.confirmation.payloadPreview.subject}
+                        </Text>
+                      ) : null}
+                      {pendingTurn.confirmation.payloadPreview.recipients?.length ? (
+                        <Text style={styles.previewMeta}>
+                          To: {pendingTurn.confirmation.payloadPreview.recipients.join(", ")}
+                        </Text>
+                      ) : null}
+                      <Text style={styles.previewBody}>
+                        {pendingTurn.confirmation.payloadPreview.body}
+                      </Text>
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
               <View style={styles.actions}>
                 <TouchableOpacity style={styles.confirm} onPress={() => void submit({ action: "confirm" })}>
                   <Text style={styles.confirmText}>{pendingTurn.confirmation.actionLabel}</Text>
@@ -208,6 +243,38 @@ const styles = StyleSheet.create({
   inlineEyebrow: { color: colors.tertiary, ...typography.eyebrow },
   inlineTitle: { color: colors.text, fontWeight: "700", fontSize: 16 },
   inlineBody: { color: colors.textMuted },
+  previewToggle: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  previewToggleText: {
+    color: colors.primary,
+    fontWeight: "700",
+  },
+  previewCard: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  previewSubject: {
+    color: colors.text,
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  previewMeta: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  previewBody: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 21,
+  },
   option: { backgroundColor: colors.surfaceHighest, borderRadius: radii.md, padding: spacing.md },
   optionText: { color: colors.primary, fontWeight: "700" },
   actions: { flexDirection: "row", gap: spacing.sm },

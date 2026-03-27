@@ -70,6 +70,8 @@ describe("api route utils", () => {
       toolName: "write_draft",
       arguments: {
         subject: "Reschedule request",
+        to: ["sarah@example.com"],
+        body: "Hi Sarah,\n\nCould we move our meeting to Thursday afternoon?\n\nThanks,\nSeaver",
       },
     });
 
@@ -77,6 +79,9 @@ describe("api route utils", () => {
       prompt: 'Please confirm: should I create the draft "Reschedule request"?',
       payloadPreview: {
         summary: 'create the draft "Reschedule request"',
+        subject: "Reschedule request",
+        recipients: ["sarah@example.com"],
+        body: "Hi Sarah,\n\nCould we move our meeting to Thursday afternoon?\n\nThanks,\nSeaver",
       },
     });
   });

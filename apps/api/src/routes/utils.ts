@@ -15,6 +15,46 @@ export function buildUtcDayBounds(date: string) {
   };
 }
 
+export function buildExpandedUtcDayBounds(date: string) {
+  const center = new Date(`${date}T12:00:00.000Z`);
+  const start = new Date(center);
+  start.setUTCDate(start.getUTCDate() - 1);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(center);
+  end.setUTCDate(end.getUTCDate() + 1);
+  end.setUTCHours(23, 59, 59, 999);
+  return {
+    timeMin: start.toISOString(),
+    timeMax: end.toISOString(),
+  };
+}
+
+export function buildExpandedUtcMonthBounds(year: number, month: number) {
+  const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+  start.setUTCDate(start.getUTCDate() - 1);
+  const end = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+  end.setUTCDate(end.getUTCDate() + 1);
+  end.setUTCHours(23, 59, 59, 999);
+  return {
+    timeMin: start.toISOString(),
+    timeMax: end.toISOString(),
+  };
+}
+
+export function dateKeyInTimezone(value: Date, timezone: string) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(value);
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "01";
+  const day = parts.find((part) => part.type === "day")?.value ?? "01";
+  return `${year}-${month}-${day}`;
+}
+
 export function buildTaskStateRoutePayload(session: StoredSessionState) {
   return {
     taskState: session.taskState
@@ -52,6 +92,11 @@ export function buildTaskStateRoutePayload(session: StoredSessionState) {
               session.pendingConfirmation.toolName,
               session.pendingConfirmation.arguments,
             ),
+            subject: asString(session.pendingConfirmation.arguments.subject),
+            recipients: Array.isArray(session.pendingConfirmation.arguments.to)
+              ? session.pendingConfirmation.arguments.to.map(String)
+              : undefined,
+            body: asString(session.pendingConfirmation.arguments.body),
             raw: session.pendingConfirmation.arguments,
           },
         }

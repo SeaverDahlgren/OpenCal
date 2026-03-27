@@ -27,6 +27,7 @@ export type ConfirmationPrompt = {
     calendarId?: string;
     subject?: string;
     recipients?: string[];
+    body?: string;
     raw: Record<string, unknown>;
   };
 };

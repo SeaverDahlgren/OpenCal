@@ -462,6 +462,7 @@ function buildConfirmationPrompt(toolName: string, input: Record<string, unknown
       calendarId: asString(input.calendarId),
       subject: asString(input.subject),
       recipients: Array.isArray(input.to) ? input.to.map(String) : undefined,
+      body: asString(input.body),
       raw: input,
     },
   };

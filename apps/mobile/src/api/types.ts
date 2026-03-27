@@ -98,6 +98,8 @@ export type AgentTurnDto = {
       kind: string;
       summary?: string;
       subject?: string;
+      recipients?: string[];
+      body?: string;
     };
   } | null;
   session: {
