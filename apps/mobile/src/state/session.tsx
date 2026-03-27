@@ -2,7 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { createApiClient } from "../api/client";
+import { ApiRequestError, createApiClient } from "../api/client";
 import type { AgentTurnDto, ChatHistoryDto, SessionDto, TaskStateDto } from "../api/types";
 import { derivePendingTurn, hasBlockedUiState, type AgentActionInput } from "./session-view";
 
@@ -44,6 +44,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     void bootstrap();
   }, []);
 
+  async function clearLocalSession(markSignedOut = false) {
+    if (markSignedOut) {
+      await SecureStore.setItemAsync(SIGNED_OUT_KEY, "true");
+    }
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    setTokenState(null);
+    applySessionSnapshot(null, null, []);
+  }
+
+  async function handleAuthFailure(error: unknown, options?: { markSignedOut?: boolean }) {
+    if (
+      error instanceof ApiRequestError &&
+      (error.code === "SESSION_EXPIRED" || error.code === "UNAUTHORIZED")
+    ) {
+      await clearLocalSession(options?.markSignedOut);
+      router.replace("/signin");
+      return true;
+    }
+    return false;
+  }
+
   async function bootstrap() {
     const stored = await SecureStore.getItemAsync(TOKEN_KEY);
     const signedOut = (await SecureStore.getItemAsync(SIGNED_OUT_KEY)) === "true";
@@ -81,13 +102,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         client.getChatHistory(),
       ]);
       applySessionSnapshot(result.session, nextTaskState, history.messages);
-    } catch {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      setTokenState(null);
-      setSession(null);
-      setTaskState(null);
-      setChatHistory([]);
-      setPendingTurn(null);
+    } catch (error) {
+      if (!(await handleAuthFailure(error))) {
+        await clearLocalSession(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -109,21 +127,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       await SecureStore.setItemAsync(TOKEN_KEY, next);
       await SecureStore.deleteItemAsync(SIGNED_OUT_KEY);
     } else {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await clearLocalSession(false);
     }
     setTokenState(next);
     if (!next) {
-      applySessionSnapshot(null, null, []);
       return;
     }
-    const client = createApiClient(next);
-    const [result, nextTaskState, history] = await Promise.all([
-      client.getSession(),
-      client.getTaskState(),
-      client.getChatHistory(),
-    ]);
-    applySessionSnapshot(result.session, nextTaskState, history.messages);
-    router.replace("/(tabs)/today");
+    try {
+      const client = createApiClient(next);
+      const [result, nextTaskState, history] = await Promise.all([
+        client.getSession(),
+        client.getTaskState(),
+        client.getChatHistory(),
+      ]);
+      applySessionSnapshot(result.session, nextTaskState, history.messages);
+      router.replace("/(tabs)/today");
+    } catch (error) {
+      if (!(await handleAuthFailure(error))) {
+        await clearLocalSession(false);
+        throw error;
+      }
+    }
   }
 
   async function refreshSession() {
@@ -133,8 +157,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setChatHistory([]);
       return;
     }
-    const result = await createApiClient(token).getSession();
-    setSession(result.session);
+    try {
+      const result = await createApiClient(token).getSession();
+      setSession(result.session);
+    } catch (error) {
+      if (!(await handleAuthFailure(error))) {
+        throw error;
+      }
+    }
   }
 
   async function refreshTaskState() {
@@ -143,9 +173,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setPendingTurn(null);
       return;
     }
-    const result = await createApiClient(token).getTaskState();
-    setTaskState(result);
-    setPendingTurn(derivePendingTurn(result));
+    try {
+      const result = await createApiClient(token).getTaskState();
+      setTaskState(result);
+      setPendingTurn(derivePendingTurn(result));
+    } catch (error) {
+      if (!(await handleAuthFailure(error))) {
+        throw error;
+      }
+    }
   }
 
   async function refreshChatHistory() {
@@ -153,8 +189,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setChatHistory([]);
       return;
     }
-    const result = await createApiClient(token).getChatHistory();
-    setChatHistory(result.messages);
+    try {
+      const result = await createApiClient(token).getChatHistory();
+      setChatHistory(result.messages);
+    } catch (error) {
+      if (!(await handleAuthFailure(error))) {
+        throw error;
+      }
+    }
   }
 
   async function startAuth() {
@@ -172,8 +214,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         // Best-effort server-side revoke; local sign-out still proceeds.
       }
     }
-    await SecureStore.setItemAsync(SIGNED_OUT_KEY, "true");
-    await setToken(null);
+    await clearLocalSession(true);
     router.replace("/signin");
   }
 
@@ -182,18 +223,31 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
     const client = createApiClient(token);
-    const next = await client.sendAgentMessage(input);
-    await Promise.all([refreshSession(), refreshTaskState(), refreshChatHistory()]);
-    setScheduleVersion((value) => value + 1);
-    return next;
+    try {
+      const next = await client.sendAgentMessage(input);
+      await Promise.all([refreshSession(), refreshTaskState(), refreshChatHistory()]);
+      setScheduleVersion((value) => value + 1);
+      return next;
+    } catch (error) {
+      if (await handleAuthFailure(error)) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   async function resetAgentSession() {
     if (!token) {
       return;
     }
-    await createApiClient(token).resetSession();
-    await Promise.all([refreshSession(), refreshTaskState()]);
+    try {
+      await createApiClient(token).resetSession();
+      await Promise.all([refreshSession(), refreshTaskState()]);
+    } catch (error) {
+      if (!(await handleAuthFailure(error))) {
+        throw error;
+      }
+    }
   }
 
   const value = useMemo(

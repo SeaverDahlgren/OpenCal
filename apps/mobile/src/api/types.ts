@@ -135,5 +135,6 @@ export type ApiErrorDto = {
     code: string;
     message: string;
     retryable: boolean;
+    requestId?: string;
   };
 };

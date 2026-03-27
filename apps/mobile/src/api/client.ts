@@ -12,6 +12,18 @@ import type {
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8787/api/v1";
 
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+    readonly retryable?: boolean,
+    readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = "ApiRequestError";
+  }
+}
+
 export class ApiClient {
   constructor(private readonly token?: string | null) {}
 
@@ -98,7 +110,11 @@ export class ApiClient {
 
     const payload = (await response.json()) as T | ApiErrorDto;
     if (!response.ok) {
-      throw new Error((payload as ApiErrorDto).error?.message ?? "API request failed.");
+      const error = (payload as ApiErrorDto).error;
+      const message = error?.requestId
+        ? `${error.message ?? "API request failed."} (request ${error.requestId})`
+        : error?.message ?? "API request failed.";
+      throw new ApiRequestError(message, error?.code, error?.retryable, error?.requestId);
     }
     return payload as T;
   }
