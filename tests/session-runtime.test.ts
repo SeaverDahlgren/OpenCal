@@ -109,6 +109,7 @@ function createConfig(rootDir: string): AppConfig {
     idempotencyTtlHours: 24,
     jobMaxAttempts: 3,
     jobRetryDelayMs: 30000,
+    workerPollIntervalMs: 5000,
     rateLimitWindowMs: 60000,
     rateLimitMaxRequests: 120,
     openAiModel: "gpt-5-mini",

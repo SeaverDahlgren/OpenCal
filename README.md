@@ -121,6 +121,12 @@ Process one queued background job with:
 npm run api:worker
 ```
 
+Run the worker continuously with:
+
+```bash
+npm run api:worker:watch
+```
+
 By default it listens on:
 
 ```text

@@ -57,6 +57,8 @@ read_when:
   Starts the API server with `tsx apps/api/src/index.ts`.
 - `npm run api:worker`
   Processes one queued background job and exits.
+- `npm run api:worker:watch`
+  Runs the worker in a polling loop for queued jobs.
 - `npm run mobile:start`
   Runs `expo start` from `apps/mobile`.
 

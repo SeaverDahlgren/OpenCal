@@ -3,6 +3,7 @@ import { ApiAuthService } from "./auth/service.js";
 import { GoogleTokenStore } from "./auth/token-store.js";
 import { JobProcessor } from "./jobs/processor.js";
 import { JobStore } from "./jobs/store.js";
+import { parseWorkerOptions, runWorker } from "./jobs/worker-runner.js";
 import { SessionStore } from "./sessions/store.js";
 import { UserProfileStore } from "./users/store.js";
 
@@ -20,13 +21,16 @@ async function main() {
     profiles,
     jobs,
   });
+  const options = parseWorkerOptions(process.argv.slice(2), config.workerPollIntervalMs);
 
-  const result = await processor.processNext();
+  const result = await runWorker(processor, options);
   if (!result) {
     console.log("No pending jobs.");
     return;
   }
-  console.log(`Processed job ${result.jobId}: ${result.status}`);
+  if (!options.watch) {
+    console.log(`Processed job ${result.jobId}: ${result.status}`);
+  }
 }
 
 main().catch((error) => {

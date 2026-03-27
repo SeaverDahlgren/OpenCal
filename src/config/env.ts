@@ -30,6 +30,7 @@ const envSchema = z.object({
   IDEMPOTENCY_TTL_HOURS: z.coerce.number().int().positive().default(24),
   JOB_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
   JOB_RETRY_DELAY_MS: z.coerce.number().int().positive().default(30000),
+  WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
   OPENAI_MODEL: z.string().default("gpt-5-mini"),
@@ -59,6 +60,7 @@ export type AppConfig = {
   idempotencyTtlHours: number;
   jobMaxAttempts: number;
   jobRetryDelayMs: number;
+  workerPollIntervalMs: number;
   rateLimitWindowMs: number;
   rateLimitMaxRequests: number;
   openAiModel: string;
@@ -104,6 +106,7 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     idempotencyTtlHours: env.IDEMPOTENCY_TTL_HOURS,
     jobMaxAttempts: env.JOB_MAX_ATTEMPTS,
     jobRetryDelayMs: env.JOB_RETRY_DELAY_MS,
+    workerPollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
     rateLimitWindowMs: env.RATE_LIMIT_WINDOW_MS,
     rateLimitMaxRequests: env.RATE_LIMIT_MAX_REQUESTS,
     openAiModel: env.OPENAI_MODEL,

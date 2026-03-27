@@ -9,6 +9,7 @@
     "dev": "tsx src/index.ts",
     "api:dev": "tsx apps/api/src/index.ts",
     "api:worker": "tsx apps/api/src/worker.ts",
+    "api:worker:watch": "tsx apps/api/src/worker.ts --watch",
     "mobile:start": "npm --prefix apps/mobile run start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
