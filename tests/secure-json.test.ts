@@ -62,6 +62,7 @@ function createConfig(privateDir: string, stateEncryptionKey?: string): AppConfi
     stateEncryptionKey,
     apiVersion: "1.0.0",
     minSupportedAppVersion: undefined,
+    allowedReturnToPrefixes: [],
     databaseUrl: undefined,
     redisUrl: undefined,
     googleClientId: "google-client-id",

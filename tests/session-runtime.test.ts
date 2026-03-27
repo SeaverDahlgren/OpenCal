@@ -106,6 +106,7 @@ function createConfig(rootDir: string): AppConfig {
     stateEncryptionKey: undefined,
     apiVersion: "1.0.0",
     minSupportedAppVersion: undefined,
+    allowedReturnToPrefixes: [],
     databaseUrl: undefined,
     redisUrl: undefined,
     googleClientId: "client-id",

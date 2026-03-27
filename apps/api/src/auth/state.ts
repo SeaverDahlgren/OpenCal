@@ -50,6 +50,7 @@ export function decodeAuthState(
 }
 
 export function buildMobileReturnUrl(
+  config: Pick<AppConfig, "appEnv" | "allowedReturnToPrefixes">,
   returnTo: string | undefined,
   session: { token: string; sessionId: string },
 ) {
@@ -59,6 +60,9 @@ export function buildMobileReturnUrl(
 
   try {
     const url = new URL(returnTo);
+    if (!isAllowedReturnTarget(config, url)) {
+      return null;
+    }
     url.searchParams.set("sessionToken", session.token);
     url.searchParams.set("sessionId", session.sessionId);
     return url.toString();
@@ -82,4 +86,23 @@ function signState(
 function isExpired(issuedAtIso: string, nowIso: string) {
   const ageMs = new Date(nowIso).getTime() - new Date(issuedAtIso).getTime();
   return !Number.isFinite(ageMs) || ageMs < 0 || ageMs > AUTH_STATE_TTL_MS;
+}
+
+function isAllowedReturnTarget(
+  config: Pick<AppConfig, "appEnv" | "allowedReturnToPrefixes">,
+  url: URL,
+) {
+  const normalized = url.toString();
+  const defaultPrefixes = ["opencal://", "exp://", "exps://"];
+  if (defaultPrefixes.some((prefix) => normalized.startsWith(prefix))) {
+    return true;
+  }
+  if (
+    config.appEnv === "development" &&
+    (url.protocol === "http:" || url.protocol === "https:") &&
+    (url.hostname === "127.0.0.1" || url.hostname === "localhost")
+  ) {
+    return true;
+  }
+  return config.allowedReturnToPrefixes.some((prefix) => normalized.startsWith(prefix));
 }

@@ -57,6 +57,7 @@ function createConfig(): AppConfig {
     stateEncryptionKey: "secret",
     apiVersion: "1.0.0",
     minSupportedAppVersion: "1.2.0",
+    allowedReturnToPrefixes: [],
     databaseUrl: undefined,
     redisUrl: undefined,
     googleClientId: "google-client-id",

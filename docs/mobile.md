@@ -85,6 +85,7 @@ read_when:
 - The app includes an `auth-callback` route that can accept a `sessionToken` query param from your deep-link flow.
 - `POST /api/v1/auth/google/start` accepts `returnTo`, and the backend callback redirects back to that deep link with `sessionToken` and `sessionId` query params when provided.
 - The backend signs and time-bounds the OAuth `state` payload before redirecting to Google, so the deep-link return target is only trusted when the callback carries a valid recent state token.
+- The backend also allowlists return-target prefixes. Defaults are `opencal://`, `exp://`, `exps://`, plus localhost HTTP in development. Hosted universal-link prefixes can be added with `ALLOWED_RETURN_TO_PREFIXES`.
 - The Google OAuth redirect used by the mobile/API path is:
   - `GOOGLE_OAUTH_API_REDIRECT_URI`
   - default: `http://127.0.0.1:8787/api/v1/auth/google/callback`

@@ -6,8 +6,10 @@ import {
 } from "../apps/api/src/auth/state.js";
 
 const stateConfig = {
+  appEnv: "development" as const,
   stateEncryptionKey: "secret-key",
   googleClientSecret: "google-client-secret",
+  allowedReturnToPrefixes: [],
 };
 
 describe("api auth state", () => {
@@ -22,7 +24,7 @@ describe("api auth state", () => {
   });
 
   it("builds a deep link return url with the session token", () => {
-    const url = buildMobileReturnUrl("opencal://auth-callback", {
+    const url = buildMobileReturnUrl(stateConfig, "opencal://auth-callback", {
       token: "token-123",
       sessionId: "sess-123",
     });
@@ -37,7 +39,10 @@ describe("api auth state", () => {
     });
     expect(decodeAuthState(stateConfig, encoded, "2026-03-26T20:20:00.000Z")).toEqual({});
     expect(
-      buildMobileReturnUrl("%%%not-a-url%%%", {
+      buildMobileReturnUrl({
+        appEnv: "development",
+        allowedReturnToPrefixes: [],
+      } as never, "%%%not-a-url%%%", {
         token: "token-123",
         sessionId: "sess-123",
       }),
@@ -57,5 +62,29 @@ describe("api auth state", () => {
     const tampered = Buffer.from(JSON.stringify(parsed), "utf8").toString("base64url");
 
     expect(decodeAuthState(stateConfig, tampered)).toEqual({});
+  });
+
+  it("rejects unapproved return targets unless explicitly allowlisted", () => {
+    expect(
+      buildMobileReturnUrl(stateConfig, "https://evil.example.com/callback", {
+        token: "token-123",
+        sessionId: "sess-123",
+      }),
+    ).toBeNull();
+
+    expect(
+      buildMobileReturnUrl(
+        {
+          ...stateConfig,
+          appEnv: "production",
+          allowedReturnToPrefixes: ["https://app.example.com/auth"],
+        },
+        "https://app.example.com/auth/callback",
+        {
+          token: "token-123",
+          sessionId: "sess-123",
+        },
+      ),
+    ).toBe("https://app.example.com/auth/callback?sessionToken=token-123&sessionId=sess-123");
   });
 });

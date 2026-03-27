@@ -41,7 +41,7 @@ export async function handleAuthRoute(ctx: PublicRouteContext) {
     }
     const session = await ctx.auth.completeAuthorization(code);
     const state = decodeAuthState(ctx.config, ctx.url.searchParams.get("state"));
-    const returnUrl = buildMobileReturnUrl(state.returnTo, session);
+    const returnUrl = buildMobileReturnUrl(ctx.config, state.returnTo, session);
     if (returnUrl) {
       ctx.res.writeHead(302, { location: returnUrl });
       ctx.res.end();
