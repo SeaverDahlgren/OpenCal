@@ -15,6 +15,7 @@ import { handleSessionRoute } from "./routes/session.js";
 import { handleSettingsRoute } from "./routes/settings.js";
 import { jsonError, jsonRoute, readBearerToken } from "./server/http.js";
 import { InMemoryRateLimiter } from "./server/rate-limit.js";
+import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
 import { SessionStore } from "./sessions/store.js";
 import { GoogleTokenStore } from "./auth/token-store.js";
 import { UserProfileStore } from "./users/store.js";
@@ -32,6 +33,7 @@ const rateLimiter = new InMemoryRateLimiter(config.rateLimitWindowMs, config.rat
 const server = http.createServer(async (req, res) => {
   const requestId = crypto.randomUUID();
   res.setHeader("x-request-id", requestId);
+  res.setHeader("x-opencal-api-version", config.apiVersion ?? "1.0.0");
   const debugLogPath = path.join(config.rootDir, ".opencal", "logs", `${new Date().toISOString().slice(0, 10)}.log`);
 
   try {
@@ -71,6 +73,20 @@ const server = http.createServer(async (req, res) => {
         status: 200,
       });
       return result;
+    }
+
+    if (
+      url.pathname.startsWith("/api/v1") &&
+      url.pathname !== "/api/v1/auth/google/callback" &&
+      !isSupportedAppVersion(readClientAppVersion(req), config.minSupportedAppVersion)
+    ) {
+      return await jsonError(
+        res,
+        426,
+        "CLIENT_UPGRADE_REQUIRED",
+        `App version ${config.minSupportedAppVersion} or newer is required.`,
+        false,
+      );
     }
 
     const token = readBearerToken(req);

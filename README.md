@@ -36,6 +36,8 @@ Then fill in the Google OAuth values and one provider key:
 
 ```env
 APP_ENV=development
+API_VERSION=1.0.0
+MIN_SUPPORTED_APP_VERSION=
 ADMIN_API_KEY=
 STATE_ENCRYPTION_KEY=
 GOOGLE_OAUTH_CLIENT_ID=...
@@ -58,6 +60,7 @@ TOOL_RESULT_VERBOSITY=compact
 ```
 
 In `staging` or `production`, `STATE_ENCRYPTION_KEY` is required. The API uses it to encrypt persisted session and user-profile state under `.opencal/`.
+Set `MIN_SUPPORTED_APP_VERSION` when you want the backend to reject stale mobile builds with `CLIENT_UPGRADE_REQUIRED`.
 
 ## Google OAuth Setup
 

@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import type {
   AgentTurnDto,
   ApiErrorDto,
@@ -11,6 +12,7 @@ import type {
 } from "./types";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8787/api/v1";
+const APP_VERSION = Constants.expoConfig?.version ?? "0.0.0";
 
 export class ApiRequestError extends Error {
   constructor(
@@ -103,6 +105,7 @@ export class ApiClient {
       ...init,
       headers: {
         "content-type": "application/json",
+        "x-opencal-app-version": APP_VERSION,
         ...(this.token ? { authorization: `Bearer ${this.token}` } : {}),
         ...(init.headers ?? {}),
       },

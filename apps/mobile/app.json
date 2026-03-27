@@ -2,6 +2,7 @@
   "expo": {
     "name": "OpenCal",
     "slug": "opencal",
+    "version": "1.0.0",
     "scheme": "opencal",
     "plugins": ["expo-router"],
     "experiments": {

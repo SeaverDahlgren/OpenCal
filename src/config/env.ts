@@ -13,6 +13,8 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   ADMIN_API_KEY: z.string().optional(),
   STATE_ENCRYPTION_KEY: z.string().optional(),
+  API_VERSION: z.string().default("1.0.0"),
+  MIN_SUPPORTED_APP_VERSION: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_ID: z.string().min(1, "GOOGLE_OAUTH_CLIENT_ID is required"),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().min(1, "GOOGLE_OAUTH_CLIENT_SECRET is required"),
   GOOGLE_OAUTH_REDIRECT_URI: z
@@ -42,6 +44,8 @@ export type AppConfig = {
   openAiApiKey?: string;
   adminApiKey?: string;
   stateEncryptionKey?: string;
+  apiVersion?: string;
+  minSupportedAppVersion?: string;
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
@@ -83,6 +87,8 @@ export function loadConfig(rootDir = process.cwd()): AppConfig {
     openAiApiKey: env.OPENAI_API_KEY,
     adminApiKey: env.ADMIN_API_KEY,
     stateEncryptionKey: env.STATE_ENCRYPTION_KEY,
+    apiVersion: env.API_VERSION,
+    minSupportedAppVersion: env.MIN_SUPPORTED_APP_VERSION,
     googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
     googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
     googleRedirectUri: env.GOOGLE_OAUTH_REDIRECT_URI,
