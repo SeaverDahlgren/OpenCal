@@ -26,6 +26,7 @@ export default function CalendarScreen() {
   const monthCacheRef = useRef<Record<string, CalendarMonthDto>>({});
   const monthRequestRef = useRef(0);
   const dayRequestRef = useRef(0);
+  const hydrateRequestRef = useRef(0);
   const syncedScheduleVersionRef = useRef<number>(scheduleVersion);
 
   const loadMonthData = useCallback(async (targetMonth: Date) => {
@@ -76,6 +77,7 @@ export default function CalendarScreen() {
       setRefreshing(true);
     }
     setError(null);
+    const requestId = ++hydrateRequestRef.current;
 
     const monthKey = getMonthKey(targetMonth);
 
@@ -85,16 +87,24 @@ export default function CalendarScreen() {
         client.getCalendarMonth(targetMonth.getFullYear(), targetMonth.getMonth() + 1),
         client.getCalendarDay(focusDate),
       ]);
+      if (requestId !== hydrateRequestRef.current) {
+        return;
+      }
       monthCacheRef.current[monthKey] = nextMonth;
       setVisibleMonth(targetMonth);
       setSelectedDate(focusDate);
       setMonth(nextMonth);
       setDay(nextDay);
     } catch (nextError) {
+      if (requestId !== hydrateRequestRef.current) {
+        return;
+      }
       setError(nextError instanceof Error ? nextError.message : "Failed to load calendar.");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === hydrateRequestRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [token]);
 
