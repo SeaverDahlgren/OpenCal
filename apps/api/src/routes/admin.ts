@@ -152,6 +152,7 @@ function summarizeJob(job: Awaited<ReturnType<PublicRouteContext["jobs"]["load"]
     jobId: job.jobId,
     kind: job.kind,
     status: job.status,
+    isTerminal: job.status === "completed" || job.status === "exhausted" || job.status === "failed",
     attempts: job.attempts,
     maxAttempts: job.maxAttempts,
     runAt: job.runAt,

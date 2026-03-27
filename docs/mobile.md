@@ -122,6 +122,7 @@ read_when:
 - Repeated route helpers now live in `apps/api/src/routes/utils.ts`.
 - `POST /api/v1/agent/turn` supports `Idempotency-Key` for retry-safe mobile submits.
 - Retryable LLM failures on `POST /api/v1/agent/turn` now enqueue an `agent_turn_retry` background job for worker processing.
+- Queued jobs that exceed `JOB_MAX_ATTEMPTS` move to `exhausted`, which the admin job endpoint exposes as a terminal state for support recovery.
 - `STORAGE_BACKEND` and `JOB_BACKEND` now select the runtime repository layer. The current supported production path is still `file`, but the API no longer hardcodes file-backed stores at route startup.
 - The API can enforce a minimum supported mobile build via `MIN_SUPPORTED_APP_VERSION`.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.

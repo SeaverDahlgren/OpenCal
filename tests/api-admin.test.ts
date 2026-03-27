@@ -152,6 +152,47 @@ describe("admin-ready session store helpers", () => {
       },
     });
   });
+
+  it("surfaces exhausted jobs as terminal in admin summaries", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-admin-job-store-"));
+    createdDirs.push(privateDir);
+    const jobs = new JobStore(createConfig(privateDir));
+    const queued = await jobs.enqueue({
+      kind: "agent_turn_retry",
+      payload: {
+        sessionId: "sess-999",
+        action: { type: "message", message: "retry this" },
+      },
+      maxAttempts: 1,
+      runAt: "2000-03-26T00:00:00.000Z",
+    });
+    await jobs.reserveNext();
+    await jobs.fail(queued.jobId, "permanent failure");
+
+    const list = createResponse();
+    await handleAdminRoute({
+      req: createRequest("GET", "/api/v1/admin/job?status=exhausted"),
+      res: list.res,
+      url: new URL("http://127.0.0.1:8787/api/v1/admin/job?status=exhausted"),
+      config: createConfig(privateDir),
+      auth: {} as never,
+      sessions: new SessionStore(createConfig(privateDir)),
+      profiles: {} as never,
+      idempotency: {} as never,
+      jobs,
+    });
+
+    expect(JSON.parse(list.body())).toMatchObject({
+      jobs: [
+        {
+          jobId: queued.jobId,
+          status: "exhausted",
+          isTerminal: true,
+          sessionId: "sess-999",
+        },
+      ],
+    });
+  });
 });
 
 function createConfig(privateDir: string): AppConfig {

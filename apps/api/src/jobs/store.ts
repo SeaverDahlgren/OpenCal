@@ -88,7 +88,7 @@ export class JobStore {
     const exhausted = current.attempts >= current.maxAttempts;
     const failed: JobRecord = {
       ...current,
-      status: exhausted ? "failed" : "pending",
+      status: exhausted ? "exhausted" : "pending",
       lastError: error,
       runAt: exhausted ? current.runAt : nextRunAt ?? current.runAt,
       updatedAt: new Date().toISOString(),

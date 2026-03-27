@@ -1,7 +1,7 @@
 import type { AgentActionRequest, AssistantTurnPayload } from "../../../../src/app/session-types.js";
 
 export type JobKind = "agent_turn_retry";
-export type JobStatus = "pending" | "running" | "completed" | "failed";
+export type JobStatus = "pending" | "running" | "completed" | "failed" | "exhausted";
 
 export type AgentTurnRetryJobPayload = {
   sessionId: string;

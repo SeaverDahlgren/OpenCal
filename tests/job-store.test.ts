@@ -50,10 +50,20 @@ describe("job store", () => {
     const reserved = await store.reserveNext();
     expect(reserved?.jobId).toBe(job.jobId);
 
-    const pending = await store.fail(job.jobId, "temporary", buildNextRunAt(1000, "2030-03-26T00:00:00.000Z"));
+    const pending = await store.fail(job.jobId, "temporary", buildNextRunAt(1000, "2000-03-26T00:00:00.000Z"));
     expect(pending).toMatchObject({
       status: "pending",
       lastError: "temporary",
+    });
+
+    const again = await store.reserveNext();
+    expect(again?.jobId).toBe(job.jobId);
+
+    const exhausted = await store.fail(job.jobId, "still broken");
+    expect(exhausted).toMatchObject({
+      status: "exhausted",
+      lastError: "still broken",
+      attempts: 2,
     });
   });
 
