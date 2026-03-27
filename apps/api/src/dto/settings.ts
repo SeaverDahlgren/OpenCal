@@ -1,4 +1,5 @@
 type PreferenceSnapshot = {
+  name: string;
   timezone: string;
   workStart: string;
   workEnd: string;
@@ -16,7 +17,10 @@ export function mapSettingsView(args: {
 }) {
   const prefs = parseUserPreferences(args.userMarkdown);
   return {
-    profile: args.user,
+    profile: {
+      ...args.user,
+      name: prefs.name || args.user.name,
+    },
     preferences: prefs,
     advanced: {
       provider: args.provider,
@@ -31,6 +35,7 @@ export function mapSettingsView(args: {
 export function updateUserMarkdown(userMarkdown: string, input: Partial<PreferenceSnapshot>) {
   const next = { ...parseUserPreferences(userMarkdown), ...input };
   const lines = [
+    `name: ${next.name}`,
     `timezone: ${next.timezone}`,
     `workStart: ${next.workStart}`,
     `workEnd: ${next.workEnd}`,
@@ -42,6 +47,7 @@ export function updateUserMarkdown(userMarkdown: string, input: Partial<Preferen
 
 function parseUserPreferences(userMarkdown: string): PreferenceSnapshot {
   return {
+    name: matchValue(userMarkdown, "name") ?? "",
     timezone: matchValue(userMarkdown, "timezone") ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     workStart: matchValue(userMarkdown, "workStart") ?? "09:00",
     workEnd: matchValue(userMarkdown, "workEnd") ?? "17:00",

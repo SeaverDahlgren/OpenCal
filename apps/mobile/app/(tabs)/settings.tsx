@@ -100,7 +100,11 @@ export default function SettingsScreen() {
 
       <SurfaceCard elevated>
         <Text style={styles.sectionTitle}>Profile</Text>
-        <Text style={styles.value}>{data.profile.name}</Text>
+        <Field
+          label="Name"
+          value={data.profile.name}
+          onChangeText={(value) => setData({ ...data, profile: { ...data.profile, name: value } })}
+        />
         <Text style={styles.muted}>{data.profile.email}</Text>
       </SurfaceCard>
 

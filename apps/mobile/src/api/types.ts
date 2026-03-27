@@ -61,6 +61,7 @@ export type SettingsDto = {
     email: string;
   };
   preferences: {
+    name: string;
     timezone: string;
     workStart: string;
     workEnd: string;

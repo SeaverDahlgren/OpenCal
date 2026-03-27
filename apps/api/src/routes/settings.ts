@@ -5,6 +5,12 @@ import { jsonRoute, readJsonBody } from "../server/http.js";
 import type { SessionRouteContext } from "./types.js";
 
 const settingsPatchSchema = z.object({
+  profile: z
+    .object({
+      name: z.string().optional(),
+    })
+    .partial()
+    .optional(),
   preferences: z
     .object({
       timezone: z.string().optional(),
@@ -43,10 +49,17 @@ export async function handleSettingsRoute(ctx: SessionRouteContext & { userMarkd
 
   if (ctx.req.method === "PATCH" && ctx.url.pathname === "/api/v1/settings") {
     const body = settingsPatchSchema.parse(await readJsonBody(ctx.req));
-    const nextMarkdown = updateUserMarkdown(ctx.userMarkdown, body.preferences ?? {});
+    const nextMarkdown = updateUserMarkdown(ctx.userMarkdown, {
+      name: body.profile?.name,
+      ...(body.preferences ?? {}),
+    });
     await fs.writeFile(`${ctx.config.rootDir}/USER.md`, nextMarkdown, "utf8");
     const updatedSession = {
       ...ctx.session,
+      user: {
+        ...ctx.session.user,
+        name: body.profile?.name ?? ctx.session.user.name,
+      },
       provider: body.advanced?.provider ?? ctx.session.provider,
       model: body.advanced?.model ?? ctx.session.model,
       toolResultVerbosity: body.advanced?.toolResultVerbosity ?? ctx.session.toolResultVerbosity,

@@ -58,6 +58,7 @@ describe("api dto mappers", () => {
 
   it("maps settings and persists markdown preference updates", () => {
     const markdown = [
+      "name: Seaver",
       "timezone: America/Los_Angeles",
       "workStart: 09:00",
       "workEnd: 17:00",
@@ -79,6 +80,7 @@ describe("api dto mappers", () => {
     });
 
     expect(settings.preferences).toEqual({
+      name: "Seaver",
       timezone: "America/Los_Angeles",
       workStart: "09:00",
       workEnd: "17:00",
@@ -87,10 +89,12 @@ describe("api dto mappers", () => {
     });
 
     const updated = updateUserMarkdown(markdown, {
+      name: "Seaver Dahlgren",
       workStart: "08:00",
       assistantNotes: "Save mornings for workouts",
     });
 
+    expect(updated).toContain("name: Seaver Dahlgren");
     expect(updated).toContain("workStart: 08:00");
     expect(updated).toContain("assistantNotes: Save mornings for workouts");
   });
