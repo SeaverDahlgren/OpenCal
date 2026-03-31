@@ -12,6 +12,7 @@ describe("runtime bootstrap", () => {
     expect(stores.betaUsers).toBeTruthy();
     expect(stores.idempotency).toBeTruthy();
     expect(stores.jobs).toBeTruthy();
+    expect(stores.recommendations).toBeTruthy();
   });
 
   it("rejects unsupported storage backends", () => {

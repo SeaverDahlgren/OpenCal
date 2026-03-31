@@ -1,5 +1,8 @@
+import { appendDebugLog } from "../../../../src/memory/logs.js";
 import { z } from "zod";
 import { mapCalendarDayView, mapCalendarMonthView, mapTodayOverview } from "../dto/mappers.js";
+import { createTodayRecommendationGenerator } from "../recommendations/generator.js";
+import { TodayRecommendationService } from "../recommendations/service.js";
 import { jsonError, jsonRoute } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
 import { buildExpandedUtcDayBounds, buildExpandedUtcMonthBounds, dateKeyInTimezone, resolveUserTimezone } from "./utils.js";
@@ -24,14 +27,45 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       timeMax,
       maxResults: 25,
     });
+    const overview = mapTodayOverview({
+      date: today,
+      timezone,
+      events,
+    });
+    let insight = null;
+    try {
+      const recommendations = new TodayRecommendationService(
+        ctx.recommendations,
+        createTodayRecommendationGenerator(ctx.config),
+        (error) => {
+          void appendDebugLog(ctx.workspace.debugLogPath, "today.recommendation.error", {
+            userEmail: ctx.session.user.email,
+            date: today,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        },
+      );
+      insight = await recommendations.getOrCreate({
+        user: ctx.session.user,
+        profile: ctx.profile,
+        date: today,
+        timezone,
+        schedule: overview.schedule,
+      });
+    } catch (error) {
+      await appendDebugLog(ctx.workspace.debugLogPath, "today.recommendation.error", {
+        userEmail: ctx.session.user.email,
+        date: today,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
     return await jsonRoute(
       ctx.res,
       200,
-      mapTodayOverview({
-        date: today,
-        timezone,
-        events,
-      }),
+      {
+        ...overview,
+        insight,
+      },
     );
   }
 

@@ -79,6 +79,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
     });
@@ -104,6 +105,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
     });
@@ -147,6 +149,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs,
     });
@@ -173,6 +176,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs,
     });
@@ -218,6 +222,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs,
     });
@@ -264,6 +269,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs: new JobStore(createConfig(privateDir)),
     });
@@ -305,6 +311,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs: new JobStore(config),
     });
@@ -328,6 +335,7 @@ describe("admin-ready session store helpers", () => {
       betaUsers,
       tokens,
       audit,
+      recommendations: {} as never,
       idempotency: {} as never,
       jobs: new JobStore(config),
     });

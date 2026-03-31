@@ -31,7 +31,7 @@ import { updateSessionClientContext } from "./server/client-context.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
 
 const config = loadConfig(process.cwd());
-const { sessions, profiles, tokens, betaUsers, audit, idempotency, jobs } = createRuntimeStores(config);
+const { sessions, profiles, tokens, betaUsers, audit, idempotency, jobs, recommendations } = createRuntimeStores(config);
 const auth = new ApiAuthService(config, sessions, tokens, betaUsers, audit);
 const rateLimiter = new InMemoryRateLimiter(
   config.rateLimitWindowMs,
@@ -151,6 +151,7 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      recommendations,
     });
     if (adminHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {
@@ -175,6 +176,7 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      recommendations,
     });
     if (publicHandled !== false) {
       await appendDebugLog(debugLogPath, "api.request.complete", {
@@ -216,6 +218,7 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      recommendations,
       session,
       profile,
     });
@@ -247,6 +250,7 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      recommendations,
       session,
       profile,
       googleClients,

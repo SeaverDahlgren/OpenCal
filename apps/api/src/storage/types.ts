@@ -4,6 +4,7 @@ import type { UserProfile } from "../users/profile.js";
 import type { AuditEvent } from "../audit/types.js";
 import type { JobRecord } from "../jobs/types.js";
 import type { BetaUserRecord } from "../beta-users/store.js";
+import type { TodayRecommendationRecord } from "../recommendations/types.js";
 
 export interface SessionRepository {
   loadByToken(token: string): Promise<StoredSessionState | null>;
@@ -54,4 +55,9 @@ export interface JobRepository {
 export interface AuditRepository {
   append(input: Omit<AuditEvent, "eventId" | "createdAt">): Promise<AuditEvent>;
   list(): Promise<AuditEvent[]>;
+}
+
+export interface TodayRecommendationRepository {
+  load(email: string, date: string): Promise<TodayRecommendationRecord | null>;
+  save(record: TodayRecommendationRecord): Promise<void>;
 }

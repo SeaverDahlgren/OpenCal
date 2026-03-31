@@ -4,6 +4,7 @@ import { GoogleTokenStore } from "../auth/token-store.js";
 import { BetaUserStore } from "../beta-users/store.js";
 import { IdempotencyStore } from "../idempotency/store.js";
 import { JobStore } from "../jobs/store.js";
+import { TodayRecommendationStore } from "../recommendations/store.js";
 import { SessionStore } from "../sessions/store.js";
 import type {
   GoogleTokenRepository,
@@ -12,6 +13,7 @@ import type {
   IdempotencyRepository,
   JobRepository,
   SessionRepository,
+  TodayRecommendationRepository,
   UserProfileRepository,
 } from "../storage/types.js";
 import { UserProfileStore } from "../users/store.js";
@@ -24,6 +26,7 @@ export type RuntimeStores = {
   audit: AuditRepository;
   idempotency: IdempotencyRepository;
   jobs: JobRepository;
+  recommendations: TodayRecommendationRepository;
 };
 
 export function createRuntimeStores(config: AppConfig): RuntimeStores {
@@ -43,5 +46,6 @@ export function createRuntimeStores(config: AppConfig): RuntimeStores {
     audit: new AuditStore(config),
     idempotency: new IdempotencyStore(config),
     jobs: new JobStore(config),
+    recommendations: new TodayRecommendationStore(config),
   };
 }

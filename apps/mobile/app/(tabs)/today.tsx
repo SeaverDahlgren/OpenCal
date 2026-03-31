@@ -66,21 +66,6 @@ export default function TodayScreen() {
     >
       <EditorialHeader eyebrow={formatTodayEyebrow(data?.date)} title={data?.greeting ?? "Today"} subtitle="Strategic overview of your day." />
       {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
-      {data?.insight ? (
-        <SurfaceCard elevated style={styles.insight}>
-          <Text style={styles.insightEyebrow}>AI INTELLIGENCE</Text>
-          <Text style={styles.insightTitle}>{data.insight.title}</Text>
-          <Text style={styles.insightBody}>{data.insight.body}</Text>
-          {data.insight.action?.prompt ? (
-            <TouchableOpacity
-              style={styles.inlineActionButton}
-              onPress={() => router.push(`/chat?prompt=${encodeURIComponent(data.insight!.action!.prompt)}`)}
-            >
-              <Text style={styles.inlineAction}>{data.insight.actionLabel}</Text>
-            </TouchableOpacity>
-          ) : null}
-        </SurfaceCard>
-      ) : null}
       <SurfaceCard elevated>
         <Text style={styles.sectionTitle}>Today&apos;s Schedule</Text>
         {data?.schedule.length ? (
@@ -100,6 +85,21 @@ export default function TodayScreen() {
           <Text style={styles.muted}>No events scheduled.</Text>
         )}
       </SurfaceCard>
+      {data?.insight ? (
+        <SurfaceCard elevated style={styles.insight}>
+          <Text style={styles.insightEyebrow}>TODAY PLAN</Text>
+          <Text style={styles.insightTitle}>{data.insight.title}</Text>
+          <Text style={styles.insightBody}>{data.insight.body}</Text>
+          {data.insight.action?.prompt ? (
+            <TouchableOpacity
+              style={styles.inlineActionButton}
+              onPress={() => router.push(`/chat?prompt=${encodeURIComponent(data.insight!.action!.prompt)}`)}
+            >
+              <Text style={styles.inlineAction}>{data.insight.actionLabel}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </SurfaceCard>
+      ) : null}
     </ScrollView>
   );
 }

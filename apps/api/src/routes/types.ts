@@ -14,6 +14,7 @@ import type {
   IdempotencyRepository,
   JobRepository,
   SessionRepository,
+  TodayRecommendationRepository,
   UserProfileRepository,
 } from "../storage/types.js";
 
@@ -30,6 +31,7 @@ export type PublicRouteContext = {
   audit: AuditRepository;
   idempotency: IdempotencyRepository;
   jobs: JobRepository;
+  recommendations: TodayRecommendationRepository;
 };
 
 export type SessionRouteContext = PublicRouteContext & {
