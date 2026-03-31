@@ -33,14 +33,19 @@ function sleep(ms: number, signal?: AbortSignal) {
     return Promise.resolve();
   }
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        resolve(undefined);
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      resolve(undefined);
+    };
+    const cleanup = () => {
+      signal?.removeEventListener("abort", onAbort);
+    };
+
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve(undefined);
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }

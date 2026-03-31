@@ -32,4 +32,36 @@ describe("worker runner", () => {
 
     expect(result).toBeNull();
   });
+
+  it("does not accumulate abort listeners while polling in watch mode", async () => {
+    const listeners = new Set<() => void>();
+    const signal = {
+      aborted: false,
+      addEventListener: (_event: string, listener: () => void) => {
+        listeners.add(listener);
+      },
+      removeEventListener: (_event: string, listener: () => void) => {
+        listeners.delete(listener);
+      },
+    } as unknown as AbortSignal;
+
+    let polls = 0;
+    const result = await runWorker(
+      {
+        processNext: async () => {
+          polls += 1;
+          if (polls >= 12) {
+            (signal as { aborted: boolean }).aborted = true;
+          }
+          return null;
+        },
+      } as never,
+      { watch: true, pollIntervalMs: 0 },
+      signal,
+    );
+
+    expect(result).toBeNull();
+    expect(polls).toBe(12);
+    expect(listeners.size).toBe(0);
+  });
 });
