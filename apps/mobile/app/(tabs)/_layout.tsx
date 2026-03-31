@@ -1,6 +1,8 @@
+import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { FloatingAIButton } from "../../src/components/FloatingAIButton";
+import { getSettingsTabIcon } from "../../src/navigation/tab-icons";
 import { useSession } from "../../src/state/session";
 import { colors } from "../../src/theme/tokens";
 
@@ -104,33 +106,20 @@ function SettingsTabIcon(props: {
   size: number;
   focused: boolean;
 }) {
-  const outer = Math.max(16, props.size - 2);
-  const inner = Math.max(6, Math.round(outer * 0.34));
-  const tooth = Math.max(4, Math.round(outer * 0.22));
+  const icon = getSettingsTabIcon();
 
   return (
-    <View style={[styles.settingsWrap, { width: props.size, height: props.size }]}>
-      <View style={[styles.gearTooth, styles.gearToothTop, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View style={[styles.gearTooth, styles.gearToothBottom, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View style={[styles.gearTooth, styles.gearToothLeft, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View style={[styles.gearTooth, styles.gearToothRight, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View style={[styles.gearTooth, styles.gearToothTopLeft, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View style={[styles.gearTooth, styles.gearToothTopRight, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View style={[styles.gearTooth, styles.gearToothBottomLeft, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View style={[styles.gearTooth, styles.gearToothBottomRight, { width: tooth, height: tooth, backgroundColor: props.color }]} />
-      <View
-        style={[
-          styles.settingsOuter,
-          {
-            width: outer,
-            height: outer,
-            borderColor: props.color,
-            backgroundColor: props.focused ? `${props.color}18` : "transparent",
-          },
-        ]}
-      >
-        <View style={[styles.settingsInner, { width: inner, height: inner, backgroundColor: props.color }]} />
-      </View>
+    <View
+      style={[
+        styles.settingsWrap,
+        {
+          width: props.size,
+          height: props.size,
+          backgroundColor: props.focused ? `${props.color}18` : "transparent",
+        },
+      ]}
+    >
+      <Feather name={icon.name} size={Math.max(16, props.size - 2)} color={props.color} />
     </View>
   );
 }
@@ -173,50 +162,6 @@ const styles = StyleSheet.create({
   settingsWrap: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  gearTooth: {
-    position: "absolute",
-    borderRadius: 2,
-  },
-  gearToothTop: {
-    top: 0,
-  },
-  gearToothBottom: {
-    bottom: 0,
-  },
-  gearToothLeft: {
-    left: 0,
-  },
-  gearToothRight: {
-    right: 0,
-  },
-  gearToothTopLeft: {
-    top: 2,
-    left: 2,
-    transform: [{ rotate: "45deg" }],
-  },
-  gearToothTopRight: {
-    top: 2,
-    right: 2,
-    transform: [{ rotate: "45deg" }],
-  },
-  gearToothBottomLeft: {
-    bottom: 2,
-    left: 2,
-    transform: [{ rotate: "45deg" }],
-  },
-  gearToothBottomRight: {
-    bottom: 2,
-    right: 2,
-    transform: [{ rotate: "45deg" }],
-  },
-  settingsOuter: {
-    borderWidth: 1.6,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  settingsInner: {
     borderRadius: 999,
   },
 });

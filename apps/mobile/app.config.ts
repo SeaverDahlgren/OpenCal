@@ -22,7 +22,7 @@ export default {
     owner,
     orientation: "portrait",
     userInterfaceStyle: "dark",
-    plugins: ["expo-router"],
+    plugins: ["expo-router", "expo-asset"],
     experiments: {
       typedRoutes: true,
     },

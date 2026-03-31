@@ -12,7 +12,9 @@
     "submit:ios:production": "eas submit --platform ios --profile production"
   },
   "dependencies": {
+    "@expo/vector-icons": "^14.1.0",
     "expo": "~53.0.0",
+    "expo-asset": "~11.1.7",
     "expo-linking": "~7.1.7",
     "expo-router": "~5.1.11",
     "expo-secure-store": "~14.2.4",
