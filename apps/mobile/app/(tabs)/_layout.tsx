@@ -53,18 +53,21 @@ function TodayTabIcon(props: {
   size: number;
   focused: boolean;
 }) {
+  const bodyHeight = Math.max(14, props.size - 2);
+
   return (
     <View
       style={[
-        styles.todayIcon,
+        styles.todayCalendarIcon,
         {
           width: props.size,
-          height: props.size,
+          height: bodyHeight,
           borderColor: props.color,
           backgroundColor: props.focused ? `${props.color}18` : "transparent",
         },
       ]}
     >
+      <View style={[styles.todayHeader, { backgroundColor: props.color }]} />
       <View style={[styles.todayDot, { backgroundColor: props.color }]} />
     </View>
   );
@@ -125,16 +128,23 @@ function SettingsTabIcon(props: {
 }
 
 const styles = StyleSheet.create({
-  todayIcon: {
+  todayCalendarIcon: {
     borderWidth: 1.6,
     borderRadius: 6,
+    overflow: "hidden",
     alignItems: "center",
-    justifyContent: "center",
+  },
+  todayHeader: {
+    height: 4,
+    width: "100%",
   },
   todayDot: {
-    width: 6,
-    height: 6,
+    width: 4,
+    height: 4,
     borderRadius: 999,
+    marginTop: 4,
+    marginLeft: 5,
+    alignSelf: "flex-start",
   },
   calendarIcon: {
     borderWidth: 1.6,
