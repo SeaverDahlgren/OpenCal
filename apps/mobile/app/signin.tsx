@@ -13,7 +13,6 @@ export default function SignInScreen() {
       <View style={styles.header}>
         <AppLogo size={88} centered />
         <Text style={styles.title}>Welcome to OpenCal!</Text>
-        <Text style={styles.subtitle}>Sign in with the Google account you were invited with</Text>
       </View>
       <View style={styles.centerBlock}>
         {loading ? <Text style={styles.loadingText}>Checking for an existing beta session...</Text> : null}
@@ -45,12 +44,6 @@ const styles = StyleSheet.create({
   title: {
     color: colors.text,
     ...typography.title,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: colors.textMuted,
-    fontSize: 16,
-    lineHeight: 22,
     textAlign: "center",
   },
   centerBlock: {
