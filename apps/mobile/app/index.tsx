@@ -4,7 +4,7 @@ import { useSession } from "../src/state/session";
 import { colors } from "../src/theme/tokens";
 
 export default function Index() {
-  const { loading, token } = useSession();
+  const { loading, token, session } = useSession();
 
   if (loading) {
     return (
@@ -14,5 +14,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={token ? "/(tabs)/today" : "/signin"} />;
+  return <Redirect href={token ? (session?.needsPersonalization ? "/personalize" : "/(tabs)/today") : "/signin"} />;
 }

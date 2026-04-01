@@ -8,6 +8,7 @@ import type {
   ChatHistoryDto,
   SessionDto,
   SettingsDto,
+  SettingsUpdateDto,
   TaskStateDto,
   TodayDto,
 } from "./types";
@@ -53,7 +54,7 @@ export class ApiClient {
     return this.request<SettingsDto>("/settings");
   }
 
-  async updateSettings(input: Partial<SettingsDto>) {
+  async updateSettings(input: SettingsUpdateDto) {
     return this.request<SettingsDto>("/settings", {
       method: "PATCH",
       body: JSON.stringify(input),

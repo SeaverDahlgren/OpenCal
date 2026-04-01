@@ -50,6 +50,10 @@ export default function SettingsScreen() {
     }, [load]),
   );
 
+  const updateData = useCallback((updater: (current: SettingsDto) => SettingsDto) => {
+    setData((current) => (current ? updater(current) : current));
+  }, []);
+
   async function save() {
     if (!token || !data) {
       return;
@@ -88,6 +92,19 @@ export default function SettingsScreen() {
     );
   }
 
+  if (!data) {
+    return (
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load({ refreshing: true })} tintColor={colors.primary} />}
+      >
+        <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Control profile preferences, planning defaults, and advanced beta configuration." />
+        {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView
       style={styles.screen}
@@ -103,7 +120,10 @@ export default function SettingsScreen() {
         <Field
           label="Name"
           value={data.profile.name}
-          onChangeText={(value) => setData({ ...data, profile: { ...data.profile, name: value } })}
+          onChangeText={(value) => updateData((current) => ({
+            ...current,
+            profile: { ...current.profile, name: value },
+          }))}
         />
         <Text style={styles.muted}>{data.profile.email}</Text>
       </SurfaceCard>
@@ -121,33 +141,83 @@ export default function SettingsScreen() {
             setShowVerbosityOptions(false);
           }}
           onSelect={(value) => {
-            setData({ ...data, preferences: { ...data.preferences, timezone: value } });
+            updateData((current) => ({
+              ...current,
+              preferences: { ...current.preferences, timezone: value },
+            }));
             setShowTimezoneOptions(false);
           }}
         />
         <Field
           label="Work Start"
           value={data.preferences.workStart}
-          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, workStart: value } })}
+          onChangeText={(value) => updateData((current) => ({
+            ...current,
+            preferences: { ...current.preferences, workStart: value },
+          }))}
         />
         <Field
           label="Work End"
           value={data.preferences.workEnd}
-          onChangeText={(value) => setData({ ...data, preferences: { ...data.preferences, workEnd: value } })}
+          onChangeText={(value) => updateData((current) => ({
+            ...current,
+            preferences: { ...current.preferences, workEnd: value },
+          }))}
         />
         <Field
-          label="Personalized Notes"
-          value={mergePersonalizedNotes(data.preferences.meetingPreference, data.preferences.assistantNotes)}
+          label="Meeting Preferences"
+          value={data.preferences.meetingPreference}
           multiline
           onChangeText={(value) =>
-            setData({
-              ...data,
+            updateData((current) => ({
+              ...current,
               preferences: {
-                ...data.preferences,
+                ...current.preferences,
                 meetingPreference: value,
+              },
+            }))
+          }
+        />
+        <Field
+          label="Interests"
+          value={data.preferences.interests}
+          multiline
+          onChangeText={(value) =>
+            updateData((current) => ({
+              ...current,
+              preferences: {
+                ...current.preferences,
+                interests: value,
+              },
+            }))
+          }
+        />
+        <Field
+          label="Additional Context"
+          value={data.preferences.additionalContext}
+          multiline
+          onChangeText={(value) =>
+            updateData((current) => ({
+              ...current,
+              preferences: {
+                ...current.preferences,
+                additionalContext: value,
+              },
+            }))
+          }
+        />
+        <Field
+          label="Assistant Notes"
+          value={data.preferences.assistantNotes}
+          multiline
+          onChangeText={(value) =>
+            updateData((current) => ({
+              ...current,
+              preferences: {
+                ...current.preferences,
                 assistantNotes: value,
               },
-            })
+            }))
           }
         />
       </SurfaceCard>
@@ -173,14 +243,20 @@ export default function SettingsScreen() {
                 setShowVerbosityOptions(false);
               }}
               onSelect={(value) => {
-                setData({ ...data, advanced: { ...data.advanced, provider: value } });
+                updateData((current) => ({
+                  ...current,
+                  advanced: { ...current.advanced, provider: value },
+                }));
                 setShowProviderOptions(false);
               }}
             />
             <Field
               label="Model"
               value={data.advanced.model}
-              onChangeText={(value) => setData({ ...data, advanced: { ...data.advanced, model: value } })}
+              onChangeText={(value) => updateData((current) => ({
+                ...current,
+                advanced: { ...current.advanced, model: value },
+              }))}
             />
             <SelectField
               label="Verbosity"
@@ -196,13 +272,13 @@ export default function SettingsScreen() {
                 setShowProviderOptions(false);
               }}
               onSelect={(value) => {
-                setData({
-                  ...data,
+                updateData((current) => ({
+                  ...current,
                   advanced: {
-                    ...data.advanced,
+                    ...current.advanced,
                     toolResultVerbosity: value === "verbose" ? "verbose" : "compact",
                   },
-                });
+                }));
                 setShowVerbosityOptions(false);
               }}
             />
@@ -245,25 +321,6 @@ function buildTimezoneOptions(selectedValue: string) {
   }
 
   return [{ label: selectedValue, value: selectedValue }, ...options];
-}
-
-function mergePersonalizedNotes(meetingPreference: string, assistantNotes: string) {
-  const normalizedMeetingPreference = meetingPreference.trim();
-  const normalizedAssistantNotes = assistantNotes.trim();
-
-  if (!normalizedMeetingPreference) {
-    return normalizedAssistantNotes;
-  }
-
-  if (!normalizedAssistantNotes) {
-    return normalizedMeetingPreference;
-  }
-
-  if (normalizedMeetingPreference === normalizedAssistantNotes) {
-    return normalizedAssistantNotes;
-  }
-
-  return `${normalizedMeetingPreference}\n\n${normalizedAssistantNotes}`;
 }
 
 function Field(props: {
@@ -358,7 +415,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   selectOption: {
-    borderRadius: radii.sm,
+    borderRadius: radii.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

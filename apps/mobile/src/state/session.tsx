@@ -149,7 +149,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         client.getChatHistory(),
       ]);
       applySessionSnapshot(result.session, nextTaskState, history.messages);
-      router.replace("/(tabs)/today");
+      router.replace(result.session.needsPersonalization ? "/personalize" : "/(tabs)/today");
     } catch (error) {
       if (!(await handleAuthFailure(error))) {
         await clearLocalSession(false);

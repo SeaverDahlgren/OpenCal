@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { FloatingAIButton } from "../../src/components/FloatingAIButton";
 import { getSettingsTabIcon } from "../../src/navigation/tab-icons";
@@ -7,7 +7,11 @@ import { useSession } from "../../src/state/session";
 import { colors } from "../../src/theme/tokens";
 
 export default function TabsLayout() {
-  const { blocked } = useSession();
+  const { blocked, session } = useSession();
+
+  if (session?.needsPersonalization) {
+    return <Redirect href="/personalize" />;
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
