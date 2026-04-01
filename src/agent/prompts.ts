@@ -9,6 +9,7 @@ export function buildSystemPrompt(args: {
   selectedSkillDetails: string[];
   taskStateSummary: string;
   memory: string;
+  profileContext?: string;
   runtime: RuntimeContext;
   tokenUsage: {
     estimatedInputTokens: number;
@@ -17,7 +18,18 @@ export function buildSystemPrompt(args: {
     compactionThreshold: number;
   };
 }): string {
-  const { soul, user, tools, skillsCatalog, selectedSkillDetails, taskStateSummary, memory, runtime, tokenUsage } =
+  const {
+    soul,
+    user,
+    tools,
+    skillsCatalog,
+    selectedSkillDetails,
+    taskStateSummary,
+    memory,
+    profileContext,
+    runtime,
+    tokenUsage,
+  } =
     args;
   const toolBlock = tools
     .map(
@@ -63,6 +75,9 @@ export function buildSystemPrompt(args: {
     "",
     "USER.md:",
     user,
+    "",
+    "Production personalization:",
+    profileContext || "none",
     "",
     "Memory.md:",
     memory,

@@ -41,6 +41,7 @@ type RuntimeDeps = {
   provider: LlmProvider;
   tools: ToolRegistry;
   workspace: WorkspaceFiles;
+  profileContext?: string;
   skillManifests: SkillManifest[];
   skillsCatalog: string;
   timezone: string;
@@ -230,7 +231,11 @@ async function resolvePendingConfirmation(
     session.messages.push(createConversationMessage("tool", result.toolMessage, tool.name));
   }
 
-  session.taskState = activateNextSubgoal(session.taskState);
+  if (hasPendingSubgoals(session.taskState)) {
+    session.taskState = activateNextSubgoal(session.taskState);
+  } else {
+    session.taskState = null;
+  }
   return buildTurnResponse(session, `Confirmed. I'll ${actionSummary}.`);
 }
 

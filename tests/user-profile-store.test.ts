@@ -17,7 +17,7 @@ afterEach(async () => {
 });
 
 describe("user profile store", () => {
-  it("seeds a new user profile from legacy USER.md values", async () => {
+  it("seeds a new user profile with production defaults instead of legacy markdown", async () => {
     const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-profile-store-"));
     createdDirs.push(privateDir);
     const store = new UserProfileStore(createConfig(privateDir));
@@ -33,6 +33,8 @@ describe("user profile store", () => {
         "workStart: 08:00",
         "workEnd: 16:00",
         "meetingPreference: Avoid mornings",
+        "interests: AI agents and running",
+        "additionalContext: Prefer concise summaries",
         "assistantNotes: Protect workout time",
         "",
       ].join("\n"),
@@ -40,11 +42,14 @@ describe("user profile store", () => {
 
     expect(profile).toMatchObject({
       email: "avery@example.com",
-      timezone: "America/Los_Angeles",
-      workStart: "08:00",
-      workEnd: "16:00",
-      meetingPreference: "Avoid mornings",
-      assistantNotes: "Protect workout time",
+      name: "Avery",
+      workStart: "09:00",
+      workEnd: "17:00",
+      meetingPreference: "",
+      interests: "",
+      additionalContext: "",
+      assistantNotes: "",
+      personalizationCompletedAt: undefined,
     });
   });
 
@@ -64,6 +69,7 @@ describe("user profile store", () => {
     const updated = updateUserProfile(current, {
       name: "Avery Mercer",
       timezone: "America/New_York",
+      interests: "Running",
     }, "2026-03-25T00:05:00.000Z");
     await store.save(updated);
 
@@ -72,8 +78,10 @@ describe("user profile store", () => {
     expect(loaded).toMatchObject({
       name: "Avery Mercer",
       timezone: "America/New_York",
+      interests: "Running",
     });
     expect(renderLegacyUserMarkdown(loaded!)).toContain("timezone: America/New_York");
+    expect(renderLegacyUserMarkdown(loaded!)).toContain("interests: Running");
   });
 });
 

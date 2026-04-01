@@ -132,6 +132,8 @@ function createInput(overrides: Partial<Parameters<TodayRecommendationService["g
     workStart: "09:00",
     workEnd: "17:00",
     meetingPreference: "Avoid back-to-back meetings.",
+    interests: "Running and AI agents",
+    additionalContext: "Keep advice tactical.",
     assistantNotes: "Protect the first hour for deep work.",
     updatedAt: "2026-03-30T20:00:00.000Z",
   };

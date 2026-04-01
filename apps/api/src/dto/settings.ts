@@ -19,7 +19,12 @@ export function mapSettingsView(args: {
       workStart: args.profile.workStart,
       workEnd: args.profile.workEnd,
       meetingPreference: args.profile.meetingPreference,
+      interests: args.profile.interests,
+      additionalContext: args.profile.additionalContext,
       assistantNotes: args.profile.assistantNotes,
+    },
+    personalization: {
+      completedAt: args.profile.personalizationCompletedAt ?? null,
     },
     advanced: {
       provider: args.provider,

@@ -1,5 +1,5 @@
 import type { StoredSessionState } from "../../../../src/app/session-types.js";
-import type { UserProfile } from "../users/profile.js";
+import { needsUserPersonalization, type UserProfile } from "../users/profile.js";
 
 export function resolveUserTimezone(profile?: Pick<UserProfile, "timezone"> | null) {
   return profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -132,6 +132,7 @@ export function buildSessionRoutePayload(session: StoredSessionState, profile: U
       timezone: resolveUserTimezone(profile) || resolveSystemTimezone(),
       hasBlockedTask: Boolean(session.taskState?.awaitingUserResponse || session.pendingConfirmation),
       activeTaskSummary: session.taskState?.taskSummary ?? "",
+      needsPersonalization: needsUserPersonalization(profile),
     },
   };
 }

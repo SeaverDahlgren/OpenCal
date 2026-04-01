@@ -18,7 +18,15 @@ const settingsPatchSchema = z.object({
       workStart: z.string().optional(),
       workEnd: z.string().optional(),
       meetingPreference: z.string().optional(),
+      interests: z.string().optional(),
+      additionalContext: z.string().optional(),
       assistantNotes: z.string().optional(),
+    })
+    .partial()
+    .optional(),
+  personalization: z
+    .object({
+      markCompleted: z.boolean().optional(),
     })
     .partial()
     .optional(),
@@ -50,9 +58,13 @@ export async function handleSettingsRoute(ctx: AuthedRouteContext) {
 
   if (ctx.req.method === "PATCH" && ctx.url.pathname === "/api/v1/settings") {
     const body = settingsPatchSchema.parse(await readJsonBody(ctx.req, ctx.config.maxRequestBodyBytes));
+    const now = new Date().toISOString();
     const nextProfile = updateUserProfile(ctx.profile, {
       name: body.profile?.name,
       ...(body.preferences ?? {}),
+      personalizationCompletedAt: body.personalization?.markCompleted
+        ? ctx.profile.personalizationCompletedAt ?? now
+        : undefined,
     });
     await ctx.profiles.save(nextProfile);
     await fs.writeFile(`${ctx.config.rootDir}/USER.md`, renderLegacyUserMarkdown(nextProfile), "utf8");

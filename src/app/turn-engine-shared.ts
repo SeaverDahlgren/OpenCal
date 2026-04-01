@@ -30,6 +30,7 @@ export type SharedTurnDeps = {
   provider: LlmProvider;
   tools: ToolRegistry;
   workspace: WorkspaceFiles;
+  profileContext?: string;
   skillManifests: SkillManifest[];
   skillsCatalog: string;
   timezone: string;
@@ -65,6 +66,7 @@ export async function buildDecisionContext(
     selectedSkillDetails: buildSelectedSkillDetails(selectedSkills),
     taskStateSummary: summarizeTaskStateForPrompt(state.taskState),
     memory: deps.workspace.memory,
+    profileContext: deps.profileContext,
     runtime,
     tokenUsage: {
       estimatedInputTokens: estimateMessagesTokens(compacted.messages),

@@ -113,6 +113,8 @@ describe("api route utils", () => {
       workStart: "09:00",
       workEnd: "17:00",
       meetingPreference: "",
+      interests: "",
+      additionalContext: "",
       assistantNotes: "",
       updatedAt: "2026-03-25T00:00:00.000Z",
     };
@@ -129,8 +131,28 @@ describe("api route utils", () => {
         timezone: "America/New_York",
         hasBlockedTask: false,
         activeTaskSummary: "",
+        needsPersonalization: true,
       },
     });
+  });
+
+  it("marks onboarding complete once the profile completion timestamp is set", () => {
+    const session = baseSession(null);
+    const profile: UserProfile = {
+      email: "avery@example.com",
+      name: "Avery Mercer",
+      timezone: "America/New_York",
+      workStart: "09:00",
+      workEnd: "17:00",
+      meetingPreference: "",
+      interests: "AI agents",
+      additionalContext: "",
+      assistantNotes: "",
+      personalizationCompletedAt: "2026-03-25T00:10:00.000Z",
+      updatedAt: "2026-03-25T00:10:00.000Z",
+    };
+
+    expect(buildSessionRoutePayload(session, profile).session.needsPersonalization).toBe(false);
   });
 });
 

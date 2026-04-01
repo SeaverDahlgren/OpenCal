@@ -106,6 +106,8 @@ export function buildTodayRecommendationPrompt(input: TodayRecommendationInput) 
     `User: ${input.user.name}`,
     `Work hours: ${input.profile.workStart}-${input.profile.workEnd}`,
     `Meeting preference: ${input.profile.meetingPreference || "None provided"}`,
+    `Interests: ${input.profile.interests || "None provided"}`,
+    `Additional context: ${input.profile.additionalContext || "None provided"}`,
     `Assistant notes: ${input.profile.assistantNotes || "None provided"}`,
     "",
     "Today's schedule:",

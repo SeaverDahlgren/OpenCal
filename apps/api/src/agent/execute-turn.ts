@@ -6,6 +6,7 @@ import type { AppConfig } from "../../../../src/config/env.js";
 import type { WorkspaceFiles } from "../../../../src/memory/workspace.js";
 import type { GoogleClients } from "../../../../src/integrations/google/auth.js";
 import type { UserProfile } from "../users/profile.js";
+import { buildProfilePersonalizationBlock } from "../users/profile.js";
 import { buildSkillCatalogAndManifests } from "../skills.js";
 
 export async function executeAgentTurn(args: {
@@ -26,6 +27,7 @@ export async function executeAgentTurn(args: {
       provider,
       tools,
       workspace: args.workspace,
+      profileContext: buildProfilePersonalizationBlock(args.profile),
       timezone: args.profile.timezone,
       skillManifests: skills.manifests,
       skillsCatalog: skills.catalog,

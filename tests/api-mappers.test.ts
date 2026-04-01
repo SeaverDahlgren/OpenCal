@@ -57,20 +57,24 @@ describe("api dto mappers", () => {
   });
 
   it("maps settings and persists markdown preference updates", () => {
-    const profile = createUserProfile(
-      {
-        name: "Avery",
-        email: "avery@example.com",
-      },
-      [
-        "name: Avery",
-        "timezone: America/Los_Angeles",
-        "workStart: 09:00",
-        "workEnd: 17:00",
-        "meetingPreference: Afternoons preferred",
-        "assistantNotes: Protect mornings",
+    const profile = updateUserProfile(
+      createUserProfile(
+        {
+          name: "Avery",
+          email: "avery@example.com",
+        },
         "",
-      ].join("\n"),
+        "2026-03-25T00:00:00.000Z",
+      ),
+      {
+        timezone: "America/Los_Angeles",
+        workStart: "09:00",
+        workEnd: "17:00",
+        meetingPreference: "Afternoons preferred",
+        interests: "AI agents",
+        additionalContext: "Prefer concise summaries",
+        assistantNotes: "Protect mornings",
+      },
       "2026-03-25T00:00:00.000Z",
     );
 
@@ -92,18 +96,25 @@ describe("api dto mappers", () => {
       workStart: "09:00",
       workEnd: "17:00",
       meetingPreference: "Afternoons preferred",
+      interests: "AI agents",
+      additionalContext: "Prefer concise summaries",
       assistantNotes: "Protect mornings",
+    });
+    expect(settings.personalization).toEqual({
+      completedAt: null,
     });
 
     const updated = updateUserProfile(profile, {
       name: "Avery Mercer",
       workStart: "08:00",
+      additionalContext: "Prefer afternoon follow-ups",
       assistantNotes: "Save mornings for workouts",
     }, "2026-03-25T00:05:00.000Z");
     const markdown = renderLegacyUserMarkdown(updated);
 
     expect(markdown).toContain("name: Avery Mercer");
     expect(markdown).toContain("workStart: 08:00");
+    expect(markdown).toContain("additionalContext: Prefer afternoon follow-ups");
     expect(markdown).toContain("assistantNotes: Save mornings for workouts");
   });
 
