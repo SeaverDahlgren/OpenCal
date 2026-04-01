@@ -11,6 +11,7 @@ describe("loadConfig", () => {
   it("rejects file-backed core storage in production", () => {
     applyEnv({
       APP_ENV: "production",
+      BETA_ACCESS_MODE: "allowlist",
       STORAGE_BACKEND: "file",
       JOB_BACKEND: "redis",
       REDIS_URL: "redis://127.0.0.1:6379",
@@ -26,6 +27,7 @@ describe("loadConfig", () => {
   it("rejects file-backed job queues in production", () => {
     applyEnv({
       APP_ENV: "production",
+      BETA_ACCESS_MODE: "allowlist",
       STORAGE_BACKEND: "postgres",
       JOB_BACKEND: "file",
       DATABASE_URL: "postgres://user:pass@db.example.com/opencal",
@@ -54,6 +56,7 @@ describe("loadConfig", () => {
   it("requires a minimum supported app version in production", () => {
     applyEnv({
       APP_ENV: "production",
+      BETA_ACCESS_MODE: "allowlist",
       STORAGE_BACKEND: "postgres",
       JOB_BACKEND: "redis",
       DATABASE_URL: "postgres://user:pass@db.example.com/opencal",
@@ -69,6 +72,7 @@ describe("loadConfig", () => {
   it("accepts a hosted production config", () => {
     applyEnv({
       APP_ENV: "production",
+      BETA_ACCESS_MODE: "allowlist",
       STORAGE_BACKEND: "postgres",
       JOB_BACKEND: "redis",
       DATABASE_URL: "postgres://user:pass@db.example.com/opencal",
