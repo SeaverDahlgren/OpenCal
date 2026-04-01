@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiRequestError, createApiClient } from "./api/client";
 import type {
   AgentTurnDto,
@@ -16,12 +16,15 @@ import { ChatPanel } from "./components/ChatPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SignInPanel } from "./components/SignInPanel";
 import { TodayPanel } from "./components/TodayPanel";
+import { CalendarNavigationController, createInitialCalendarViewport } from "./calendar-navigation";
 
 const TOKEN_KEY = "opencal.web.session.token";
 
 type ViewName = "today" | "calendar" | "settings";
 
 export function App() {
+  const initialCalendarViewportRef = useRef(createInitialCalendarViewport());
+  const calendarNavigationRef = useRef(new CalendarNavigationController(initialCalendarViewportRef.current));
   const [token, setToken] = useState<string | null>(() => window.localStorage.getItem(TOKEN_KEY));
   const [session, setSession] = useState<SessionDto["session"] | null>(null);
   const [taskState, setTaskState] = useState<TaskStateDto | null>(null);
@@ -45,8 +48,8 @@ export function App() {
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
   const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
   const [scheduleVersion, setScheduleVersion] = useState(0);
-  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => toDateOnly(new Date()));
+  const [visibleMonth, setVisibleMonth] = useState(() => initialCalendarViewportRef.current.visibleMonth);
+  const [selectedDate, setSelectedDate] = useState(() => initialCalendarViewportRef.current.selectedDate);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -79,6 +82,8 @@ export function App() {
   }, []);
 
   const clearClientSession = useCallback(() => {
+    const nextViewport = createInitialCalendarViewport();
+    calendarNavigationRef.current = new CalendarNavigationController(nextViewport);
     window.localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setSession(null);
@@ -88,6 +93,8 @@ export function App() {
     setMonth(null);
     setDay(null);
     setSettings(null);
+    setVisibleMonth(nextViewport.visibleMonth);
+    setSelectedDate(nextViewport.selectedDate);
   }, []);
 
   useEffect(() => {
@@ -121,26 +128,34 @@ export function App() {
     }
   }, [token]);
 
-  const loadCalendar = useCallback(async (targetMonth: Date, focusDate: string) => {
+  const loadCalendar = useCallback(async (plan: ReturnType<CalendarNavigationController["planRefresh"]>) => {
     if (!token) {
       return;
     }
     setLoadingCalendar(true);
     setCalendarError(null);
+    setVisibleMonth(plan.viewport.visibleMonth);
+    setSelectedDate(plan.viewport.selectedDate);
     try {
       const client = createApiClient(token);
       const [nextMonth, nextDay] = await Promise.all([
-        client.getCalendarMonth(targetMonth.getFullYear(), targetMonth.getMonth() + 1),
-        client.getCalendarDay(focusDate),
+        client.getCalendarMonth(plan.viewport.visibleMonth.getFullYear(), plan.viewport.visibleMonth.getMonth() + 1),
+        client.getCalendarDay(plan.viewport.selectedDate),
       ]);
+      if (!calendarNavigationRef.current.isCurrent(plan.requestId)) {
+        return;
+      }
       setMonth(nextMonth);
       setDay(nextDay);
-      setVisibleMonth(targetMonth);
-      setSelectedDate(focusDate);
     } catch (error) {
+      if (!calendarNavigationRef.current.isCurrent(plan.requestId)) {
+        return;
+      }
       setCalendarError(error instanceof Error ? error.message : "Failed to load calendar.");
     } finally {
-      setLoadingCalendar(false);
+      if (calendarNavigationRef.current.isCurrent(plan.requestId)) {
+        setLoadingCalendar(false);
+      }
     }
   }, [token]);
 
@@ -164,7 +179,7 @@ export function App() {
       return;
     }
     void loadToday();
-    void loadCalendar(visibleMonth, selectedDate);
+    void loadCalendar(calendarNavigationRef.current.planRefresh());
     void loadSettings();
   }, [loadCalendar, loadSettings, loadToday, token]);
 
@@ -173,8 +188,8 @@ export function App() {
       return;
     }
     void loadToday();
-    void loadCalendar(visibleMonth, selectedDate);
-  }, [loadCalendar, loadToday, scheduleVersion, selectedDate, token, visibleMonth]);
+    void loadCalendar(calendarNavigationRef.current.planRefresh());
+  }, [loadCalendar, loadToday, scheduleVersion, token]);
 
   async function startAuth() {
     const { authUrl } = await createApiClient(null).startGoogleAuth(window.location.origin);
@@ -243,18 +258,15 @@ export function App() {
   }
 
   async function moveMonth(offset: number) {
-    const targetMonth = startOfMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + offset, 1));
-    const focusDate = toDateOnly(new Date(targetMonth.getFullYear(), targetMonth.getMonth(), 1, 12));
-    await loadCalendar(targetMonth, focusDate);
+    await loadCalendar(calendarNavigationRef.current.planMonthShift(offset));
   }
 
   async function jumpToToday() {
-    const todayDate = new Date();
-    await loadCalendar(startOfMonth(todayDate), toDateOnly(todayDate));
+    await loadCalendar(calendarNavigationRef.current.planToday());
   }
 
   async function selectDay(date: string) {
-    await loadCalendar(startOfMonth(new Date(`${date}T12:00:00`)), date);
+    await loadCalendar(calendarNavigationRef.current.planSelectDay(date));
   }
 
   if (!token || !session) {
@@ -312,7 +324,7 @@ export function App() {
               onNext={() => moveMonth(1)}
               onToday={jumpToToday}
               onSelectDay={selectDay}
-              onRefresh={() => loadCalendar(visibleMonth, selectedDate)}
+              onRefresh={() => loadCalendar(calendarNavigationRef.current.planRefresh())}
               onPrompt={(prompt) => setQueuedPrompt(prompt)}
             />
           ) : null}
@@ -387,12 +399,4 @@ async function fetchWithAuth(token: string, path: string) {
     const payload = await response.json() as { error?: { message?: string } };
     throw new Error(payload.error?.message ?? "Request failed.");
   }
-}
-
-function startOfMonth(value: Date) {
-  return new Date(value.getFullYear(), value.getMonth(), 1, 12);
-}
-
-function toDateOnly(value: Date) {
-  return value.toISOString().slice(0, 10);
 }
