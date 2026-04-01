@@ -54,6 +54,30 @@ describe("task state", () => {
     expect(shouldStartNewTask(taskState, "What emails did Sarah send me yesterday?")).toBe(true);
   });
 
+  it("treats any new input as a new task once the prior task is fully completed", () => {
+    let taskState = activateNextSubgoal(createTaskState("Make a new event for me"))!;
+
+    taskState = applyToolResultToTaskState(
+      taskState,
+      "create_event",
+      {
+        ok: true,
+        summary: "Created event Jazz bar with Olivia.",
+        data: {
+          id: "event-1",
+          summary: "Jazz bar with Olivia",
+          start: "2026-04-02T19:00:00-07:00",
+          end: "2026-04-02T21:00:00-07:00",
+        },
+      },
+      "success",
+      "Created event Jazz bar with Olivia.",
+    );
+
+    expect(hasPendingSubgoals(taskState)).toBe(false);
+    expect(shouldStartNewTask(taskState, "This Saturday set up an event at the beach")).toBe(true);
+  });
+
   it("stores candidate slots as artifacts and blocks for slot choice", () => {
     let taskState = activateNextSubgoal(createTaskState("Schedule a meeting with Joe next week."))!;
 

@@ -59,6 +59,10 @@ export function shouldStartNewTask(taskState: TaskState | null, userInput: strin
     return false;
   }
 
+  if (!hasPendingSubgoals(taskState)) {
+    return true;
+  }
+
   if (taskState.awaitingUserResponse && looksLikeFollowUpReply(normalized)) {
     return false;
   }

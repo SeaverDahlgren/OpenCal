@@ -90,6 +90,91 @@ describe("session runtime", () => {
       toolName: "create_event",
     });
   });
+
+  it("clears completed task state after a confirmed protected tool succeeds", async () => {
+    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-runtime-"));
+    tempDirs.push(rootDir);
+    await ensureWorkspace(rootDir);
+    const workspace = await loadWorkspaceFiles(rootDir, "2026-03-26");
+
+    const provider: LlmProvider = {
+      name: "test",
+      async generateDecision() {
+        return {
+          type: "tool",
+          reasoning: "Need protected tool confirmation.",
+          toolCalls: [
+            {
+              name: "create_event",
+              arguments: {
+                title: "Lunch with Joe",
+                start: "2026-03-27T12:00:00-07:00",
+              },
+            },
+          ],
+        };
+      },
+      async summarizeConversation() {
+        return "";
+      },
+    };
+
+    const tool: ToolDefinition<any, unknown> = {
+      name: "create_event",
+      description: "Create an event.",
+      protected: true,
+      inputSchema: z.object({
+        title: z.string(),
+        start: z.string(),
+      }),
+      promptShape: {
+        name: "create_event",
+        description: "Create an event.",
+        protected: true,
+        inputShape: '{"title":"string","start":"string"}',
+      },
+      async execute() {
+        return {
+          ok: true,
+          data: {},
+          summary: "Created event.",
+        };
+      },
+    };
+
+    const initial = await runAgentSessionTurn(
+      {
+        config: createConfig(rootDir),
+        provider,
+        tools: new Map([[tool.name, tool]]),
+        workspace,
+        skillManifests: [],
+        skillsCatalog: "",
+        timezone: "America/Los_Angeles",
+      },
+      createStoredSession(),
+      { type: "message", message: "Schedule lunch with Joe tomorrow at noon." },
+    );
+
+    expect(initial.session.pendingConfirmation).toMatchObject({ toolName: "create_event" });
+
+    const confirmed = await runAgentSessionTurn(
+      {
+        config: createConfig(rootDir),
+        provider,
+        tools: new Map([[tool.name, tool]]),
+        workspace,
+        skillManifests: [],
+        skillsCatalog: "",
+        timezone: "America/Los_Angeles",
+      },
+      initial.session,
+      { type: "confirm" },
+    );
+
+    expect(confirmed.session.pendingConfirmation).toBeNull();
+    expect(confirmed.session.taskState).toBeNull();
+  });
 });
 
 function createConfig(rootDir: string): AppConfig {
