@@ -3,7 +3,7 @@ import { z } from "zod";
 import { mapCalendarDayView, mapCalendarMonthView, mapTodayOverview } from "../dto/mappers.js";
 import { createTodayRecommendationGenerator } from "../recommendations/generator.js";
 import { TodayRecommendationService } from "../recommendations/service.js";
-import { jsonError, jsonRoute } from "../server/http.js";
+import { jsonError, jsonRoute, readJsonBody } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
 import { buildExpandedUtcDayBounds, buildExpandedUtcMonthBounds, dateKeyInTimezone, resolveUserTimezone } from "./utils.js";
 
@@ -14,6 +14,14 @@ const monthQuerySchema = z.object({
 
 const dayQuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+const createEventSchema = z.object({
+  summary: z.string().min(1),
+  start: z.string().min(1),
+  end: z.string().min(1),
+  location: z.string().optional(),
+  description: z.string().optional(),
 });
 
 export async function handleCalendarRoute(ctx: AuthedRouteContext) {
@@ -129,6 +137,21 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
         events,
       }),
     );
+  }
+
+  if (ctx.req.method === "POST" && ctx.url.pathname === "/api/v1/calendar/events") {
+    const body = createEventSchema.parse(await readJsonBody(ctx.req, ctx.config.maxRequestBodyBytes));
+    const created = await ctx.calendarService.createEvent({
+      summary: body.summary,
+      start: body.start,
+      end: body.end,
+      location: body.location,
+      description: body.description,
+    });
+    return await jsonRoute(ctx.res, 201, {
+      eventId: created.id,
+      summary: created.summary,
+    });
   }
 
   return false;

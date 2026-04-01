@@ -2,6 +2,7 @@ import type {
   AgentTurnDto,
   ApiErrorDto,
   CalendarDayDto,
+  CalendarEventCreateDto,
   CalendarMonthDto,
   ChatHistoryDto,
   SessionDto,
@@ -44,6 +45,13 @@ export class ApiClient {
 
   getCalendarDay(date: string) {
     return this.request<CalendarDayDto>(`/calendar/day?date=${date}`);
+  }
+
+  createCalendarEvent(input: CalendarEventCreateDto) {
+    return this.request<{ eventId: string; summary: string }>("/calendar/events", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
   }
 
   getSettings() {

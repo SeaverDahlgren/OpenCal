@@ -57,6 +57,14 @@ export type CalendarDayDto = {
   }>;
 };
 
+export type CalendarEventCreateDto = {
+  summary: string;
+  start: string;
+  end: string;
+  location?: string;
+  description?: string;
+};
+
 export type SettingsDto = {
   profile: {
     name: string;

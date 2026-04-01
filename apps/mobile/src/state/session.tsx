@@ -25,6 +25,7 @@ type SessionContextValue = {
   refreshSession: () => Promise<void>;
   refreshTaskState: () => Promise<void>;
   refreshChatHistory: () => Promise<void>;
+  bumpScheduleVersion: () => void;
   startAuth: () => Promise<void>;
   clearSession: () => Promise<void>;
   resetAgentSession: () => Promise<void>;
@@ -259,6 +260,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  function bumpScheduleVersion() {
+    setScheduleVersion((value) => value + 1);
+  }
+
   const value = useMemo(
     () => ({
       token,
@@ -276,6 +281,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       refreshSession,
       refreshTaskState,
       refreshChatHistory,
+      bumpScheduleVersion,
       startAuth,
       clearSession,
       resetAgentSession,

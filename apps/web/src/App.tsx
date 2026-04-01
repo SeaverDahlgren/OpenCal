@@ -305,6 +305,28 @@ export function App() {
     await loadCalendar(calendarNavigationRef.current.planSelectDay(date));
   }
 
+  async function createCalendarEvent(input: {
+    summary: string;
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    endTime: string;
+    location?: string;
+  }) {
+    if (!token) {
+      return;
+    }
+    const client = createApiClient(token);
+    await client.createCalendarEvent({
+      summary: input.summary,
+      start: toIsoDateTime(input.startDate, input.startTime),
+      end: toIsoDateTime(input.endDate, input.endTime),
+      location: input.location,
+    });
+    setScheduleVersion((value) => value + 1);
+    await loadCalendar(calendarNavigationRef.current.planSelectDay(input.startDate));
+  }
+
   if (!token || !session) {
     return <SignInPanel loading={loadingSession} authError={authError} onSignIn={startAuth} />;
   }
@@ -407,6 +429,7 @@ export function App() {
               onToday={jumpToToday}
               onSelectDay={selectDay}
               onRefresh={() => loadCalendar(calendarNavigationRef.current.planRefresh())}
+              onCreateEvent={createCalendarEvent}
               onPrompt={(prompt) => setQueuedPrompt(prompt)}
             />
           ) : null}
@@ -441,6 +464,10 @@ export function App() {
       </main>
     </div>
   );
+}
+
+function toIsoDateTime(date: string, time: string) {
+  return new Date(`${date}T${time}:00`).toISOString();
 }
 
 function derivePendingTurn(taskState: TaskStateDto | null): AgentTurnDto | null {

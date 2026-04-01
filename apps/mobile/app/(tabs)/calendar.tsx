@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
-import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Animated, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { createApiClient } from "../../src/api/client";
 import type { CalendarDayDto, CalendarMonthDto } from "../../src/api/types";
 import { EditorialHeader } from "../../src/components/EditorialHeader";
@@ -10,13 +10,25 @@ import { useSession } from "../../src/state/session";
 import { colors, radii, spacing, typography } from "../../src/theme/tokens";
 
 export default function CalendarScreen() {
-  const { token, scheduleVersion } = useSession();
+  const { token, scheduleVersion, bumpScheduleVersion } = useSession();
   const [month, setMonth] = useState<CalendarMonthDto | null>(null);
   const [day, setDay] = useState<CalendarDayDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [monthAnimating, setMonthAnimating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createStartMonth, setCreateStartMonth] = useState(() => new Date().toISOString().slice(5, 7));
+  const [createStartDay, setCreateStartDay] = useState(() => new Date().toISOString().slice(8, 10));
+  const [createStartYear, setCreateStartYear] = useState(() => new Date().toISOString().slice(0, 4));
+  const [createStartTime, setCreateStartTime] = useState("09:00");
+  const [createEndMonth, setCreateEndMonth] = useState(() => new Date().toISOString().slice(5, 7));
+  const [createEndDay, setCreateEndDay] = useState(() => new Date().toISOString().slice(8, 10));
+  const [createEndYear, setCreateEndYear] = useState(() => new Date().toISOString().slice(0, 4));
+  const [createEndTime, setCreateEndTime] = useState("10:00");
+  const [createLocation, setCreateLocation] = useState("");
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => toDateOnly(new Date()));
   const router = useRouter();
@@ -28,6 +40,28 @@ export default function CalendarScreen() {
   const dayRequestRef = useRef(0);
   const hydrateRequestRef = useRef(0);
   const syncedScheduleVersionRef = useRef<number>(scheduleVersion);
+  const monthOptions = useMemo(() => buildMonthOptions(), []);
+  const yearOptions = useMemo(() => buildYearOptions(selectedDate.slice(0, 4)), [selectedDate]);
+  const startDayOptions = useMemo(() => buildDayOptions(createStartYear, createStartMonth), [createStartMonth, createStartYear]);
+  const endDayOptions = useMemo(() => buildDayOptions(createEndYear, createEndMonth), [createEndMonth, createEndYear]);
+  const timeOptions = useMemo(() => buildTimeOptions(), []);
+
+  useEffect(() => {
+    setCreateStartMonth(selectedDate.slice(5, 7));
+    setCreateStartDay(selectedDate.slice(8, 10));
+    setCreateStartYear(selectedDate.slice(0, 4));
+    setCreateEndMonth(selectedDate.slice(5, 7));
+    setCreateEndDay(selectedDate.slice(8, 10));
+    setCreateEndYear(selectedDate.slice(0, 4));
+  }, [selectedDate]);
+
+  useEffect(() => {
+    setCreateStartDay((value) => clampDay(value, createStartYear, createStartMonth));
+  }, [createStartMonth, createStartYear]);
+
+  useEffect(() => {
+    setCreateEndDay((value) => clampDay(value, createEndYear, createEndMonth));
+  }, [createEndMonth, createEndYear]);
 
   const loadMonthData = useCallback(async (targetMonth: Date) => {
     if (!token) {
@@ -185,6 +219,52 @@ export default function CalendarScreen() {
     void transitionMonth(todayMonth, todayDate, direction);
   }
 
+  async function createEvent() {
+    const eventStartDate = toDateOnlyFromParts(createStartYear, createStartMonth, createStartDay);
+    const eventEndDate = toDateOnlyFromParts(createEndYear, createEndMonth, createEndDay);
+    if (!token) {
+      return;
+    }
+    if (!createTitle.trim()) {
+      setCreateError("Title is required.");
+      return;
+    }
+    if (!eventStartDate || !eventEndDate) {
+      setCreateError("Enter a valid start and end date.");
+      return;
+    }
+    if (toTimestamp(eventEndDate, createEndTime) <= toTimestamp(eventStartDate, createStartTime)) {
+      setCreateError("End date and time must be after the start date and time.");
+      return;
+    }
+    setCreateSaving(true);
+    setCreateError(null);
+    try {
+      await createApiClient(token).createCalendarEvent({
+        summary: createTitle.trim(),
+        start: toIsoDateTime(eventStartDate, createStartTime),
+        end: toIsoDateTime(eventEndDate, createEndTime),
+        location: createLocation.trim() || undefined,
+      });
+      setCreateTitle("");
+      setCreateLocation("");
+      setCreateStartTime("09:00");
+      setCreateEndTime("10:00");
+      setCreateStartMonth(eventStartDate.slice(5, 7));
+      setCreateStartDay(eventStartDate.slice(8, 10));
+      setCreateStartYear(eventStartDate.slice(0, 4));
+      setCreateEndMonth(eventStartDate.slice(5, 7));
+      setCreateEndDay(eventStartDate.slice(8, 10));
+      setCreateEndYear(eventStartDate.slice(0, 4));
+      bumpScheduleVersion();
+      await hydrateVisibleCalendar(startOfMonth(new Date(`${eventStartDate}T12:00:00`)), eventStartDate, { refreshing: true });
+    } catch (nextError) {
+      setCreateError(nextError instanceof Error ? nextError.message : "Failed to create event.");
+    } finally {
+      setCreateSaving(false);
+    }
+  }
+
   useFocusEffect(
     useCallback(() => {
       if (!token) {
@@ -320,6 +400,59 @@ export default function CalendarScreen() {
         ) : (
           <Text style={styles.muted}>No events for this day.</Text>
         )}
+        <View style={styles.createCard}>
+          <Text style={styles.subsectionTitle}>Add Event</Text>
+          {createError ? <InlineNotice tone="error" message={createError} /> : null}
+          <Field
+            label="Title"
+            value={createTitle}
+            onChangeText={setCreateTitle}
+            placeholder="New event"
+          />
+          <Text style={styles.groupLabel}>Start</Text>
+          <View style={styles.inlineRow}>
+            <View style={styles.inlineField}>
+              <SelectField label="Month" value={createStartMonth} options={monthOptions} onChange={setCreateStartMonth} />
+            </View>
+            <View style={styles.inlineField}>
+              <SelectField label="Day" value={createStartDay} options={startDayOptions} onChange={setCreateStartDay} />
+            </View>
+          </View>
+          <View style={styles.inlineRow}>
+            <View style={styles.inlineField}>
+              <SelectField label="Year" value={createStartYear} options={yearOptions} onChange={setCreateStartYear} />
+            </View>
+            <View style={styles.inlineField}>
+              <SelectField label="Time" value={createStartTime} options={timeOptions} onChange={setCreateStartTime} />
+            </View>
+          </View>
+          <Text style={styles.groupLabel}>End</Text>
+          <View style={styles.inlineRow}>
+            <View style={styles.inlineField}>
+              <SelectField label="Month" value={createEndMonth} options={monthOptions} onChange={setCreateEndMonth} />
+            </View>
+            <View style={styles.inlineField}>
+              <SelectField label="Day" value={createEndDay} options={endDayOptions} onChange={setCreateEndDay} />
+            </View>
+          </View>
+          <View style={styles.inlineRow}>
+            <View style={styles.inlineField}>
+              <SelectField label="Year" value={createEndYear} options={yearOptions} onChange={setCreateEndYear} />
+            </View>
+            <View style={styles.inlineField}>
+              <SelectField label="Time" value={createEndTime} options={timeOptions} onChange={setCreateEndTime} />
+            </View>
+          </View>
+          <Field
+            label="Location"
+            value={createLocation}
+            onChangeText={setCreateLocation}
+            placeholder="Optional"
+          />
+          <TouchableOpacity style={styles.eventCreateButton} onPress={() => void createEvent()} disabled={createSaving}>
+            <Text style={styles.eventCreateText}>{createSaving ? "Adding..." : "Add Event"}</Text>
+          </TouchableOpacity>
+        </View>
       </SurfaceCard>
     </ScrollView>
   );
@@ -372,6 +505,67 @@ const styles = StyleSheet.create({
   count: { color: colors.tertiary, fontSize: 10, fontWeight: "700", alignSelf: "flex-end" },
   timeline: { gap: spacing.md },
   sectionTitle: { color: colors.text, ...typography.section },
+  subsectionTitle: { color: colors.text, fontSize: 22, fontWeight: "800" },
+  groupLabel: { color: colors.primary, ...typography.label },
+  createCard: { gap: spacing.md, paddingBottom: spacing.sm },
+  inlineRow: { flexDirection: "row", gap: spacing.md },
+  inlineField: { flex: 1 },
+  label: { color: colors.textMuted, ...typography.label },
+  input: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    color: colors.text,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  selectTrigger: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
+  selectValue: { color: colors.text, flex: 1 },
+  selectChevron: { color: colors.textMuted, fontSize: 12, fontWeight: "800" },
+  modalFrame: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.lg,
+    borderTopRightRadius: radii.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    maxHeight: "70%",
+  },
+  modalTitle: { color: colors.text, ...typography.section },
+  modalOptions: { gap: spacing.xs },
+  modalOption: {
+    backgroundColor: colors.surfaceHighest,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  modalOptionSelected: { borderWidth: 1, borderColor: colors.primary },
+  modalOptionText: { color: colors.text, fontWeight: "600" },
+  modalClose: { alignSelf: "flex-end" },
+  modalCloseText: { color: colors.primary, fontWeight: "700" },
+  eventCreateButton: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.primary,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  eventCreateText: { color: colors.background, fontWeight: "800" },
   eventCard: { gap: 4, paddingVertical: spacing.sm },
   eventTime: { color: colors.primary, ...typography.label },
   eventTitle: { color: colors.text, fontSize: 18, fontWeight: "700" },
@@ -459,4 +653,149 @@ function runMonthEnterAnimation(translate: Animated.Value, opacity: Animated.Val
       }),
     ]).start(() => resolve());
   });
+}
+
+function toIsoDateTime(date: string, time: string) {
+  return new Date(`${date}T${time}:00`).toISOString();
+}
+
+function toDateOnlyFromParts(year: string, month: string, day: string) {
+  if (!/^\d{4}$/.test(year) || !/^\d{1,2}$/.test(month) || !/^\d{1,2}$/.test(day)) {
+    return null;
+  }
+  const normalizedMonth = month.padStart(2, "0");
+  const normalizedDay = day.padStart(2, "0");
+  const date = new Date(`${year}-${normalizedMonth}-${normalizedDay}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  const dateOnly = date.toISOString().slice(0, 10);
+  return dateOnly === `${year}-${normalizedMonth}-${normalizedDay}` ? dateOnly : null;
+}
+
+function Field(props: {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={styles.label}>{props.label}</Text>
+      <TextInput
+        value={props.value}
+        onChangeText={props.onChangeText}
+        placeholder={props.placeholder}
+        placeholderTextColor={colors.textMuted}
+        style={styles.input}
+      />
+    </View>
+  );
+}
+
+function SelectField(props: {
+  label: string;
+  value: string;
+  options: Array<{ label: string; value: string }>;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = props.options.find((option) => option.value === props.value);
+
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={styles.label}>{props.label}</Text>
+      <TouchableOpacity style={styles.selectTrigger} onPress={() => setOpen(true)} activeOpacity={0.85}>
+        <Text style={styles.selectValue}>{selected?.label ?? props.value}</Text>
+        <Text style={styles.selectChevron}>▼</Text>
+      </TouchableOpacity>
+      <Modal transparent animationType="slide" visible={open} onRequestClose={() => setOpen(false)}>
+        <View style={styles.modalFrame}>
+          <Pressable style={styles.modalBackdrop} onPress={() => setOpen(false)} />
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>{props.label}</Text>
+            <ScrollView contentContainerStyle={styles.modalOptions}>
+              {props.options.map((option) => (
+                <TouchableOpacity
+                  key={`${props.label}-${option.value}`}
+                  style={[styles.modalOption, option.value === props.value && styles.modalOptionSelected]}
+                  onPress={() => {
+                    props.onChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.modalClose} onPress={() => setOpen(false)}>
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function buildMonthOptions() {
+  return Array.from({ length: 12 }, (_, index) => {
+    const value = String(index + 1).padStart(2, "0");
+    return {
+      value,
+      label: new Date(`2000-${value}-01T12:00:00`).toLocaleDateString("en-US", { month: "short" }),
+    };
+  });
+}
+
+function buildDayOptions(year: string, month: string) {
+  const fallback = Array.from({ length: 31 }, (_, index) => String(index + 1).padStart(2, "0"));
+  const daysInMonth = getDaysInMonth(year, month);
+  return (daysInMonth ? fallback.slice(0, daysInMonth) : fallback).map((value) => ({ value, label: value }));
+}
+
+function buildYearOptions(anchorYear: string) {
+  const base = /^\d{4}$/.test(anchorYear) ? Number(anchorYear) : new Date().getFullYear();
+  return Array.from({ length: 6 }, (_, index) => String(base - 1 + index)).map((value) => ({
+    value,
+    label: value,
+  }));
+}
+
+function buildTimeOptions() {
+  return Array.from({ length: 48 }, (_, index) => {
+    const hours = String(Math.floor(index / 2)).padStart(2, "0");
+    const minutes = index % 2 === 0 ? "00" : "30";
+    const value = `${hours}:${minutes}`;
+    return {
+      value,
+      label: formatTimeLabel(value),
+    };
+  });
+}
+
+function formatTimeLabel(value: string) {
+  return new Date(`2000-01-01T${value}:00`).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getDaysInMonth(year: string, month: string) {
+  if (!/^\d{4}$/.test(year) || !/^\d{2}$/.test(month)) {
+    return null;
+  }
+  return new Date(Number(year), Number(month), 0).getDate();
+}
+
+function toTimestamp(date: string, time: string) {
+  return new Date(`${date}T${time}:00`).getTime();
+}
+
+function clampDay(day: string, year: string, month: string) {
+  const maxDay = getDaysInMonth(year, month);
+  if (!maxDay || !/^\d{2}$/.test(day)) {
+    return day;
+  }
+  return String(Math.min(Number(day), maxDay)).padStart(2, "0");
 }
