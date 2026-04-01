@@ -116,16 +116,54 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <label className="field">
             <span>Personalized Notes</span>
             <textarea
-              rows={5}
-              value={mergePersonalizedNotes(
-                props.data.preferences.meetingPreference,
-                props.data.preferences.assistantNotes,
-              )}
+              rows={3}
+              value={props.data.preferences.meetingPreference}
               onChange={(event) => props.onChange({
                 ...props.data!,
                 preferences: {
                   ...props.data!.preferences,
                   meetingPreference: event.target.value,
+                },
+              })}
+            />
+          </label>
+          <label className="field">
+            <span>Interests</span>
+            <textarea
+              rows={3}
+              value={props.data.preferences.interests}
+              onChange={(event) => props.onChange({
+                ...props.data!,
+                preferences: {
+                  ...props.data!.preferences,
+                  interests: event.target.value,
+                },
+              })}
+            />
+          </label>
+          <label className="field">
+            <span>Additional Context</span>
+            <textarea
+              rows={3}
+              value={props.data.preferences.additionalContext}
+              onChange={(event) => props.onChange({
+                ...props.data!,
+                preferences: {
+                  ...props.data!.preferences,
+                  additionalContext: event.target.value,
+                },
+              })}
+            />
+          </label>
+          <label className="field">
+            <span>Assistant Notes</span>
+            <textarea
+              rows={4}
+              value={props.data.preferences.assistantNotes}
+              onChange={(event) => props.onChange({
+                ...props.data!,
+                preferences: {
+                  ...props.data!.preferences,
                   assistantNotes: event.target.value,
                 },
               })}
@@ -209,16 +247,4 @@ function buildTimezoneOptions(selectedValue: string) {
     return TIMEZONES;
   }
   return [[selectedValue, selectedValue], ...TIMEZONES];
-}
-
-function mergePersonalizedNotes(meetingPreference: string, assistantNotes: string) {
-  const left = meetingPreference.trim();
-  const right = assistantNotes.trim();
-  if (!left) {
-    return right;
-  }
-  if (!right || left === right) {
-    return left;
-  }
-  return `${left}\n\n${right}`;
 }

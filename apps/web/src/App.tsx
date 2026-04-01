@@ -14,6 +14,7 @@ import { AppLogo } from "./components/AppLogo";
 import { CalendarPanel } from "./components/CalendarPanel";
 import { ChatPanel } from "./components/ChatPanel";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { PersonalizationPanel } from "./components/PersonalizationPanel";
 import { SignInPanel } from "./components/SignInPanel";
 import { TodayPanel } from "./components/TodayPanel";
 import { CalendarNavigationController, createInitialCalendarViewport } from "./calendar-navigation";
@@ -225,6 +226,29 @@ export function App() {
     }
   }
 
+  async function completePersonalization(skip = false) {
+    if (!token) {
+      return;
+    }
+    setSavingSettings(true);
+    setSettingsError(null);
+    try {
+      const next = await createApiClient(token).updateSettings({
+        ...(skip ? {} : settings ?? {}),
+        personalization: {
+          markCompleted: true,
+        },
+      });
+      setSettings(next);
+      await loadSessionSnapshot(token);
+      setSettingsNotice(skip ? "Personalization skipped." : "Personalization saved.");
+    } catch (error) {
+      setSettingsError(error instanceof Error ? error.message : "Failed to save personalization.");
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
   async function resetAgentSession() {
     if (!token) {
       return;
@@ -271,6 +295,52 @@ export function App() {
 
   if (!token || !session) {
     return <SignInPanel loading={loadingSession} authError={authError} onSignIn={startAuth} />;
+  }
+
+  if (session.needsPersonalization) {
+    return (
+      <div className="app-shell">
+        <header className="topbar">
+          <div className="topbar__brand">
+            <AppLogo />
+            <div>
+              <p className="eyebrow">OPENCAL REVIEW BUILD</p>
+              <h1>OpenCal</h1>
+            </div>
+          </div>
+          <div className="topbar__meta">
+            <p>{session.user.name}</p>
+            <p className="muted">{session.user.email}</p>
+          </div>
+        </header>
+        <main className="dashboard">
+          <section className="dashboard__main">
+            <PersonalizationPanel
+              data={settings}
+              loading={loadingSettings}
+              saving={savingSettings}
+              error={settingsError}
+              onChange={setSettings}
+              onSave={() => completePersonalization(false)}
+              onSkip={() => completePersonalization(true)}
+            />
+          </section>
+          <ChatPanel
+            history={chatHistory}
+            pendingTurn={pendingTurn}
+            sending={chatSending}
+            error={chatError}
+            defaultPrompt={queuedPrompt}
+            onSubmit={async (input) => {
+              await sendAgentAction(input);
+              if (input.message || input.optionValue || input.action) {
+                setQueuedPrompt(null);
+              }
+            }}
+          />
+        </main>
+      </div>
+    );
   }
 
   return (

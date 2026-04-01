@@ -10,6 +10,7 @@ export type SessionDto = {
     timezone: string;
     hasBlockedTask: boolean;
     activeTaskSummary: string;
+    needsPersonalization: boolean;
   };
 };
 
@@ -67,7 +68,12 @@ export type SettingsDto = {
     workStart: string;
     workEnd: string;
     meetingPreference: string;
+    interests: string;
+    additionalContext: string;
     assistantNotes: string;
+  };
+  personalization: {
+    completedAt: string | null;
   };
   advanced: {
     provider: string;
@@ -76,6 +82,15 @@ export type SettingsDto = {
     sessionId: string;
     sessionStatus: string;
   };
+};
+
+export type SettingsUpdateDto = {
+  profile?: Partial<SettingsDto["profile"]>;
+  preferences?: Partial<SettingsDto["preferences"]>;
+  personalization?: Partial<SettingsDto["personalization"]> & {
+    markCompleted?: boolean;
+  };
+  advanced?: Partial<Pick<SettingsDto["advanced"], "provider" | "model" | "toolResultVerbosity">>;
 };
 
 export type AgentTurnDto = {
