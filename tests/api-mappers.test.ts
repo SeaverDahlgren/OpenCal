@@ -7,7 +7,12 @@ import {
   mapSettingsView,
   mapTodayOverview,
 } from "../apps/api/src/dto/mappers.js";
-import { createUserProfile, renderLegacyUserMarkdown, updateUserProfile } from "../apps/api/src/users/profile.js";
+import {
+  buildProfilePersonalizationBlock,
+  createUserProfile,
+  renderLegacyUserMarkdown,
+  updateUserProfile,
+} from "../apps/api/src/users/profile.js";
 
 describe("api dto mappers", () => {
   it("maps today overview into display-ready schedule cards", () => {
@@ -142,5 +147,25 @@ describe("api dto mappers", () => {
         ],
       }),
     );
+  });
+
+  it("includes the stored user name in production personalization context", () => {
+    const profile = updateUserProfile(
+      createUserProfile(
+        {
+          name: "Avery Mercer",
+          email: "avery@example.com",
+        },
+        "",
+        "2026-03-25T00:00:00.000Z",
+      ),
+      {
+        interests: "AI agents",
+      },
+      "2026-03-25T00:00:00.000Z",
+    );
+
+    expect(buildProfilePersonalizationBlock(profile)).toContain("user_name: Avery Mercer");
+    expect(buildProfilePersonalizationBlock(profile)).toContain("current_interests: AI agents");
   });
 });

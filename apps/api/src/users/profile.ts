@@ -71,6 +71,7 @@ export function renderLegacyUserMarkdown(profile: UserProfile) {
 
 export function buildProfilePersonalizationBlock(profile: UserProfile) {
   const entries = [
+    profile.name ? `user_name: ${profile.name}` : "",
     profile.workStart || profile.workEnd ? `work_hours: ${profile.workStart}-${profile.workEnd}` : "",
     profile.meetingPreference ? `meeting_preference: ${profile.meetingPreference}` : "",
     profile.interests ? `current_interests: ${profile.interests}` : "",

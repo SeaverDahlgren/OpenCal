@@ -15,18 +15,6 @@ type SettingsPanelProps = {
   onSignOut: () => Promise<void>;
 };
 
-const TIMEZONES = [
-  ["Pacific Time", "America/Los_Angeles"],
-  ["Mountain Time", "America/Denver"],
-  ["Central Time", "America/Chicago"],
-  ["Eastern Time", "America/New_York"],
-  ["UTC", "UTC"],
-  ["London", "Europe/London"],
-  ["Paris", "Europe/Paris"],
-  ["Tokyo", "Asia/Tokyo"],
-  ["Sydney", "Australia/Sydney"],
-];
-
 export function SettingsPanel(props: SettingsPanelProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -37,6 +25,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
           <div>
             <p className="eyebrow">SETTINGS</p>
             <h2>Settings</h2>
+            <p className="panel__subtitle">Update your interests for better daily suggestions and planning.</p>
           </div>
         </div>
         {props.error ? <InlineNotice tone="error" message={props.error} /> : null}
@@ -50,7 +39,7 @@ export function SettingsPanel(props: SettingsPanelProps) {
         <div>
           <p className="eyebrow">SETTINGS</p>
           <h2>Settings</h2>
-          <p className="panel__subtitle">Profile, planning defaults, and advanced beta controls.</p>
+          <p className="panel__subtitle">Update your interests for better daily suggestions and planning.</p>
         </div>
         <button className="button button--ghost" onClick={() => void props.onRefresh()} disabled={props.loading}>
           {props.loading ? "Refreshing..." : "Refresh"}
@@ -65,110 +54,38 @@ export function SettingsPanel(props: SettingsPanelProps) {
             <span>Name</span>
             <input
               value={props.data.profile.name}
-              onChange={(event) => props.onChange({
-                ...props.data!,
-                profile: { ...props.data!.profile, name: event.target.value },
-              })}
+              onChange={(event) =>
+                props.onChange({
+                  ...props.data!,
+                  profile: {
+                    ...props.data!.profile,
+                    name: event.target.value,
+                  },
+                })
+              }
             />
           </label>
           <p className="muted">{props.data.profile.email}</p>
         </article>
         <article className="card">
-          <h3>Preferences</h3>
-          <label className="field">
-            <span>Timezone</span>
-            <select
-              value={props.data.preferences.timezone}
-              onChange={(event) => props.onChange({
-                ...props.data!,
-                preferences: { ...props.data!.preferences, timezone: event.target.value },
-              })}
-            >
-              {buildTimezoneOptions(props.data.preferences.timezone).map(([label, value]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="field-row">
-            <label className="field">
-              <span>Work Start</span>
-              <input
-                value={props.data.preferences.workStart}
-                onChange={(event) => props.onChange({
-                  ...props.data!,
-                  preferences: { ...props.data!.preferences, workStart: event.target.value },
-                })}
-              />
-            </label>
-            <label className="field">
-              <span>Work End</span>
-              <input
-                value={props.data.preferences.workEnd}
-                onChange={(event) => props.onChange({
-                  ...props.data!,
-                  preferences: { ...props.data!.preferences, workEnd: event.target.value },
-                })}
-              />
-            </label>
-          </div>
-          <label className="field">
-            <span>Personalized Notes</span>
-            <textarea
-              rows={3}
-              value={props.data.preferences.meetingPreference}
-              onChange={(event) => props.onChange({
-                ...props.data!,
-                preferences: {
-                  ...props.data!.preferences,
-                  meetingPreference: event.target.value,
-                },
-              })}
-            />
-          </label>
+          <h3>Interests</h3>
           <label className="field">
             <span>Interests</span>
             <textarea
-              rows={3}
+              rows={5}
               value={props.data.preferences.interests}
-              onChange={(event) => props.onChange({
-                ...props.data!,
-                preferences: {
-                  ...props.data!.preferences,
-                  interests: event.target.value,
-                },
-              })}
+              onChange={(event) =>
+                props.onChange({
+                  ...props.data!,
+                  preferences: {
+                    ...props.data!.preferences,
+                    interests: event.target.value,
+                  },
+                })
+              }
             />
           </label>
-          <label className="field">
-            <span>Additional Context</span>
-            <textarea
-              rows={3}
-              value={props.data.preferences.additionalContext}
-              onChange={(event) => props.onChange({
-                ...props.data!,
-                preferences: {
-                  ...props.data!.preferences,
-                  additionalContext: event.target.value,
-                },
-              })}
-            />
-          </label>
-          <label className="field">
-            <span>Assistant Notes</span>
-            <textarea
-              rows={4}
-              value={props.data.preferences.assistantNotes}
-              onChange={(event) => props.onChange({
-                ...props.data!,
-                preferences: {
-                  ...props.data!.preferences,
-                  assistantNotes: event.target.value,
-                },
-              })}
-            />
-          </label>
+          <p className="muted">Use onboarding to set work hours, meeting preferences, and other planning context.</p>
         </article>
       </div>
       <article className="card">
@@ -183,28 +100,32 @@ export function SettingsPanel(props: SettingsPanelProps) {
             <div className="field-row">
               <label className="field">
                 <span>Provider</span>
-                <select
+                <input
                   value={props.data.advanced.provider}
-                  onChange={(event) => props.onChange({
-                    ...props.data!,
-                    advanced: { ...props.data!.advanced, provider: event.target.value },
-                  })}
-                >
-                  <option value="groq">Groq</option>
-                  <option value="gemini">Gemini</option>
-                </select>
+                  onChange={(event) =>
+                    props.onChange({
+                      ...props.data!,
+                      advanced: {
+                        ...props.data!.advanced,
+                        provider: event.target.value,
+                      },
+                    })
+                  }
+                />
               </label>
               <label className="field">
                 <span>Verbosity</span>
                 <select
                   value={props.data.advanced.toolResultVerbosity}
-                  onChange={(event) => props.onChange({
-                    ...props.data!,
-                    advanced: {
-                      ...props.data!.advanced,
-                      toolResultVerbosity: event.target.value === "verbose" ? "verbose" : "compact",
-                    },
-                  })}
+                  onChange={(event) =>
+                    props.onChange({
+                      ...props.data!,
+                      advanced: {
+                        ...props.data!.advanced,
+                        toolResultVerbosity: event.target.value === "verbose" ? "verbose" : "compact",
+                      },
+                    })
+                  }
                 >
                   <option value="compact">Compact</option>
                   <option value="verbose">Verbose</option>
@@ -215,10 +136,15 @@ export function SettingsPanel(props: SettingsPanelProps) {
               <span>Model</span>
               <input
                 value={props.data.advanced.model}
-                onChange={(event) => props.onChange({
-                  ...props.data!,
-                  advanced: { ...props.data!.advanced, model: event.target.value },
-                })}
+                onChange={(event) =>
+                  props.onChange({
+                    ...props.data!,
+                    advanced: {
+                      ...props.data!.advanced,
+                      model: event.target.value,
+                    },
+                  })
+                }
               />
             </label>
             <p className="muted">Session ID: {props.data.advanced.sessionId}</p>
@@ -240,11 +166,4 @@ export function SettingsPanel(props: SettingsPanelProps) {
       </div>
     </section>
   );
-}
-
-function buildTimezoneOptions(selectedValue: string) {
-  if (TIMEZONES.some(([, value]) => value === selectedValue)) {
-    return TIMEZONES;
-  }
-  return [[selectedValue, selectedValue], ...TIMEZONES];
 }

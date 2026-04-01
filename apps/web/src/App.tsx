@@ -216,7 +216,19 @@ export function App() {
     setSettingsError(null);
     setSettingsNotice(null);
     try {
-      const next = await createApiClient(token).updateSettings(settings);
+      const next = await createApiClient(token).updateSettings({
+        profile: {
+          name: settings.profile.name,
+        },
+        preferences: {
+          interests: settings.preferences.interests,
+        },
+        advanced: {
+          provider: settings.advanced.provider,
+          model: settings.advanced.model,
+          toolResultVerbosity: settings.advanced.toolResultVerbosity,
+        },
+      });
       setSettings(next);
       setSettingsNotice("Settings saved.");
     } catch (error) {

@@ -122,7 +122,7 @@ Skill body.`,
       ]),
       taskStateSummary: "task_id: task-1\ntask_summary: Find my meetings",
       memory: "memory",
-      profileContext: "- current_interests: AI agents",
+      profileContext: ["- user_name: Avery Mercer", "- current_interests: AI agents"].join("\n"),
       runtime: {
         nowIso: "2026-03-25T00:00:00.000Z",
         dayOfWeek: "Wednesday",
@@ -141,6 +141,7 @@ Skill body.`,
     expect(prompt).toContain("skill_id: calendar-query-expansion");
     expect(prompt).toContain("calendar body");
     expect(prompt).toContain("Production personalization:");
+    expect(prompt).toContain("- user_name: Avery Mercer");
     expect(prompt).toContain("- current_interests: AI agents");
   });
 });

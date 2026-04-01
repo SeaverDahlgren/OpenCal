@@ -16,9 +16,6 @@ export default function SettingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showTimezoneOptions, setShowTimezoneOptions] = useState(false);
-  const [showProviderOptions, setShowProviderOptions] = useState(false);
-  const [showVerbosityOptions, setShowVerbosityOptions] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +59,19 @@ export default function SettingsScreen() {
     setError(null);
     setNotice(null);
     try {
-      const updated = await createApiClient(token).updateSettings(data);
+      const updated = await createApiClient(token).updateSettings({
+        profile: {
+          name: data.profile.name,
+        },
+        preferences: {
+          interests: data.preferences.interests,
+        },
+        advanced: {
+          provider: data.advanced.provider,
+          model: data.advanced.model,
+          toolResultVerbosity: data.advanced.toolResultVerbosity,
+        },
+      });
       setData(updated);
       setNotice("Settings saved.");
     } catch (nextError) {
@@ -99,7 +108,7 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load({ refreshing: true })} tintColor={colors.primary} />}
       >
-        <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Control profile preferences, planning defaults, and advanced beta configuration." />
+        <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Update your interests for better daily suggestions and planning." />
         {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
       </ScrollView>
     );
@@ -111,7 +120,7 @@ export default function SettingsScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load({ refreshing: true })} tintColor={colors.primary} />}
     >
-      <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Control profile preferences, planning defaults, and advanced beta configuration." />
+      <EditorialHeader eyebrow="PREFERENCES" title="Settings" subtitle="Update your interests for better daily suggestions and planning." />
       {notice ? <InlineNotice tone="success" message={notice} /> : null}
       {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
 
@@ -120,64 +129,21 @@ export default function SettingsScreen() {
         <Field
           label="Name"
           value={data.profile.name}
-          onChangeText={(value) => updateData((current) => ({
-            ...current,
-            profile: { ...current.profile, name: value },
-          }))}
+          onChangeText={(value) =>
+            updateData((current) => ({
+              ...current,
+              profile: {
+                ...current.profile,
+                name: value,
+              },
+            }))
+          }
         />
         <Text style={styles.muted}>{data.profile.email}</Text>
       </SurfaceCard>
 
       <SurfaceCard elevated>
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <SelectField
-          label="Timezone"
-          value={data.preferences.timezone}
-          open={showTimezoneOptions}
-          options={buildTimezoneOptions(data.preferences.timezone)}
-          onToggle={() => {
-            setShowTimezoneOptions((value) => !value);
-            setShowProviderOptions(false);
-            setShowVerbosityOptions(false);
-          }}
-          onSelect={(value) => {
-            updateData((current) => ({
-              ...current,
-              preferences: { ...current.preferences, timezone: value },
-            }));
-            setShowTimezoneOptions(false);
-          }}
-        />
-        <Field
-          label="Work Start"
-          value={data.preferences.workStart}
-          onChangeText={(value) => updateData((current) => ({
-            ...current,
-            preferences: { ...current.preferences, workStart: value },
-          }))}
-        />
-        <Field
-          label="Work End"
-          value={data.preferences.workEnd}
-          onChangeText={(value) => updateData((current) => ({
-            ...current,
-            preferences: { ...current.preferences, workEnd: value },
-          }))}
-        />
-        <Field
-          label="Meeting Preferences"
-          value={data.preferences.meetingPreference}
-          multiline
-          onChangeText={(value) =>
-            updateData((current) => ({
-              ...current,
-              preferences: {
-                ...current.preferences,
-                meetingPreference: value,
-              },
-            }))
-          }
-        />
+        <Text style={styles.sectionTitle}>Interests</Text>
         <Field
           label="Interests"
           value={data.preferences.interests}
@@ -192,34 +158,9 @@ export default function SettingsScreen() {
             }))
           }
         />
-        <Field
-          label="Additional Context"
-          value={data.preferences.additionalContext}
-          multiline
-          onChangeText={(value) =>
-            updateData((current) => ({
-              ...current,
-              preferences: {
-                ...current.preferences,
-                additionalContext: value,
-              },
-            }))
-          }
-        />
-        <Field
-          label="Assistant Notes"
-          value={data.preferences.assistantNotes}
-          multiline
-          onChangeText={(value) =>
-            updateData((current) => ({
-              ...current,
-              preferences: {
-                ...current.preferences,
-                assistantNotes: value,
-              },
-            }))
-          }
-        />
+        <Text style={styles.helper}>
+          Use onboarding to set work hours, meeting preferences, and other planning context.
+        </Text>
       </SurfaceCard>
 
       <SurfaceCard>
@@ -228,59 +169,45 @@ export default function SettingsScreen() {
           <Switch value={showAdvanced} onValueChange={setShowAdvanced} />
         </View>
         {showAdvanced ? (
-          <View style={{ gap: spacing.md }}>
-            <SelectField
+          <View style={styles.advancedStack}>
+            <Field
               label="Provider"
               value={data.advanced.provider}
-              open={showProviderOptions}
-              options={[
-                { label: "Groq", value: "groq" },
-                { label: "Gemini", value: "gemini" },
-              ]}
-              onToggle={() => {
-                setShowProviderOptions((value) => !value);
-                setShowTimezoneOptions(false);
-                setShowVerbosityOptions(false);
-              }}
-              onSelect={(value) => {
+              onChangeText={(value) =>
                 updateData((current) => ({
                   ...current,
-                  advanced: { ...current.advanced, provider: value },
-                }));
-                setShowProviderOptions(false);
-              }}
+                  advanced: {
+                    ...current.advanced,
+                    provider: value,
+                  },
+                }))
+              }
             />
             <Field
               label="Model"
               value={data.advanced.model}
-              onChangeText={(value) => updateData((current) => ({
-                ...current,
-                advanced: { ...current.advanced, model: value },
-              }))}
+              onChangeText={(value) =>
+                updateData((current) => ({
+                  ...current,
+                  advanced: {
+                    ...current.advanced,
+                    model: value,
+                  },
+                }))
+              }
             />
-            <SelectField
+            <Field
               label="Verbosity"
               value={data.advanced.toolResultVerbosity}
-              open={showVerbosityOptions}
-              options={[
-                { label: "Compact", value: "compact" },
-                { label: "Verbose", value: "verbose" },
-              ]}
-              onToggle={() => {
-                setShowVerbosityOptions((value) => !value);
-                setShowTimezoneOptions(false);
-                setShowProviderOptions(false);
-              }}
-              onSelect={(value) => {
+              onChangeText={(value) =>
                 updateData((current) => ({
                   ...current,
                   advanced: {
                     ...current.advanced,
                     toolResultVerbosity: value === "verbose" ? "verbose" : "compact",
                   },
-                }));
-                setShowVerbosityOptions(false);
-              }}
+                }))
+              }
             />
             <Text style={styles.muted}>Session ID: {data.advanced.sessionId}</Text>
             <TouchableOpacity style={styles.secondaryButton} onPress={() => void handleResetAgentSession()}>
@@ -299,28 +226,6 @@ export default function SettingsScreen() {
       </TouchableOpacity>
     </ScrollView>
   );
-}
-
-function buildTimezoneOptions(selectedValue: string) {
-  const options = [
-    { label: "Pacific Time", value: "America/Los_Angeles" },
-    { label: "Mountain Time", value: "America/Denver" },
-    { label: "Central Time", value: "America/Chicago" },
-    { label: "Eastern Time", value: "America/New_York" },
-    { label: "Alaska Time", value: "America/Anchorage" },
-    { label: "Hawaii Time", value: "Pacific/Honolulu" },
-    { label: "UTC", value: "UTC" },
-    { label: "London", value: "Europe/London" },
-    { label: "Paris", value: "Europe/Paris" },
-    { label: "Tokyo", value: "Asia/Tokyo" },
-    { label: "Sydney", value: "Australia/Sydney" },
-  ];
-
-  if (options.some((option) => option.value === selectedValue)) {
-    return options;
-  }
-
-  return [{ label: selectedValue, value: selectedValue }, ...options];
 }
 
 function Field(props: {
@@ -343,49 +248,15 @@ function Field(props: {
   );
 }
 
-function SelectField(props: {
-  label: string;
-  value: string;
-  open: boolean;
-  options: Array<{ label: string; value: string }>;
-  onToggle: () => void;
-  onSelect: (value: string) => void;
-}) {
-  const selected = props.options.find((option) => option.value === props.value);
-  return (
-    <View style={{ gap: 6 }}>
-      <Text style={styles.label}>{props.label}</Text>
-      <TouchableOpacity style={styles.selectTrigger} onPress={props.onToggle}>
-        <Text style={styles.selectValue}>{selected?.label ?? props.value}</Text>
-        <Text style={styles.selectChevron}>{props.open ? "▲" : "▼"}</Text>
-      </TouchableOpacity>
-      {props.open ? (
-        <ScrollView style={styles.selectMenu} contentContainerStyle={styles.selectMenuContent} nestedScrollEnabled>
-          {props.options.map((option) => {
-            const active = option.value === props.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                style={[styles.selectOption, active && styles.selectOptionActive]}
-                onPress={() => props.onSelect(option.value)}
-              >
-                <Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]}>{option.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 120 },
   loader: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
   sectionTitle: { color: colors.text, ...typography.section },
-  value: { color: colors.text, fontSize: 18, fontWeight: "600" },
   muted: { color: colors.textMuted },
+  helper: { color: colors.textMuted, ...typography.body },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  advancedStack: { gap: spacing.md },
   label: { color: colors.textMuted, ...typography.label },
   input: {
     backgroundColor: colors.surfaceHighest,
@@ -394,43 +265,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
   },
-  selectTrigger: {
-    backgroundColor: colors.surfaceHighest,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  selectValue: { color: colors.text, fontSize: 16 },
-  selectChevron: { color: colors.textMuted, fontSize: 12, fontWeight: "700" },
-  selectMenu: {
-    backgroundColor: colors.surfaceHighest,
-    borderRadius: radii.md,
-    maxHeight: 220,
-  },
-  selectMenuContent: {
-    padding: 6,
-    gap: 4,
-  },
-  selectOption: {
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  selectOptionActive: {
-    backgroundColor: colors.surface,
-  },
-  selectOptionText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  selectOptionTextActive: {
-    color: colors.primary,
-  },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: radii.lg,
@@ -452,6 +286,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     backgroundColor: colors.surfaceHighest,
+    alignSelf: "flex-start",
   },
   secondaryText: { color: colors.primary, fontWeight: "700" },
 });
