@@ -86,6 +86,9 @@ export function buildTodayRecommendationSystemPrompt() {
     "- do not invent meetings or deadlines",
     "- actionLabel should be short and clickable",
     "- actionPrompt should ask the assistant to help execute the plan",
+    "- prioritize meetings and time-sensitive calendar commitments first",
+    "- next prioritize user goals, stored memory, and planning context",
+    "- use interests as a lower-priority input for flavor or motivation, not the main driver",
   ].join("\n");
 }
 
@@ -104,14 +107,24 @@ export function buildTodayRecommendationPrompt(input: TodayRecommendationInput) 
     `Date: ${input.date}`,
     `Timezone: ${input.timezone}`,
     `User: ${input.user.name}`,
-    `Work hours: ${input.profile.workStart}-${input.profile.workEnd}`,
-    `Meeting preference: ${input.profile.meetingPreference || "None provided"}`,
-    `Interests: ${input.profile.interests || "None provided"}`,
-    `Additional context: ${input.profile.additionalContext || "None provided"}`,
-    `Assistant notes: ${input.profile.assistantNotes || "None provided"}`,
     "",
-    "Today's schedule:",
+    "Priority order for today's recommendation:",
+    "1. Meetings and time-sensitive upcoming calendar items",
+    "2. User goals and planning context",
+    "3. Interests",
+    "",
+    "Today's calendar (highest priority):",
     scheduleLines,
+    "",
+    "User goals and planning context:",
+    `- Work hours: ${input.profile.workStart}-${input.profile.workEnd}`,
+    `- Meeting preference: ${input.profile.meetingPreference || "None provided"}`,
+    `- Additional context: ${input.profile.additionalContext || "None provided"}`,
+    `- Assistant notes: ${input.profile.assistantNotes || "None provided"}`,
+    `- Stored memory: ${input.memoryContext.trim() || "No stored memory."}`,
+    "",
+    "Interests (lower priority):",
+    `- ${input.profile.interests || "None provided"}`,
   ].join("\n");
 }
 

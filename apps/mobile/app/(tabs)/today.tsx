@@ -18,7 +18,7 @@ export default function TodayScreen() {
   const router = useRouter();
   const loadedRef = useRef(false);
 
-  const load = useCallback(async (options?: { refreshing?: boolean }) => {
+  const load = useCallback(async (options?: { refreshing?: boolean; refreshPlan?: boolean }) => {
     if (!token) {
       setLoading(false);
       setRefreshing(false);
@@ -31,7 +31,7 @@ export default function TodayScreen() {
     }
     setError(null);
     try {
-      setData(await createApiClient(token).getToday());
+      setData(await createApiClient(token).getToday({ refreshPlan: options?.refreshPlan }));
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : "Failed to load today.");
     } finally {
@@ -62,10 +62,16 @@ export default function TodayScreen() {
     <ScrollView
       style={styles.screen}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void load({ refreshing: true })} tintColor={colors.primary} />}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => void load({ refreshing: true, refreshPlan: true })}
+          tintColor={colors.primary}
+        />
+      }
     >
       <EditorialHeader eyebrow={formatTodayEyebrow(data?.date)} title={data?.greeting ?? "Today"} subtitle="Strategic overview of your day." />
-      {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load()} /> : null}
+      {error ? <InlineNotice tone="error" message={error} actionLabel="Retry" onPress={() => void load({ refreshPlan: true })} /> : null}
       <SurfaceCard elevated>
         <Text style={styles.sectionTitle}>Today&apos;s Schedule</Text>
         {data?.schedule.length ? (

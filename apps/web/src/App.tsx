@@ -114,14 +114,14 @@ export function App() {
       .finally(() => setLoadingSession(false));
   }, [clearClientSession, loadSessionSnapshot, token]);
 
-  const loadToday = useCallback(async () => {
+  const loadToday = useCallback(async (options?: { refreshPlan?: boolean }) => {
     if (!token) {
       return;
     }
     setLoadingToday(true);
     setTodayError(null);
     try {
-      setToday(await createApiClient(token).getToday());
+      setToday(await createApiClient(token).getToday({ refreshPlan: options?.refreshPlan }));
     } catch (error) {
       setTodayError(error instanceof Error ? error.message : "Failed to load today.");
     } finally {
@@ -388,7 +388,7 @@ export function App() {
               data={today}
               loading={loadingToday}
               error={todayError}
-              onRefresh={loadToday}
+              onRefresh={() => loadToday({ refreshPlan: true })}
               onPrompt={(prompt) => {
                 setQueuedPrompt(prompt);
               }}

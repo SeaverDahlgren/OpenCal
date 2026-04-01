@@ -23,6 +23,7 @@ export type TodayRecommendationInput = {
     email: string;
   };
   profile: UserProfile;
+  memoryContext: string;
   date: string;
   timezone: string;
   schedule: Array<{

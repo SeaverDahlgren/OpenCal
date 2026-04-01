@@ -12,9 +12,14 @@ export class TodayRecommendationService {
     private readonly onError?: (error: unknown) => void,
   ) {}
 
-  async getOrCreate(input: TodayRecommendationInput): Promise<TodayRecommendationInsight | null> {
+  async getOrCreate(
+    input: TodayRecommendationInput,
+    options?: {
+      forceRefresh?: boolean;
+    },
+  ): Promise<TodayRecommendationInsight | null> {
     const cached = await this.recommendations.load(input.user.email, input.date);
-    if (cached) {
+    if (cached && !options?.forceRefresh) {
       return toInsight(cached);
     }
 

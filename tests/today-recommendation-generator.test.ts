@@ -26,6 +26,7 @@ describe("today recommendation generator", () => {
         email: "avery@example.com",
       },
       profile,
+      memoryContext: "Remembers that Avery protects workout time and prefers concise planning.",
       date: "2026-03-31",
       timezone: profile.timezone,
       schedule: [
@@ -39,10 +40,14 @@ describe("today recommendation generator", () => {
     });
 
     expect(prompt).toContain("2026-03-31");
+    expect(prompt).toContain("Priority order for today's recommendation:");
+    expect(prompt).toContain("Today's calendar (highest priority):");
     expect(prompt).toContain("Avoid back-to-back meetings.");
     expect(prompt).toContain("Running and AI agents");
     expect(prompt).toContain("Keep advice tactical.");
     expect(prompt).toContain("Protect the first hour for deep work.");
+    expect(prompt).toContain("protects workout time");
+    expect(prompt).toContain("Interests (lower priority):");
     expect(prompt).toContain("5:00 PM - 5:30 PM");
     expect(prompt).toContain("Job discussion with Sally");
   });

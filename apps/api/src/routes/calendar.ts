@@ -18,6 +18,9 @@ const dayQuerySchema = z.object({
 
 export async function handleCalendarRoute(ctx: AuthedRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/today") {
+    const forceRefresh = ["1", "true", "yes"].includes(
+      (ctx.url.searchParams.get("refreshPlan") ?? "").toLowerCase(),
+    );
     const timezone = resolveUserTimezone(ctx.profile);
     const today = dateKeyInTimezone(new Date(), timezone);
     const { timeMin, timeMax } = buildExpandedUtcDayBounds(today);
@@ -48,9 +51,12 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       insight = await recommendations.getOrCreate({
         user: ctx.session.user,
         profile: ctx.profile,
+        memoryContext: ctx.workspace.memory,
         date: today,
         timezone,
         schedule: overview.schedule,
+      }, {
+        forceRefresh,
       });
     } catch (error) {
       await appendDebugLog(ctx.workspace.debugLogPath, "today.recommendation.error", {

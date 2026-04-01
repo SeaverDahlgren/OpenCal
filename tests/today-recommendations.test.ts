@@ -64,6 +64,41 @@ describe("today recommendations", () => {
     expect(second).toEqual(first);
   });
 
+  it("regenerates and overwrites the cached recommendation when forced", async () => {
+    const privateDir = await makePrivateDir();
+    const store = new TodayRecommendationStore(createConfig(privateDir));
+    const generate = vi
+      .fn()
+      .mockResolvedValueOnce({
+        title: "Original plan",
+        body: "Keep your morning focused.",
+        actionLabel: "Plan this with AI",
+        action: {
+          type: "chat_prompt" as const,
+          prompt: "Help me execute today’s plan.",
+        },
+      })
+      .mockResolvedValueOnce({
+        title: "Refreshed plan",
+        body: "Adjust around the latest context and tackle the hardest work first.",
+        actionLabel: "Plan this with AI",
+        action: {
+          type: "chat_prompt" as const,
+          prompt: "Help me execute today’s refreshed plan.",
+        },
+      });
+    const service = new TodayRecommendationService(store, generate);
+
+    const first = await service.getOrCreate(createInput());
+    const second = await service.getOrCreate(createInput(), { forceRefresh: true });
+    const saved = await store.load("avery@example.com", "2026-03-31");
+
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(first?.title).toBe("Original plan");
+    expect(second?.title).toBe("Refreshed plan");
+    expect(saved?.title).toBe("Refreshed plan");
+  });
+
   it("generates a new recommendation on the next local day", async () => {
     const privateDir = await makePrivateDir();
     const store = new TodayRecommendationStore(createConfig(privateDir));
@@ -144,6 +179,7 @@ function createInput(overrides: Partial<Parameters<TodayRecommendationService["g
       email: "avery@example.com",
     },
     profile,
+    memoryContext: "User prefers decisive recommendations and values workout consistency.",
     date: "2026-03-31",
     timezone: profile.timezone,
     schedule: [

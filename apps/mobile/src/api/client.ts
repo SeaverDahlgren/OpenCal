@@ -38,8 +38,9 @@ export class ApiClient {
     return this.request<SessionDto>("/session");
   }
 
-  async getToday() {
-    return this.request<TodayDto>("/today");
+  async getToday(options?: { refreshPlan?: boolean }) {
+    const query = options?.refreshPlan ? "?refreshPlan=1" : "";
+    return this.request<TodayDto>(`/today${query}`);
   }
 
   async getCalendarMonth(year: number, month: number) {

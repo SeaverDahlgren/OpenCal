@@ -33,8 +33,9 @@ export class ApiClient {
     return this.request<SessionDto>("/session");
   }
 
-  getToday() {
-    return this.request<TodayDto>("/today");
+  getToday(options?: { refreshPlan?: boolean }) {
+    const query = options?.refreshPlan ? "?refreshPlan=1" : "";
+    return this.request<TodayDto>(`/today${query}`);
   }
 
   getCalendarMonth(year: number, month: number) {
