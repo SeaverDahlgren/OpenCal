@@ -99,7 +99,11 @@ export default function TodayScreen() {
           {data.insight.action?.prompt ? (
             <TouchableOpacity
               style={styles.inlineActionButton}
-              onPress={() => router.push(`/chat?prompt=${encodeURIComponent(data.insight!.action!.prompt)}`)}
+              onPress={() =>
+                router.push(
+                  `/chat?autoSend=1&promptId=${Date.now()}&prompt=${encodeURIComponent(data.insight!.action!.prompt)}`,
+                )
+              }
             >
               <Text style={styles.inlineAction}>{data.insight.actionLabel}</Text>
             </TouchableOpacity>

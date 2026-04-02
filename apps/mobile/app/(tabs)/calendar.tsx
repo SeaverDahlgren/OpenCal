@@ -387,7 +387,7 @@ export default function CalendarScreen() {
                 style={styles.eventActionButton}
                 onPress={() =>
                   router.push(
-                    `/chat?prompt=${encodeURIComponent(
+                    `/chat?autoSend=1&promptId=${Date.now()}&prompt=${encodeURIComponent(
                       `Help me reschedule ${item.title} on ${day?.dateLabel ?? selectedDate} currently at ${item.timeLabel}.`,
                     )}`,
                   )

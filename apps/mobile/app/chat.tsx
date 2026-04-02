@@ -7,10 +7,11 @@ import { useSession } from "../src/state/session";
 import { colors, radii, spacing, typography } from "../src/theme/tokens";
 
 export default function ChatScreen() {
-  const { prompt } = useLocalSearchParams<{ prompt?: string }>();
+  const { prompt, autoSend, promptId } = useLocalSearchParams<{ prompt?: string; autoSend?: string; promptId?: string }>();
   const router = useRouter();
   const { chatHistory, pendingTurn, sendAgentAction } = useSession();
   const listRef = useRef<FlatList<(typeof chatHistory)[number]>>(null);
+  const autoSentRef = useRef<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,10 +25,43 @@ export default function ChatScreen() {
   }, []);
 
   useEffect(() => {
-    if (typeof prompt === "string" && prompt.trim() && !draft) {
-      setDraft(prompt.trim());
+    const nextPrompt = typeof prompt === "string" ? prompt.trim() : "";
+    const shouldAutoSend = autoSend === "1";
+    const autoSendKey = typeof promptId === "string" && promptId ? promptId : nextPrompt;
+    if (!nextPrompt) {
+      return;
     }
-  }, [draft, prompt]);
+    if (!shouldAutoSend) {
+      if (!draft) {
+        setDraft(nextPrompt);
+      }
+      return;
+    }
+    if (autoSentRef.current === autoSendKey) {
+      return;
+    }
+
+    autoSentRef.current = autoSendKey;
+    void (async () => {
+      setSending(true);
+      setError(null);
+      try {
+        const next = await sendAgentAction({ message: nextPrompt });
+        if (!next) {
+          setSending(false);
+          return;
+        }
+        setDraft("");
+        router.replace("/chat");
+      } catch (nextError) {
+        setDraft(nextPrompt);
+        setError(nextError instanceof Error ? nextError.message : "Failed to send that message.");
+        router.replace("/chat");
+      } finally {
+        setSending(false);
+      }
+    })();
+  }, [autoSend, draft, prompt, promptId, router, sendAgentAction]);
 
   useEffect(() => {
     setShowDraftPreview(false);

@@ -47,7 +47,6 @@ export function App() {
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
-  const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
   const [scheduleVersion, setScheduleVersion] = useState(0);
   const [visibleMonth, setVisibleMonth] = useState(() => initialCalendarViewportRef.current.visibleMonth);
   const [selectedDate, setSelectedDate] = useState(() => initialCalendarViewportRef.current.selectedDate);
@@ -364,13 +363,7 @@ export function App() {
             pendingTurn={pendingTurn}
             sending={chatSending}
             error={chatError}
-            defaultPrompt={queuedPrompt}
-            onSubmit={async (input) => {
-              await sendAgentAction(input);
-              if (input.message || input.optionValue || input.action) {
-                setQueuedPrompt(null);
-              }
-            }}
+            onSubmit={sendAgentAction}
           />
         </main>
       </div>
@@ -411,9 +404,7 @@ export function App() {
               loading={loadingToday}
               error={todayError}
               onRefresh={() => loadToday({ refreshPlan: true })}
-              onPrompt={(prompt) => {
-                setQueuedPrompt(prompt);
-              }}
+              onPrompt={(prompt) => void sendAgentAction({ message: prompt })}
             />
           ) : null}
           {view === "calendar" ? (
@@ -430,7 +421,7 @@ export function App() {
               onSelectDay={selectDay}
               onRefresh={() => loadCalendar(calendarNavigationRef.current.planRefresh())}
               onCreateEvent={createCalendarEvent}
-              onPrompt={(prompt) => setQueuedPrompt(prompt)}
+              onPrompt={(prompt) => void sendAgentAction({ message: prompt })}
             />
           ) : null}
           {view === "settings" ? (
@@ -453,13 +444,7 @@ export function App() {
           pendingTurn={pendingTurn}
           sending={chatSending}
           error={chatError}
-          defaultPrompt={queuedPrompt}
-          onSubmit={async (input) => {
-            await sendAgentAction(input);
-            if (input.message || input.optionValue || input.action) {
-              setQueuedPrompt(null);
-            }
-          }}
+          onSubmit={sendAgentAction}
         />
       </main>
     </div>

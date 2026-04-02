@@ -6,21 +6,14 @@ type ChatPanelProps = {
   pendingTurn: AgentTurnDto | null;
   sending: boolean;
   error: string | null;
-  defaultPrompt: string | null;
   onSubmit: (input: { message?: string; action?: "confirm" | "cancel"; optionValue?: string }) => Promise<void>;
 };
 
-export function ChatPanel({ history, pendingTurn, sending, error, defaultPrompt, onSubmit }: ChatPanelProps) {
+export function ChatPanel({ history, pendingTurn, sending, error, onSubmit }: ChatPanelProps) {
   const [draft, setDraft] = useState("");
   const [showHelp, setShowHelp] = useState(false);
   const [showDraftPreview, setShowDraftPreview] = useState(false);
   const timelineRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (defaultPrompt && !draft) {
-      setDraft(defaultPrompt);
-    }
-  }, [defaultPrompt, draft]);
 
   useEffect(() => {
     setShowDraftPreview(false);
