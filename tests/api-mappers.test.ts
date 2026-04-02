@@ -61,14 +61,13 @@ describe("api dto mappers", () => {
     );
   });
 
-  it("maps settings and persists markdown preference updates", () => {
+  it("maps settings and can still render a legacy profile export", () => {
     const profile = updateUserProfile(
       createUserProfile(
         {
           name: "Avery",
           email: "avery@example.com",
         },
-        "",
         "2026-03-25T00:00:00.000Z",
       ),
       {
@@ -156,7 +155,6 @@ describe("api dto mappers", () => {
           name: "Avery Mercer",
           email: "avery@example.com",
         },
-        "",
         "2026-03-25T00:00:00.000Z",
       ),
       {

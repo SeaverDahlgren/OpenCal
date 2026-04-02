@@ -19,7 +19,7 @@ export class UserProfileStore implements UserProfileRepository {
     return state.profiles[profileKey(email)] ?? null;
   }
 
-  async loadOrCreate(user: { name: string; email: string }, legacyMarkdown = "") {
+  async loadOrCreate(user: { name: string; email: string }) {
     const state = await this.readState();
     const key = profileKey(user.email);
     const existing = state.profiles[key];
@@ -27,7 +27,7 @@ export class UserProfileStore implements UserProfileRepository {
       return existing;
     }
 
-    const profile = createUserProfile(user, legacyMarkdown);
+    const profile = createUserProfile(user);
     state.profiles[key] = profile;
     await this.writeState(state);
     return profile;

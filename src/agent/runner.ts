@@ -141,7 +141,10 @@ export class AgentRunner {
           config: this.config,
           provider: this.provider,
           tools: this.tools,
-          workspace: args.workspace,
+          promptContext: {
+            kind: "workspace",
+            workspace: args.workspace,
+          },
           skillManifests: this.skillManifests,
           skillsCatalog: this.skillsCatalog,
           timezone: args.timezone,

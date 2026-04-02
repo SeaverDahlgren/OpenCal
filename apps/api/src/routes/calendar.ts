@@ -1,8 +1,10 @@
 import { appendDebugLog } from "../../../../src/memory/logs.js";
 import { z } from "zod";
 import { mapCalendarDayView, mapCalendarMonthView, mapTodayOverview } from "../dto/mappers.js";
+import { buildHostedMemoryContext } from "../memory/context.js";
 import { createTodayRecommendationGenerator } from "../recommendations/generator.js";
 import { TodayRecommendationService } from "../recommendations/service.js";
+import { hostedDebugLogPath } from "../runtime/filesystem.js";
 import { jsonError, jsonRoute, readJsonBody } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
 import { buildExpandedUtcDayBounds, buildExpandedUtcMonthBounds, dateKeyInTimezone, resolveUserTimezone } from "./utils.js";
@@ -26,6 +28,7 @@ const createEventSchema = z.object({
 
 export async function handleCalendarRoute(ctx: AuthedRouteContext) {
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/today") {
+    const debugLogPath = hostedDebugLogPath(ctx.config);
     const forceRefresh = ["1", "true", "yes"].includes(
       (ctx.url.searchParams.get("refreshPlan") ?? "").toLowerCase(),
     );
@@ -45,11 +48,12 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
     });
     let insight = null;
     try {
+      const memories = await ctx.memories.listByEmail(ctx.session.user.email);
       const recommendations = new TodayRecommendationService(
         ctx.recommendations,
         createTodayRecommendationGenerator(ctx.config),
         (error) => {
-          void appendDebugLog(ctx.workspace.debugLogPath, "today.recommendation.error", {
+          void appendDebugLog(debugLogPath, "today.recommendation.error", {
             userEmail: ctx.session.user.email,
             date: today,
             error: error instanceof Error ? error.message : String(error),
@@ -59,7 +63,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
       insight = await recommendations.getOrCreate({
         user: ctx.session.user,
         profile: ctx.profile,
-        memoryContext: ctx.workspace.memory,
+        memoryContext: buildHostedMemoryContext(memories),
         date: today,
         timezone,
         schedule: overview.schedule,
@@ -67,7 +71,7 @@ export async function handleCalendarRoute(ctx: AuthedRouteContext) {
         forceRefresh,
       });
     } catch (error) {
-      await appendDebugLog(ctx.workspace.debugLogPath, "today.recommendation.error", {
+      await appendDebugLog(debugLogPath, "today.recommendation.error", {
         userEmail: ctx.session.user.email,
         date: today,
         error: error instanceof Error ? error.message : String(error),

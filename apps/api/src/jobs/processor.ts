@@ -1,9 +1,9 @@
 import { appendDebugLog } from "../../../../src/memory/logs.js";
-import { loadWorkspaceFiles } from "../../../../src/memory/workspace.js";
 import { executeAgentTurn } from "../agent/execute-turn.js";
 import type { ApiAuthService } from "../auth/service.js";
+import { hostedDebugLogPath } from "../runtime/filesystem.js";
+import type { MemoryRepository, JobRepository, SessionRepository, UserProfileRepository } from "../storage/types.js";
 import type { JobRecord } from "./types.js";
-import type { JobRepository, SessionRepository, UserProfileRepository } from "../storage/types.js";
 import { buildNextRunAt } from "./store.js";
 
 type JobProcessorDeps = {
@@ -11,6 +11,7 @@ type JobProcessorDeps = {
   auth: ApiAuthService;
   sessions: SessionRepository;
   profiles: UserProfileRepository;
+  memories: MemoryRepository;
   jobs: JobRepository;
 };
 
@@ -55,13 +56,13 @@ export class JobProcessor {
     if (!googleClients) {
       throw new Error(`Missing Google auth for session ${session.sessionId}`);
     }
-    const workspace = await loadWorkspaceFiles(this.deps.config.rootDir, new Date().toISOString().slice(0, 10));
-    const profile = await this.deps.profiles.loadOrCreate(session.user, workspace.user);
+    const profile = await this.deps.profiles.loadOrCreate(session.user);
+    const memories = await this.deps.memories.listByEmail(session.user.email);
     const result = await executeAgentTurn({
       config: this.deps.config,
       session,
       profile,
-      workspace,
+      memories,
       googleClients,
       action: job.payload.action,
     });
@@ -76,5 +77,5 @@ export class JobProcessor {
 }
 
 function debugLogPath(config: import("../../../../src/config/env.js").AppConfig) {
-  return `${config.rootDir}/.opencal/logs/${new Date().toISOString().slice(0, 10)}.log`;
+  return hostedDebugLogPath(config);
 }

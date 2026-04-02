@@ -3,17 +3,20 @@ import { ApiAuthService } from "./auth/service.js";
 import { createRuntimeStores } from "./bootstrap/runtime.js";
 import { JobProcessor } from "./jobs/processor.js";
 import { parseWorkerOptions, runWorker } from "./jobs/worker-runner.js";
+import { ensureHostedRuntimeDirs } from "./runtime/filesystem.js";
 import { registerAbortOnSignals } from "./server/shutdown.js";
 
 async function main() {
   const config = loadConfig(process.cwd());
-  const { sessions, profiles, tokens, betaUsers, audit, jobs } = createRuntimeStores(config);
+  await ensureHostedRuntimeDirs(config);
+  const { sessions, profiles, tokens, betaUsers, audit, memories, jobs } = createRuntimeStores(config);
   const auth = new ApiAuthService(config, sessions, tokens, betaUsers, audit);
   const processor = new JobProcessor({
     config,
     auth,
     sessions,
     profiles,
+    memories,
     jobs,
   });
   const options = parseWorkerOptions(process.argv.slice(2), config.workerPollIntervalMs);

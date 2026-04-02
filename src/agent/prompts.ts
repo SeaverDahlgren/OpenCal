@@ -98,6 +98,94 @@ export function buildSystemPrompt(args: {
   ].join("\n");
 }
 
+export function buildHostedSystemPrompt(args: {
+  systemContext: string;
+  tools: ToolPromptShape[];
+  skillsCatalog: string;
+  selectedSkillDetails: string[];
+  taskStateSummary: string;
+  memoryContext: string;
+  profileContext?: string;
+  runtime: RuntimeContext;
+  tokenUsage: {
+    estimatedInputTokens: number;
+    contextWindowLimit: number;
+    maxOutputTokens: number;
+    compactionThreshold: number;
+  };
+}): string {
+  const {
+    systemContext,
+    tools,
+    skillsCatalog,
+    selectedSkillDetails,
+    taskStateSummary,
+    memoryContext,
+    profileContext,
+    runtime,
+    tokenUsage,
+  } = args;
+  const toolBlock = tools
+    .map(
+      (tool) =>
+        `- ${tool.name}${tool.protected ? " [protected]" : ""}: ${tool.description}\n  input: ${tool.inputShape}`,
+    )
+    .join("\n");
+
+  return [
+    systemContext,
+    "",
+    "Operating rules:",
+    "- Be concise and candid.",
+    "- Use tools when needed; do not hallucinate Gmail or Calendar state.",
+    "- Use semantic skills to generalize intent before choosing literal tool arguments.",
+    "- If timing or entity selection is ambiguous, ask for clarification instead of guessing.",
+    "- Protected actions must be previewed and confirmed by the human before execution.",
+    "- Offer time-management advice only when directly relevant to the request.",
+    "- Only one subgoal may be active at a time; focus only on the active subgoal.",
+    "- Use the current task state to finish the active subgoal before returning stop.",
+    "- Final responses should be user-facing and short.",
+    "",
+    "Return only valid JSON matching one of these shapes:",
+    '{"type":"message","message":"..."}',
+    '{"type":"clarify","message":"..."}',
+    '{"type":"tool","reasoning":"short note","toolCalls":[{"name":"tool_name","arguments":{}}]}',
+    '{"type":"stop","message":"<STOP> final answer"}',
+    "",
+    "Available tools:",
+    toolBlock,
+    "",
+    "Available semantic skills:",
+    skillsCatalog,
+    "",
+    "Selected skill details:",
+    selectedSkillDetails.length > 0 ? selectedSkillDetails.join("\n\n---\n\n") : "No detailed skills selected for this turn.",
+    "",
+    "Current task state:",
+    taskStateSummary,
+    "",
+    "Production personalization:",
+    profileContext || "none",
+    "",
+    "Durable production memory:",
+    memoryContext,
+    "",
+    "Runtime:",
+    `- now: ${runtime.nowIso}`,
+    `- day_of_week: ${runtime.dayOfWeek}`,
+    `- timezone: ${runtime.timezone}`,
+    runtime.compactedSummary
+      ? `- compacted_summary: ${runtime.compactedSummary}`
+      : "- compacted_summary: none",
+    "",
+    "Token budget:",
+    `- estimated_input_tokens: ${tokenUsage.estimatedInputTokens}`,
+    `- context_window_limit: ${tokenUsage.contextWindowLimit}`,
+    `- max_output_tokens: ${tokenUsage.maxOutputTokens}`,
+    `- compaction_threshold: ${tokenUsage.compactionThreshold}`,
+  ].join("\n");
+}
+
 export function buildTranscript(messages: ConversationMessage[]): string {
   return messages
     .map((message) => {

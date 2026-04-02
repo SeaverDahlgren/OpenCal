@@ -1,4 +1,4 @@
-import { buildSystemPrompt } from "../agent/prompts.js";
+import { buildHostedSystemPrompt, buildSystemPrompt } from "../agent/prompts.js";
 import { estimateMessagesTokens } from "../agent/tokenizer.js";
 import type { AgentDecision, ConversationMessage, RuntimeContext } from "../agent/types.js";
 import {
@@ -29,8 +29,17 @@ export type SharedTurnDeps = {
   config: AppConfig;
   provider: LlmProvider;
   tools: ToolRegistry;
-  workspace: WorkspaceFiles;
-  profileContext?: string;
+  promptContext:
+    | {
+        kind: "workspace";
+        workspace: WorkspaceFiles;
+      }
+    | {
+        kind: "hosted";
+        systemContext: string;
+        memoryContext: string;
+        profileContext?: string;
+      };
   skillManifests: SkillManifest[];
   skillsCatalog: string;
   timezone: string;
@@ -58,23 +67,36 @@ export async function buildDecisionContext(
   const selectedSkills = selectRelevantSkills(deps.skillManifests, skillSelectionInput);
   const runtime = buildRuntimeContext(deps.timezone, compacted.summary ?? runtimeSummary);
 
-  const systemPrompt = buildSystemPrompt({
-    soul: deps.workspace.soul,
-    user: deps.workspace.user,
-    tools: [...deps.tools.values()].map((tool) => tool.promptShape),
-    skillsCatalog: deps.skillsCatalog,
-    selectedSkillDetails: buildSelectedSkillDetails(selectedSkills),
-    taskStateSummary: summarizeTaskStateForPrompt(state.taskState),
-    memory: deps.workspace.memory,
-    profileContext: deps.profileContext,
-    runtime,
-    tokenUsage: {
-      estimatedInputTokens: estimateMessagesTokens(compacted.messages),
-      contextWindowLimit: deps.config.contextWindowLimit,
-      maxOutputTokens: deps.config.maxOutputTokens,
-      compactionThreshold: deps.config.compactionThreshold,
-    },
-  });
+  const tokenUsage = {
+    estimatedInputTokens: estimateMessagesTokens(compacted.messages),
+    contextWindowLimit: deps.config.contextWindowLimit,
+    maxOutputTokens: deps.config.maxOutputTokens,
+    compactionThreshold: deps.config.compactionThreshold,
+  };
+  const systemPrompt =
+    deps.promptContext.kind === "workspace"
+      ? buildSystemPrompt({
+          soul: deps.promptContext.workspace.soul,
+          user: deps.promptContext.workspace.user,
+          tools: [...deps.tools.values()].map((tool) => tool.promptShape),
+          skillsCatalog: deps.skillsCatalog,
+          selectedSkillDetails: buildSelectedSkillDetails(selectedSkills),
+          taskStateSummary: summarizeTaskStateForPrompt(state.taskState),
+          memory: deps.promptContext.workspace.memory,
+          runtime,
+          tokenUsage,
+        })
+      : buildHostedSystemPrompt({
+          systemContext: deps.promptContext.systemContext,
+          tools: [...deps.tools.values()].map((tool) => tool.promptShape),
+          skillsCatalog: deps.skillsCatalog,
+          selectedSkillDetails: buildSelectedSkillDetails(selectedSkills),
+          taskStateSummary: summarizeTaskStateForPrompt(state.taskState),
+          memoryContext: deps.promptContext.memoryContext,
+          profileContext: deps.promptContext.profileContext,
+          runtime,
+          tokenUsage,
+        });
 
   return {
     compactedMessages: compacted.messages,

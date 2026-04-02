@@ -2,7 +2,6 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { URL } from "node:url";
 import type { AppConfig } from "../../../../src/config/env.js";
 import type { GoogleClients } from "../../../../src/integrations/google/auth.js";
-import type { WorkspaceFiles } from "../../../../src/memory/workspace.js";
 import type { StoredSessionState } from "../../../../src/app/session-types.js";
 import type { ApiAuthService } from "../auth/service.js";
 import type { GoogleCalendarService } from "../../../../src/integrations/google/calendar.js";
@@ -13,6 +12,7 @@ import type {
   GoogleTokenRepository,
   IdempotencyRepository,
   JobRepository,
+  MemoryRepository,
   SessionRepository,
   TodayRecommendationRepository,
   UserProfileRepository,
@@ -31,6 +31,7 @@ export type PublicRouteContext = {
   audit: AuditRepository;
   idempotency: IdempotencyRepository;
   jobs: JobRepository;
+  memories: MemoryRepository;
   recommendations: TodayRecommendationRepository;
 };
 
@@ -41,6 +42,5 @@ export type SessionRouteContext = PublicRouteContext & {
 
 export type AuthedRouteContext = SessionRouteContext & {
   googleClients: GoogleClients;
-  workspace: WorkspaceFiles;
   calendarService: GoogleCalendarService;
 };

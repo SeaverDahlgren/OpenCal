@@ -4,10 +4,11 @@ import path from "node:path";
 import { URL } from "node:url";
 import { loadConfig } from "../../../src/config/env.js";
 import { appendDebugLog } from "../../../src/memory/logs.js";
-import { ensureWorkspace, loadWorkspaceFiles } from "../../../src/memory/workspace.js";
 import { GoogleCalendarService } from "../../../src/integrations/google/calendar.js";
 import { ApiAuthService } from "./auth/service.js";
 import { createRuntimeStores } from "./bootstrap/runtime.js";
+import { syncProfileMemory } from "./memory/context.js";
+import { ensureHostedRuntimeDirs, hostedDebugLogPath } from "./runtime/filesystem.js";
 import { handleAdminRoute } from "./routes/admin.js";
 import { handleAgentRoute } from "./routes/agent.js";
 import { handleAuthRoute } from "./routes/auth.js";
@@ -31,7 +32,7 @@ import { updateSessionClientContext } from "./server/client-context.js";
 import { isSupportedAppVersion, readClientAppVersion } from "./server/versioning.js";
 
 const config = loadConfig(process.cwd());
-const { sessions, profiles, tokens, betaUsers, audit, idempotency, jobs, recommendations } = createRuntimeStores(config);
+const { sessions, profiles, tokens, betaUsers, audit, idempotency, jobs, memories, recommendations } = createRuntimeStores(config);
 const auth = new ApiAuthService(config, sessions, tokens, betaUsers, audit);
 const rateLimiter = new InMemoryRateLimiter(
   config.rateLimitWindowMs,
@@ -45,10 +46,10 @@ const server = http.createServer(async (req, res) => {
   res.setHeader("x-opencal-api-version", config.apiVersion ?? "1.0.0");
   applySecurityHeaders(res, config.appEnv);
   const corsAllowed = applyCorsHeaders(req, res, config);
-  const debugLogPath = path.join(config.rootDir, ".opencal", "logs", `${new Date().toISOString().slice(0, 10)}.log`);
+  const debugLogPath = hostedDebugLogPath(config);
 
   try {
-    await ensureWorkspace(config.rootDir);
+    await ensureHostedRuntimeDirs(config);
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "127.0.0.1"}`);
     await appendDebugLog(debugLogPath, "api.request.start", {
       requestId,
@@ -151,6 +152,7 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      memories,
       recommendations,
     });
     if (adminHandled !== false) {
@@ -176,6 +178,7 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      memories,
       recommendations,
     });
     if (publicHandled !== false) {
@@ -202,8 +205,8 @@ const server = http.createServer(async (req, res) => {
       session = touchedSession;
     }
 
-    const workspace = await loadWorkspaceFiles(config.rootDir, new Date().toISOString().slice(0, 10));
-    const profile = await profiles.loadOrCreate(session.user, workspace.user);
+    const profile = await profiles.loadOrCreate(session.user);
+    await syncProfileMemory(memories, profile);
 
     const sessionHandled = await handleSessionRoute({
       req,
@@ -218,6 +221,7 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      memories,
       recommendations,
       session,
       profile,
@@ -250,11 +254,11 @@ const server = http.createServer(async (req, res) => {
       audit,
       idempotency,
       jobs,
+      memories,
       recommendations,
       session,
       profile,
       googleClients,
-      workspace,
       calendarService: new GoogleCalendarService(googleClients.calendar),
     };
 

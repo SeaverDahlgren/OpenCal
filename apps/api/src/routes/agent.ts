@@ -44,11 +44,12 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
     }
     let result;
     try {
+      const memories = await ctx.memories.listByEmail(ctx.session.user.email);
       result = await executeAgentTurn({
         config: ctx.config,
         session: ctx.session,
         profile: ctx.profile,
-        workspace: ctx.workspace,
+        memories,
         googleClients: ctx.googleClients,
         action: toAgentAction(body.data),
       });

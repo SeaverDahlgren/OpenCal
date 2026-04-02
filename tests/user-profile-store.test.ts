@@ -22,23 +22,10 @@ describe("user profile store", () => {
     createdDirs.push(privateDir);
     const store = new UserProfileStore(createConfig(privateDir));
 
-    const profile = await store.loadOrCreate(
-      {
-        name: "Avery",
-        email: "avery@example.com",
-      },
-      [
-        "name: Avery",
-        "timezone: America/Los_Angeles",
-        "workStart: 08:00",
-        "workEnd: 16:00",
-        "meetingPreference: Avoid mornings",
-        "interests: AI agents and running",
-        "additionalContext: Prefer concise summaries",
-        "assistantNotes: Protect workout time",
-        "",
-      ].join("\n"),
-    );
+    const profile = await store.loadOrCreate({
+      name: "Avery",
+      email: "avery@example.com",
+    });
 
     expect(profile).toMatchObject({
       email: "avery@example.com",
@@ -58,13 +45,10 @@ describe("user profile store", () => {
     createdDirs.push(privateDir);
     const store = new UserProfileStore(createConfig(privateDir));
 
-    const current = await store.loadOrCreate(
-      {
-        name: "Avery",
-        email: "avery@example.com",
-      },
-      "",
-    );
+    const current = await store.loadOrCreate({
+      name: "Avery",
+      email: "avery@example.com",
+    });
 
     const updated = updateUserProfile(current, {
       name: "Avery Mercer",

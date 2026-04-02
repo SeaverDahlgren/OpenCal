@@ -1,8 +1,8 @@
-import fs from "node:fs/promises";
 import { z } from "zod";
 import { mapSettingsView } from "../dto/mappers.js";
+import { syncProfileMemory } from "../memory/context.js";
 import { jsonRoute, readJsonBody } from "../server/http.js";
-import { renderLegacyUserMarkdown, updateUserProfile } from "../users/profile.js";
+import { updateUserProfile } from "../users/profile.js";
 import type { AuthedRouteContext } from "./types.js";
 
 const settingsPatchSchema = z.object({
@@ -67,7 +67,7 @@ export async function handleSettingsRoute(ctx: AuthedRouteContext) {
         : undefined,
     });
     await ctx.profiles.save(nextProfile);
-    await fs.writeFile(`${ctx.config.rootDir}/USER.md`, renderLegacyUserMarkdown(nextProfile), "utf8");
+    await syncProfileMemory(ctx.memories, nextProfile, now);
     const updatedSession = {
       ...ctx.session,
       user: {

@@ -29,7 +29,6 @@ export type UserProfileInput = Partial<
 
 export function createUserProfile(
   user: { name: string; email: string },
-  _legacyMarkdown = "",
   now = new Date().toISOString(),
 ): UserProfile {
   return {

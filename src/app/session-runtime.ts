@@ -14,7 +14,6 @@ import {
   type TaskState,
 } from "../agent/task-state.js";
 import { appendDebugLog } from "../memory/logs.js";
-import type { WorkspaceFiles } from "../memory/workspace.js";
 import type { LlmProvider } from "../llm/provider.js";
 import type { ToolDefinition, ToolResult } from "../tools/types.js";
 import { type SkillManifest } from "../skills/manifests.js";
@@ -40,8 +39,18 @@ type RuntimeDeps = {
   config: AppConfig;
   provider: LlmProvider;
   tools: ToolRegistry;
-  workspace: WorkspaceFiles;
-  profileContext?: string;
+  debugLogPath: string;
+  promptContext:
+    | {
+        kind: "workspace";
+        workspace: import("../memory/workspace.js").WorkspaceFiles;
+      }
+    | {
+        kind: "hosted";
+        systemContext: string;
+        memoryContext: string;
+        profileContext?: string;
+      };
   skillManifests: SkillManifest[];
   skillsCatalog: string;
   timezone: string;
@@ -79,7 +88,7 @@ export async function runAgentSessionTurn(
   if (action.type === "confirm" || action.type === "cancel") {
     const result = await resolvePendingConfirmation(deps, session, action.type, debugBase);
     session.messages.push(createConversationMessage("assistant", result.assistant.message));
-    await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
+    await appendDebugLog(deps.debugLogPath, "turn.assistant_reply", {
       ...debugBase,
       content: result.assistant.message,
     });
@@ -91,7 +100,7 @@ export async function runAgentSessionTurn(
 
   const userInput = action.type === "select_option" ? action.value : action.message;
   session.messages.push(createConversationMessage("user", userInput));
-  await appendDebugLog(deps.workspace.debugLogPath, "turn.user_input", {
+  await appendDebugLog(deps.debugLogPath, "turn.user_input", {
     ...debugBase,
     content: userInput,
   });
@@ -100,7 +109,7 @@ export async function runAgentSessionTurn(
     state: session,
     latestUserInput: userInput,
     log: async (event, payload) => {
-      await appendDebugLog(deps.workspace.debugLogPath, event, {
+      await appendDebugLog(deps.debugLogPath, event, {
         ...debugBase,
         ...payload,
       });
@@ -121,7 +130,7 @@ export async function runAgentSessionTurn(
       tools: [...deps.tools.values()].map((tool) => tool.promptShape),
       maxOutputTokens: deps.config.maxOutputTokens,
     });
-    await appendDebugLog(deps.workspace.debugLogPath, "llm.decision", {
+    await appendDebugLog(deps.debugLogPath, "llm.decision", {
       ...debugBase,
       type: decision.type,
       toolCalls:
@@ -139,7 +148,7 @@ export async function runAgentSessionTurn(
     if (outcome.response) {
       if (outcome.persistAssistantMessage !== false) {
         session.messages.push(createConversationMessage("assistant", outcome.response.assistant.message));
-        await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
+        await appendDebugLog(deps.debugLogPath, "turn.assistant_reply", {
           ...debugBase,
           content: outcome.response.assistant.message,
         });
@@ -161,7 +170,7 @@ export async function runAgentSessionTurn(
 
   const response = buildTurnResponse(session, finalReply);
   session.messages.push(createConversationMessage("assistant", response.assistant.message));
-  await appendDebugLog(deps.workspace.debugLogPath, "turn.assistant_reply", {
+  await appendDebugLog(deps.debugLogPath, "turn.assistant_reply", {
     ...debugBase,
     content: response.assistant.message,
   });
@@ -195,7 +204,7 @@ async function resolvePendingConfirmation(
       "cancelled",
       cancelled,
     );
-    await appendDebugLog(deps.workspace.debugLogPath, "tool.confirmation", {
+    await appendDebugLog(deps.debugLogPath, "tool.confirmation", {
       ...debugBase,
       name: pending.toolName,
       confirmed: false,
@@ -203,7 +212,7 @@ async function resolvePendingConfirmation(
     return buildTurnResponse(session, cancelled);
   }
 
-  await appendDebugLog(deps.workspace.debugLogPath, "tool.confirmation", {
+  await appendDebugLog(deps.debugLogPath, "tool.confirmation", {
     ...debugBase,
     name: pending.toolName,
     confirmed: true,
@@ -345,7 +354,7 @@ async function executeToolCall(
   input: Record<string, unknown>,
   debugBase: Record<string, unknown>,
 ) {
-  await appendDebugLog(deps.workspace.debugLogPath, "tool.start", {
+  await appendDebugLog(deps.debugLogPath, "tool.start", {
     ...debugBase,
     name: tool.name,
     arguments: input,
@@ -354,7 +363,7 @@ async function executeToolCall(
 
   try {
     const result = await tool.execute(input, { timezone: deps.timezone });
-    await appendDebugLog(deps.workspace.debugLogPath, "tool.result", {
+    await appendDebugLog(deps.debugLogPath, "tool.result", {
       ...debugBase,
       name: tool.name,
       result,
@@ -409,7 +418,7 @@ async function executeToolCall(
       "error",
       toolMessage,
     );
-    await appendDebugLog(deps.workspace.debugLogPath, "tool.error", {
+    await appendDebugLog(deps.debugLogPath, "tool.error", {
       ...debugBase,
       name: tool.name,
       arguments: input,

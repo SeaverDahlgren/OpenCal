@@ -4,6 +4,7 @@ import type { UserProfile } from "../users/profile.js";
 import type { AuditEvent } from "../audit/types.js";
 import type { JobRecord } from "../jobs/types.js";
 import type { BetaUserRecord } from "../beta-users/store.js";
+import type { ProductionMemoryRecord } from "../memory/types.js";
 import type { TodayRecommendationRecord } from "../recommendations/types.js";
 
 export interface SessionRepository {
@@ -20,8 +21,14 @@ export interface SessionRepository {
 
 export interface UserProfileRepository {
   load(email: string): Promise<UserProfile | null>;
-  loadOrCreate(user: { name: string; email: string }, legacyMarkdown?: string): Promise<UserProfile>;
+  loadOrCreate(user: { name: string; email: string }): Promise<UserProfile>;
   save(profile: UserProfile): Promise<void>;
+}
+
+export interface MemoryRepository {
+  listByEmail(email: string): Promise<ProductionMemoryRecord[]>;
+  loadBySource(email: string, source: string): Promise<ProductionMemoryRecord | null>;
+  save(record: ProductionMemoryRecord): Promise<void>;
 }
 
 export interface GoogleTokenRepository {
