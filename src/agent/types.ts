@@ -20,6 +20,7 @@ export type AgentDecision =
 
 export type RuntimeContext = {
   nowIso: string;
+  localNow: string;
   dayOfWeek: string;
   timezone: string;
   compactedSummary?: string;

@@ -13,6 +13,7 @@ describe("hosted system prompt", () => {
       profileContext: "- user_name: Avery",
       runtime: {
         nowIso: "2026-04-02T21:00:00.000Z",
+        localNow: "Thursday, April 2, 2026 at 2:00 PM PDT",
         dayOfWeek: "Thursday",
         timezone: "America/Los_Angeles",
       },
@@ -26,6 +27,8 @@ describe("hosted system prompt", () => {
 
     expect(prompt).toContain("Production personalization:");
     expect(prompt).toContain("Durable production memory:");
+    expect(prompt).toContain("local_now: Thursday, April 2, 2026 at 2:00 PM PDT");
+    expect(prompt).toContain("Treat local_now as the authoritative current local time");
     expect(prompt).not.toContain("SOUL.md:");
     expect(prompt).not.toContain("USER.md:");
     expect(prompt).not.toContain("Memory.md:");

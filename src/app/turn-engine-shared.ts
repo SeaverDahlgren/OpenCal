@@ -208,8 +208,20 @@ export async function clearCompletedTask(
 
 export function buildRuntimeContext(timezone: string, compactedSummary?: string): RuntimeContext {
   const now = new Date();
+  const localNow = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZoneName: "short",
+  }).format(now);
   return {
     nowIso: now.toISOString(),
+    localNow,
     dayOfWeek: now.toLocaleDateString("en-US", { weekday: "long", timeZone: timezone }),
     timezone,
     compactedSummary,

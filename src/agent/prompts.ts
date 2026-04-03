@@ -83,9 +83,11 @@ export function buildSystemPrompt(args: {
     memory,
     "",
     "Runtime:",
-    `- now: ${runtime.nowIso}`,
+    `- now_utc: ${runtime.nowIso}`,
+    `- local_now: ${runtime.localNow}`,
     `- day_of_week: ${runtime.dayOfWeek}`,
     `- timezone: ${runtime.timezone}`,
+    "- Treat local_now as the authoritative current local time for time-sensitive reasoning.",
     runtime.compactedSummary
       ? `- compacted_summary: ${runtime.compactedSummary}`
       : "- compacted_summary: none",
@@ -171,9 +173,11 @@ export function buildHostedSystemPrompt(args: {
     memoryContext,
     "",
     "Runtime:",
-    `- now: ${runtime.nowIso}`,
+    `- now_utc: ${runtime.nowIso}`,
+    `- local_now: ${runtime.localNow}`,
     `- day_of_week: ${runtime.dayOfWeek}`,
     `- timezone: ${runtime.timezone}`,
+    "- Treat local_now as the authoritative current local time for time-sensitive reasoning.",
     runtime.compactedSummary
       ? `- compacted_summary: ${runtime.compactedSummary}`
       : "- compacted_summary: none",

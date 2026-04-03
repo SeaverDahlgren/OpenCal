@@ -125,6 +125,7 @@ Skill body.`,
       profileContext: ["- user_name: Avery Mercer", "- current_interests: AI agents"].join("\n"),
       runtime: {
         nowIso: "2026-03-25T00:00:00.000Z",
+        localNow: "Tuesday, March 24, 2026 at 5:00 PM PDT",
         dayOfWeek: "Wednesday",
         timezone: "America/Los_Angeles",
       },
