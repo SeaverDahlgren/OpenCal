@@ -72,4 +72,15 @@ describe("today recommendation generator", () => {
       },
     });
   });
+
+  it("parses fenced JSON recommendation payloads too", () => {
+    const parsed = parseTodayRecommendationPayload(`
+\`\`\`json
+{"title":"Protect your focus window","body":"Use the morning for deep work before your afternoon conversation.","actionLabel":"Plan this with AI","actionPrompt":"Help me execute today’s plan."}
+\`\`\`
+`);
+
+    expect(parsed.action?.prompt).toBe("Help me execute today’s plan.");
+    expect(parsed.title).toBe("Protect your focus window");
+  });
 });

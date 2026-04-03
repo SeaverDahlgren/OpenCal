@@ -9,7 +9,13 @@ type GroqChatResponse = {
       content?: string | null;
     };
   }>;
-  error?: unknown;
+  error?: {
+    message?: string;
+    code?: string;
+    type?: string;
+    param?: string;
+    failed_generation?: string;
+  };
 };
 
 export class GroqProvider implements LlmProvider {
@@ -34,6 +40,7 @@ export class GroqProvider implements LlmProvider {
       ],
       request.maxOutputTokens,
       true,
+      false,
     );
 
     return parseAgentDecision(text);
@@ -66,6 +73,7 @@ export class GroqProvider implements LlmProvider {
     messages: Array<{ role: "system" | "user"; content: string }>,
     maxCompletionTokens: number,
     jsonMode: boolean,
+    allowJsonFallback = true,
   ): Promise<string> {
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -92,7 +100,13 @@ export class GroqProvider implements LlmProvider {
     const payload = tryParseGroqJson(rawText);
 
     if (!response.ok) {
-      throw new Error(JSON.stringify(payload ?? { error: { status: response.status, message: rawText } }));
+      if (jsonMode && allowJsonFallback && shouldRetryGroqWithoutJsonMode(payload)) {
+        return this.complete(messages, maxCompletionTokens, false, false);
+      }
+      if (payload?.error?.code === "json_validate_failed") {
+        throw new Error("Current model failed structured JSON output for agent decisions. Choose a more JSON-stable chat model or retry.");
+      }
+      throw new Error(payload?.error?.message ?? rawText ?? `Groq request failed with status ${response.status}`);
     }
 
     const content = payload?.choices?.[0]?.message?.content?.trim();
@@ -102,6 +116,10 @@ export class GroqProvider implements LlmProvider {
 
     return content;
   }
+}
+
+export function shouldRetryGroqWithoutJsonMode(payload: GroqChatResponse | null) {
+  return payload?.error?.code === "json_validate_failed";
 }
 
 function tryParseGroqJson(rawText: string): GroqChatResponse | null {

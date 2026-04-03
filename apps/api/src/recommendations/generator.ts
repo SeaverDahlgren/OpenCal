@@ -1,3 +1,5 @@
+import { extractJsonPayload } from "../../../../src/agent/json.js";
+import { shouldRetryGroqWithoutJsonMode } from "../../../../src/llm/groq.js";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import type { AppConfig } from "../../../../src/config/env.js";
@@ -36,44 +38,73 @@ export function createTodayRecommendationGenerator(config: AppConfig): TodayReco
       if (!config.groqApiKey) {
         throw new Error("GROQ_API_KEY is required for Today recommendations.");
       }
+      const groqApiKey = config.groqApiKey;
       return async (input) => {
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${config.groqApiKey}`,
-          },
-          body: JSON.stringify({
-            model: config.groqModel,
-            messages: [
-              {
-                role: "system",
-                content: buildTodayRecommendationSystemPrompt(),
-              },
-              {
-                role: "user",
-                content: buildTodayRecommendationPrompt(input),
-              },
-            ],
-            temperature: 0.2,
-            max_completion_tokens: Math.min(config.maxOutputTokens, 400),
-            response_format: {
-              type: "json_object",
-            },
-          }),
+        const payload = await requestGroqRecommendation({
+          apiKey: groqApiKey,
+          model: config.groqModel,
+          systemPrompt: buildTodayRecommendationSystemPrompt(),
+          userPrompt: buildTodayRecommendationPrompt(input),
+          maxCompletionTokens: Math.min(config.maxOutputTokens, 400),
         });
-        const payload = (await response.json()) as {
-          choices?: Array<{ message?: { content?: string | null } }>;
-          error?: { message?: string };
-        };
-        if (!response.ok) {
-          throw new Error(payload.error?.message ?? "Groq recommendation request failed.");
-        }
-        return parseTodayRecommendationPayload(payload.choices?.[0]?.message?.content?.trim() ?? "");
+        return parseTodayRecommendationPayload(payload);
       };
     default:
       throw new Error(`Unsupported LLM provider for Today recommendations: ${config.llmProvider}`);
   }
+}
+
+async function requestGroqRecommendation(args: {
+  apiKey: string;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  maxCompletionTokens: number;
+  jsonMode?: boolean;
+}) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${args.apiKey}`,
+    },
+    body: JSON.stringify({
+      model: args.model,
+      messages: [
+        {
+          role: "system",
+          content: args.systemPrompt,
+        },
+        {
+          role: "user",
+          content: args.userPrompt,
+        },
+      ],
+      temperature: 0.2,
+      max_completion_tokens: args.maxCompletionTokens,
+      ...(args.jsonMode === false
+        ? {}
+        : {
+            response_format: {
+              type: "json_object",
+            },
+          }),
+    }),
+  });
+  const payload = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string | null } }>;
+    error?: { message?: string; code?: string };
+  };
+  if (!response.ok) {
+    if ((args.jsonMode ?? true) && shouldRetryGroqWithoutJsonMode(payload)) {
+      return requestGroqRecommendation({
+        ...args,
+        jsonMode: false,
+      });
+    }
+    throw new Error(payload.error?.message ?? "Groq recommendation request failed.");
+  }
+  return payload.choices?.[0]?.message?.content?.trim() ?? "";
 }
 
 export function buildTodayRecommendationSystemPrompt() {
@@ -129,7 +160,7 @@ export function buildTodayRecommendationPrompt(input: TodayRecommendationInput) 
 }
 
 export function parseTodayRecommendationPayload(payload: string): TodayRecommendationInsight {
-  const parsed = recommendationSchema.parse(JSON.parse(payload));
+  const parsed = recommendationSchema.parse(JSON.parse(extractJsonPayload(payload)));
   return {
     title: parsed.title.trim(),
     body: parsed.body.trim(),
