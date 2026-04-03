@@ -231,6 +231,8 @@ p {
   border-radius: 18px;
   padding: 14px 16px;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .notice--error {
@@ -470,6 +472,8 @@ p {
   padding: 14px 16px;
   line-height: 1.55;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bubble--assistant {
@@ -503,6 +507,8 @@ p {
 .draft-preview pre {
   margin: 0;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   font: inherit;
   color: var(--text);
   line-height: 1.55;
