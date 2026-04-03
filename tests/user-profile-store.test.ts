@@ -67,6 +67,35 @@ describe("user profile store", () => {
     expect(renderLegacyUserMarkdown(loaded!)).toContain("timezone: America/New_York");
     expect(renderLegacyUserMarkdown(loaded!)).toContain("interests: Running");
   });
+
+  it("does not clear onboarding completion when later updates omit that field", async () => {
+    const privateDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-profile-store-"));
+    createdDirs.push(privateDir);
+    const store = new UserProfileStore(createConfig(privateDir));
+
+    const current = await store.loadOrCreate({
+      name: "Avery",
+      email: "avery@example.com",
+    });
+
+    const completed = updateUserProfile(current, {
+      personalizationCompletedAt: "2026-03-25T00:05:00.000Z",
+      interests: "Running",
+    }, "2026-03-25T00:05:00.000Z");
+    const later = updateUserProfile(completed, {
+      name: "Avery Mercer",
+      personalizationCompletedAt: undefined,
+    }, "2026-03-25T00:10:00.000Z");
+    await store.save(later);
+
+    const loaded = await store.load("avery@example.com");
+
+    expect(loaded).toMatchObject({
+      name: "Avery Mercer",
+      interests: "Running",
+      personalizationCompletedAt: "2026-03-25T00:05:00.000Z",
+    });
+  });
 });
 
 function createConfig(privateDir: string): AppConfig {

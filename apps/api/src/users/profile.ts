@@ -47,9 +47,13 @@ export function createUserProfile(
 }
 
 export function updateUserProfile(profile: UserProfile, input: UserProfileInput, now = new Date().toISOString()): UserProfile {
+  const definedUpdates = Object.fromEntries(
+    Object.entries(input).filter(([, value]) => value !== undefined),
+  ) as UserProfileInput;
+
   return {
     ...profile,
-    ...input,
+    ...definedUpdates,
     updatedAt: now,
   };
 }
