@@ -1,6 +1,11 @@
 import fs from "node:fs/promises";
 import os from "node:os";
-import path from "node:path";
+import {
+  ensureWorkspace,
+  getCliMemoryPath,
+  getCliSetupStatePath,
+  getCliUserPath,
+} from "../memory/workspace.js";
 
 type SetupState = {
   personalizationCompletedAt?: string;
@@ -19,13 +24,12 @@ type PersonalizationAnswers = {
   additionalContext?: string;
 };
 
-const STATE_FILE_NAME = "setup-state.json";
-
 export async function maybeRunPersonalizationSetup(
   rootDir: string,
   io: PersonalizationIO,
 ): Promise<void> {
-  const statePath = path.join(rootDir, ".opencal", STATE_FILE_NAME);
+  await ensureWorkspace(rootDir);
+  const statePath = getCliSetupStatePath(rootDir);
   const state = await loadSetupState(statePath);
   if (state.personalizationCompletedAt) {
     return;
@@ -122,8 +126,8 @@ async function persistPersonalizationAnswers(
   rootDir: string,
   answers: PersonalizationAnswers,
 ): Promise<void> {
-  const userPath = path.join(rootDir, "USER.md");
-  const memoryPath = path.join(rootDir, "Memory.md");
+  const userPath = getCliUserPath(rootDir);
+  const memoryPath = getCliMemoryPath(rootDir);
 
   if (answers.workingHours || answers.meetingPreferences) {
     const currentUser = await fs.readFile(userPath, "utf8");

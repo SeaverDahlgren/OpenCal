@@ -12,7 +12,7 @@ read_when:
 
 Two log streams exist:
 
-- `memory/YYYY-MM-DD.md`
+- `.opencal/cli/memory/YYYY-MM-DD.md`
   User and assistant transcript only.
 - `.opencal/logs/YYYY-MM-DD.log`
   Structured JSON debug log for LLM decisions and tool execution.
@@ -131,6 +131,6 @@ If mobile chat and backend task-state disagree, compare:
 
 - user prompt
 - relevant `.opencal/logs/*.log` lines
-- relevant `memory/YYYY-MM-DD.md` excerpt
+- relevant `.opencal/cli/memory/YYYY-MM-DD.md` excerpt
 - provider name
 - whether the target event was on `primary` or another calendar

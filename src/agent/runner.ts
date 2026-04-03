@@ -1,4 +1,3 @@
-import path from "node:path";
 import type { AppConfig } from "../config/env.js";
 import { formatToolResultMessage } from "./tool-result-format.js";
 import type { AgentDecision, ConversationMessage } from "./types.js";
@@ -17,7 +16,7 @@ import {
 } from "./task-state.js";
 import { updateToolsIndex } from "../memory/context.js";
 import { appendDebugLog, appendLogEntry, appendMemory } from "../memory/logs.js";
-import { ensureWorkspace, loadWorkspaceFiles } from "../memory/workspace.js";
+import { ensureWorkspace, getCliMemoryPath, loadWorkspaceFiles } from "../memory/workspace.js";
 import type { LlmProvider } from "../llm/provider.js";
 import { toUserFacingLlmErrorMessage } from "../llm/errors.js";
 import type { ConsoleIO } from "../cli/io.js";
@@ -106,7 +105,7 @@ export class AgentRunner {
       const summary = await this.provider.summarizeConversation(
         this.messages.filter((message) => message.role === "user" || message.role === "assistant"),
       );
-      await appendMemory(path.join(this.config.rootDir, "Memory.md"), summary);
+      await appendMemory(getCliMemoryPath(this.config.rootDir), summary);
     } catch {
       // Session shutdown should not fail if the summarizer is temporarily unavailable.
     }

@@ -162,7 +162,7 @@ read_when:
   - API profile state
   - durable production memory under `.opencal/`
   - session/task-state context
-- `USER.md` and `Memory.md` remain legacy CLI compatibility files.
+- `.opencal/cli/USER.md` and `.opencal/cli/Memory.md` remain legacy CLI compatibility files.
 - Health probes are available at:
   - `/api/v1/health/live`
   - `/api/v1/health/ready`

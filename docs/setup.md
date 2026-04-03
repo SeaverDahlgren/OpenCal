@@ -82,8 +82,8 @@ read_when:
 - Hosted profile fields such as name, timezone, work hours, interests, and assistant notes live in the API profile store.
 - Hosted durable memory lives in `.opencal/production-memory.json`.
 - Hosted prompt context no longer depends on `USER.md` or `Memory.md`.
-- CLI personalization still updates legacy markdown files for CLI compatibility.
-- Personalization setup completion is tracked in `.opencal/setup-state.json`.
+- CLI personalization still updates legacy markdown files for CLI compatibility under `.opencal/cli/`.
+- CLI personalization setup completion is tracked in `.opencal/cli/setup-state.json`.
 
 ## Auth Refresh
 

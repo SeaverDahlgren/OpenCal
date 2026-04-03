@@ -28,20 +28,20 @@ read_when:
 
 - Hosted production state lives under `.opencal/`
   Sessions, profiles, durable memory, recommendations, jobs, and logs.
-- `memory/YYYY-MM-DD.md`
+- `.opencal/cli/memory/YYYY-MM-DD.md`
   CLI-only daily user/assistant transcript.
 - `.opencal/logs/YYYY-MM-DD.log`
   Structured debug log for hosted and CLI execution.
 
 ## Legacy CLI Prompt Files
 
-- `SOUL.md`
+- `.opencal/cli/SOUL.md`
   CLI/system behavior context.
-- `USER.md`
+- `.opencal/cli/USER.md`
   Legacy CLI user-context file.
-- `TOOLS.md`
+- `.opencal/cli/TOOLS.md`
   CLI tool index generated from the runtime registry.
-- `Memory.md`
+- `.opencal/cli/Memory.md`
   Legacy CLI long-term memory file.
 
 Hosted mobile/web no longer use those markdown files as the source of truth for personalization or durable memory.

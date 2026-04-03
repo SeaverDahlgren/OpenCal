@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
-import path from "node:path";
 import type { ConversationMessage } from "../agent/types.js";
 import { estimateMessagesTokens } from "../agent/tokenizer.js";
 import type { LlmProvider } from "../llm/provider.js";
+import { getCliToolsPath } from "./workspace.js";
 
 export async function compactConversation(args: {
   messages: ConversationMessage[];
@@ -33,5 +33,5 @@ export async function compactConversation(args: {
 }
 
 export async function updateToolsIndex(rootDir: string, toolMarkdown: string) {
-  await fs.writeFile(path.join(rootDir, "TOOLS.md"), toolMarkdown, "utf8");
+  await fs.writeFile(getCliToolsPath(rootDir), toolMarkdown, "utf8");
 }

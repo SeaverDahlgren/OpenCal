@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { getCliMemoryPath, getCliSetupStatePath, getCliUserPath } from "../src/memory/workspace.js";
 import {
   buildMemoryPersonalizationBlock,
   maybeRunPersonalizationSetup,
@@ -56,13 +57,13 @@ describe("buildMemoryPersonalizationBlock", () => {
 describe("maybeRunPersonalizationSetup", () => {
   it("writes answers once and records setup state", async () => {
     const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-setup-"));
-    await fs.mkdir(path.join(rootDir, ".opencal"), { recursive: true });
+    await fs.mkdir(path.dirname(getCliUserPath(rootDir)), { recursive: true });
     await fs.writeFile(
-      path.join(rootDir, "USER.md"),
+      getCliUserPath(rootDir),
       "# USER\n- timezone: America/Los_Angeles\n- working_hours: 09:00-17:00\n",
       "utf8",
     );
-    await fs.writeFile(path.join(rootDir, "Memory.md"), "# Memory\n", "utf8");
+    await fs.writeFile(getCliMemoryPath(rootDir), "# Memory\n", "utf8");
 
     const io = new FakeIO([
       "AI agents and running",
@@ -73,11 +74,9 @@ describe("maybeRunPersonalizationSetup", () => {
 
     await maybeRunPersonalizationSetup(rootDir, io);
 
-    const user = await fs.readFile(path.join(rootDir, "USER.md"), "utf8");
-    const memory = await fs.readFile(path.join(rootDir, "Memory.md"), "utf8");
-    const state = JSON.parse(
-      await fs.readFile(path.join(rootDir, ".opencal", "setup-state.json"), "utf8"),
-    );
+    const user = await fs.readFile(getCliUserPath(rootDir), "utf8");
+    const memory = await fs.readFile(getCliMemoryPath(rootDir), "utf8");
+    const state = JSON.parse(await fs.readFile(getCliSetupStatePath(rootDir), "utf8"));
 
     expect(user).toContain("- working_hours: 08:00-16:00");
     expect(user).toContain("- meeting_preferences: Late morning if possible");
