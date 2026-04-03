@@ -28,6 +28,7 @@ import type {
 } from "./session-types.js";
 import type { AppConfig } from "../config/env.js";
 import { summarizeArtifacts } from "./session-types.js";
+import { formatConfirmationTime, summarizeConfirmationAction } from "./confirmation-format.js";
 import {
   advanceTaskStateForUserInput,
   buildDecisionContext,
@@ -194,7 +195,7 @@ async function resolvePendingConfirmation(
 
   const pending = session.pendingConfirmation;
   session.pendingConfirmation = null;
-  const actionSummary = summarizeConfirmationAction(pending.toolName, pending.arguments);
+  const actionSummary = summarizeConfirmationAction(pending.toolName, pending.arguments, deps.timezone);
 
   if (action === "cancel") {
     const cancelled = `Understood. I won't ${actionSummary}.`;
@@ -330,6 +331,7 @@ async function handleDecision(
     }
 
     if (tool.protected) {
+      const confirmationInput = await enrichProtectedToolArguments(deps, tool.name, parsedInput.data);
       const queuedToolCalls = decision.toolCalls
         .slice(index + 1)
         .map((remainingToolCall) => ({
@@ -338,10 +340,10 @@ async function handleDecision(
         }));
       session.pendingConfirmation = {
         toolName: tool.name,
-        arguments: parsedInput.data,
+        arguments: confirmationInput,
         queuedToolCalls,
       };
-      const actionSummary = summarizeConfirmationAction(tool.name, parsedInput.data);
+      const actionSummary = summarizeConfirmationAction(tool.name, confirmationInput, deps.timezone);
       return {
         reply: `Please confirm: should I ${actionSummary}?`,
         continueLoop: false,
@@ -349,7 +351,7 @@ async function handleDecision(
         response: buildTurnResponse(
           session,
           `Please confirm: should I ${actionSummary}?`,
-          buildConfirmationPrompt(tool.name, parsedInput.data, queuedToolCalls.length),
+          buildConfirmationPrompt(tool.name, confirmationInput, deps.timezone, queuedToolCalls.length),
         ),
       };
     }
@@ -407,15 +409,16 @@ async function continueQueuedToolCalls(
     }
 
     if (tool.protected) {
+      const confirmationInput = await enrichProtectedToolArguments(deps, tool.name, parsedInput.data);
       session.pendingConfirmation = {
         toolName: tool.name,
-        arguments: parsedInput.data,
+        arguments: confirmationInput,
         queuedToolCalls: remainingToolCalls,
       };
       return buildTurnResponse(
         session,
-        `${confirmedReply}\n\nPlease confirm: should I ${summarizeConfirmationAction(tool.name, parsedInput.data)}?`,
-        buildConfirmationPrompt(tool.name, parsedInput.data, remainingToolCalls.length),
+        `${confirmedReply}\n\nPlease confirm: should I ${summarizeConfirmationAction(tool.name, confirmationInput, deps.timezone)}?`,
+        buildConfirmationPrompt(tool.name, confirmationInput, deps.timezone, remainingToolCalls.length),
       );
     }
 
@@ -430,6 +433,62 @@ async function continueQueuedToolCalls(
   }
 
   return null;
+}
+
+async function enrichProtectedToolArguments(
+  deps: RuntimeDeps,
+  toolName: string,
+  input: Record<string, unknown>,
+) {
+  if (!["update_event", "delete_event"].includes(toolName)) {
+    return input;
+  }
+
+  const eventId = asString(input.eventId);
+  if (!eventId) {
+    return input;
+  }
+
+  const needsLookup =
+    !asString(input.summary) ||
+    !asString(input.title) ||
+    !asString(input.oldStart) ||
+    !asString(input.oldEnd);
+  if (!needsLookup) {
+    return input;
+  }
+
+  const getEventTool = deps.tools.get("get_event");
+  if (!getEventTool) {
+    return input;
+  }
+
+  const calendarId = asString(input.calendarId) ?? "primary";
+  const parsedLookup = getEventTool.inputSchema.safeParse({
+    calendarId,
+    eventId,
+  });
+  if (!parsedLookup.success) {
+    return input;
+  }
+
+  try {
+    const result = await getEventTool.execute(parsedLookup.data, { timezone: deps.timezone });
+    if (!result.ok || typeof result.data !== "object" || !result.data) {
+      return input;
+    }
+    const event = result.data as Record<string, unknown>;
+    return {
+      ...input,
+      calendarId,
+      summary: asString(input.summary) ?? asString(event.summary),
+      title: asString(input.title) ?? asString(event.summary),
+      oldStart: asString(input.oldStart) ?? asString(event.start),
+      oldEnd: asString(input.oldEnd) ?? asString(event.end),
+    };
+  } catch {
+    return input;
+  }
 }
 
 async function executeToolCall(
@@ -558,9 +617,10 @@ function buildClarificationPrompt(prompt: string, options: AppChoiceOption[]) {
 function buildConfirmationPrompt(
   toolName: string,
   input: Record<string, unknown>,
+  timezone: string,
   remainingCount = 0,
 ): ConfirmationPrompt {
-  const actionSummary = summarizeConfirmationAction(toolName, input);
+  const actionSummary = summarizeConfirmationAction(toolName, input, timezone);
   const queueSuffix = remainingCount > 0 ? ` ${remainingCount} more action${remainingCount === 1 ? "" : "s"} queued.` : "";
   return {
     type: "protected_action",
@@ -571,8 +631,8 @@ function buildConfirmationPrompt(
       kind: toolName,
       title: asString(input.summary),
       summary: actionSummary,
-      oldTime: undefined,
-      newTime: asString(input.start),
+      oldTime: formatConfirmationTime(input.oldStart ?? input.previousStart, timezone),
+      newTime: formatConfirmationTime(input.start, timezone),
       calendarId: asString(input.calendarId),
       subject: asString(input.subject),
       recipients: Array.isArray(input.to) ? input.to.map(String) : undefined,
@@ -580,62 +640,6 @@ function buildConfirmationPrompt(
       raw: input,
     },
   };
-}
-
-function summarizeConfirmationAction(toolName: string, input: Record<string, unknown>) {
-  const summary = asString(input.summary);
-  const subject = asString(input.subject);
-  const title = summary || asString(input.title);
-  const start = asString(input.start);
-  const end = asString(input.end);
-
-  if (toolName === "write_draft") {
-    if (subject) {
-      return `create the draft "${subject}"`;
-    }
-    return "create this email draft";
-  }
-
-  if (toolName === "create_event") {
-    if (title && start) {
-      return `create "${title}" starting at ${start}`;
-    }
-    if (title) {
-      return `create "${title}"`;
-    }
-    return "create this event";
-  }
-
-  if (toolName === "update_event") {
-    if (title && start) {
-      return `update "${title}" to ${start}`;
-    }
-    if (title) {
-      return `update "${title}"`;
-    }
-    return "update this event";
-  }
-
-  if (toolName === "delete_event") {
-    if (title) {
-      return `delete "${title}"`;
-    }
-    return "delete this event";
-  }
-
-  if (title && start && end) {
-    return `${toolName.replace(/_/g, " ")} "${title}" from ${start} to ${end}`;
-  }
-
-  if (title && start) {
-    return `${toolName.replace(/_/g, " ")} "${title}" at ${start}`;
-  }
-
-  if (title || subject) {
-    return `${toolName.replace(/_/g, " ")} ${JSON.stringify(title || subject)}`;
-  }
-
-  return toolName.replace(/_/g, " ");
 }
 
 function persistSession(stored: StoredSessionState, session: MutableSession): StoredSessionState {

@@ -1,4 +1,5 @@
 import type { StoredSessionState } from "../../../../src/app/session-types.js";
+import { formatConfirmationTime, summarizeConfirmationAction } from "../../../../src/app/confirmation-format.js";
 import { needsUserPersonalization, type UserProfile } from "../users/profile.js";
 
 export function resolveUserTimezone(profile?: Pick<UserProfile, "timezone"> | null) {
@@ -56,7 +57,7 @@ export function dateKeyInTimezone(value: Date, timezone: string) {
   return `${year}-${month}-${day}`;
 }
 
-export function buildTaskStateRoutePayload(session: StoredSessionState) {
+export function buildTaskStateRoutePayload(session: StoredSessionState, timezone: string) {
   return {
     taskState: session.taskState
       ? {
@@ -84,6 +85,7 @@ export function buildTaskStateRoutePayload(session: StoredSessionState) {
           prompt: `Please confirm: should I ${summarizeConfirmationAction(
             session.pendingConfirmation.toolName,
             session.pendingConfirmation.arguments,
+            timezone,
           )}?`,
           actionLabel: "Confirm",
           cancelLabel: "Cancel",
@@ -92,12 +94,18 @@ export function buildTaskStateRoutePayload(session: StoredSessionState) {
             summary: summarizeConfirmationAction(
               session.pendingConfirmation.toolName,
               session.pendingConfirmation.arguments,
+              timezone,
             ),
             subject: asString(session.pendingConfirmation.arguments.subject),
             recipients: Array.isArray(session.pendingConfirmation.arguments.to)
               ? session.pendingConfirmation.arguments.to.map(String)
               : undefined,
             body: asString(session.pendingConfirmation.arguments.body),
+            oldTime: formatConfirmationTime(
+              session.pendingConfirmation.arguments.oldStart ?? session.pendingConfirmation.arguments.previousStart,
+              timezone,
+            ),
+            newTime: formatConfirmationTime(session.pendingConfirmation.arguments.start, timezone),
             raw: session.pendingConfirmation.arguments,
           },
         }
@@ -135,50 +143,6 @@ export function buildSessionRoutePayload(session: StoredSessionState, profile: U
       needsPersonalization: needsUserPersonalization(profile),
     },
   };
-}
-
-function summarizeConfirmationAction(toolName: string, input: Record<string, unknown>) {
-  const summary = asString(input.summary);
-  const subject = asString(input.subject);
-  const title = summary || asString(input.title);
-  const start = asString(input.start);
-  const end = asString(input.end);
-
-  if (toolName === "write_draft") {
-    return subject ? `create the draft "${subject}"` : "create this email draft";
-  }
-
-  if (toolName === "create_event") {
-    if (title && start) {
-      return `create "${title}" starting at ${start}`;
-    }
-    return title ? `create "${title}"` : "create this event";
-  }
-
-  if (toolName === "update_event") {
-    if (title && start) {
-      return `update "${title}" to ${start}`;
-    }
-    return title ? `update "${title}"` : "update this event";
-  }
-
-  if (toolName === "delete_event") {
-    return title ? `delete "${title}"` : "delete this event";
-  }
-
-  if (title && start && end) {
-    return `${toolName.replace(/_/g, " ")} "${title}" from ${start} to ${end}`;
-  }
-
-  if (title && start) {
-    return `${toolName.replace(/_/g, " ")} "${title}" at ${start}`;
-  }
-
-  if (title || subject) {
-    return `${toolName.replace(/_/g, " ")} ${JSON.stringify(title || subject)}`;
-  }
-
-  return toolName.replace(/_/g, " ");
 }
 
 function asString(value: unknown) {

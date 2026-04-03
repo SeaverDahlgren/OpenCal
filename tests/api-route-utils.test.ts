@@ -59,10 +59,11 @@ describe("api route utils", () => {
       },
     });
 
-    expect(buildTaskStateRoutePayload(session).confirmation).toMatchObject({
-      prompt: 'Please confirm: should I create "Lunch with Joe" starting at 2026-03-27T12:00:00-07:00?',
+    expect(buildTaskStateRoutePayload(session, "America/Los_Angeles").confirmation).toMatchObject({
+      prompt: 'Please confirm: should I create "Lunch with Joe" starting at March 27, 2026 at 12:00 PM PDT?',
       payloadPreview: {
-        summary: 'create "Lunch with Joe" starting at 2026-03-27T12:00:00-07:00',
+        summary: 'create "Lunch with Joe" starting at March 27, 2026 at 12:00 PM PDT',
+        newTime: "March 27, 2026 at 12:00 PM PDT",
       },
     });
   });
@@ -77,7 +78,7 @@ describe("api route utils", () => {
       },
     });
 
-    expect(buildTaskStateRoutePayload(session).confirmation).toMatchObject({
+    expect(buildTaskStateRoutePayload(session, "America/Los_Angeles").confirmation).toMatchObject({
       prompt: 'Please confirm: should I create the draft "Reschedule request"?',
       payloadPreview: {
         summary: 'create the draft "Reschedule request"',
@@ -96,10 +97,34 @@ describe("api route utils", () => {
       },
     });
 
-    expect(buildTaskStateRoutePayload(session).confirmation).toMatchObject({
+    expect(buildTaskStateRoutePayload(session, "America/Los_Angeles").confirmation).toMatchObject({
       prompt: 'Please confirm: should I delete "Swim Practice"?',
       payloadPreview: {
         summary: 'delete "Swim Practice"',
+      },
+    });
+  });
+
+  it("builds verbose update confirmations with old and new local time", () => {
+    const session = baseSession({
+      toolName: "update_event",
+      arguments: {
+        summary: "Talk to James",
+        oldStart: "2026-03-27T09:00:00-07:00",
+        oldEnd: "2026-03-27T09:30:00-07:00",
+        start: "2026-03-27T14:00:00-07:00",
+        end: "2026-03-27T14:30:00-07:00",
+      },
+    });
+
+    expect(buildTaskStateRoutePayload(session, "America/Los_Angeles").confirmation).toMatchObject({
+      prompt:
+        'Please confirm: should I move "Talk to James" from March 27, 2026 at 9:00 AM PDT - March 27, 2026 at 9:30 AM PDT to March 27, 2026 at 2:00 PM PDT - March 27, 2026 at 2:30 PM PDT?',
+      payloadPreview: {
+        summary:
+          'move "Talk to James" from March 27, 2026 at 9:00 AM PDT - March 27, 2026 at 9:30 AM PDT to March 27, 2026 at 2:00 PM PDT - March 27, 2026 at 2:30 PM PDT',
+        oldTime: "March 27, 2026 at 9:00 AM PDT",
+        newTime: "March 27, 2026 at 2:00 PM PDT",
       },
     });
   });

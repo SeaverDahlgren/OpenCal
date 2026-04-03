@@ -87,7 +87,7 @@ describe("session runtime", () => {
     );
 
     expect(result.response.confirmation?.prompt).toBe(
-      'Please confirm: should I create "Lunch with Joe" starting at 2026-03-27T12:00:00-07:00?',
+      'Please confirm: should I create "Lunch with Joe" starting at March 27, 2026 at 12:00 PM PDT?',
     );
     expect(result.session.messages.filter((message) => message.role === "assistant")).toEqual([]);
     expect(result.session.pendingConfirmation).toMatchObject({
@@ -350,6 +350,125 @@ describe("session runtime", () => {
 
     expect(secondConfirm.session.pendingConfirmation).toBeNull();
     expect(secondConfirm.session.messages.some((message) => message.name === "create_event")).toBe(true);
+  });
+
+  it("hydrates update confirmations with fetched event details when args only include event id and new time", async () => {
+    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-runtime-"));
+    tempDirs.push(rootDir);
+    await ensureWorkspace(rootDir);
+    const workspace = await loadWorkspaceFiles(rootDir, "2026-03-26");
+
+    const provider: LlmProvider = {
+      name: "test",
+      async generateDecision() {
+        return {
+          type: "tool",
+          reasoning: "Update the event.",
+          toolCalls: [
+            {
+              name: "update_event",
+              arguments: {
+                eventId: "evt-1",
+                start: "2026-03-27T14:00:00-07:00",
+                end: "2026-03-27T14:30:00-07:00",
+              },
+            },
+          ],
+        };
+      },
+      async summarizeConversation() {
+        return "";
+      },
+    };
+
+    const getEventTool: ToolDefinition<any, unknown> = {
+      name: "get_event",
+      description: "Fetch an event.",
+      protected: false,
+      inputSchema: z.object({
+        calendarId: z.string(),
+        eventId: z.string(),
+      }),
+      promptShape: {
+        name: "get_event",
+        description: "Fetch an event.",
+        protected: false,
+        inputShape: '{"calendarId":"string","eventId":"string"}',
+      },
+      async execute() {
+        return {
+          ok: true,
+          data: {
+            id: "evt-1",
+            summary: "Talk to James",
+            start: "2026-03-27T09:00:00-07:00",
+            end: "2026-03-27T09:30:00-07:00",
+          },
+          summary: "Fetched event.",
+        };
+      },
+    };
+
+    const updateTool: ToolDefinition<any, unknown> = {
+      name: "update_event",
+      description: "Update an event.",
+      protected: true,
+      inputSchema: z.object({
+        eventId: z.string(),
+        start: z.string().optional(),
+        end: z.string().optional(),
+        summary: z.string().optional(),
+        title: z.string().optional(),
+        oldStart: z.string().optional(),
+        oldEnd: z.string().optional(),
+        calendarId: z.string().optional(),
+      }),
+      promptShape: {
+        name: "update_event",
+        description: "Update an event.",
+        protected: true,
+        inputShape: '{"eventId":"string","start":"string","end":"string"}',
+      },
+      async execute() {
+        return {
+          ok: true,
+          data: {},
+          summary: "Updated event.",
+        };
+      },
+    };
+
+    const result = await runAgentSessionTurn(
+      {
+        config: createConfig(rootDir),
+        provider,
+        tools: new Map([
+          [getEventTool.name, getEventTool],
+          [updateTool.name, updateTool],
+        ]),
+        debugLogPath: workspace.debugLogPath,
+        promptContext: {
+          kind: "workspace",
+          workspace,
+        },
+        skillManifests: [],
+        skillsCatalog: "",
+        timezone: "America/Los_Angeles",
+      },
+      createStoredSession(),
+      { type: "message", message: "Move James to 2 PM." },
+    );
+
+    expect(result.response.confirmation?.prompt).toBe(
+      'Please confirm: should I move "Talk to James" from March 27, 2026 at 9:00 AM PDT - March 27, 2026 at 9:30 AM PDT to March 27, 2026 at 2:00 PM PDT - March 27, 2026 at 2:30 PM PDT?',
+    );
+    expect(result.session.pendingConfirmation).toMatchObject({
+      arguments: {
+        summary: "Talk to James",
+        oldStart: "2026-03-27T09:00:00-07:00",
+        oldEnd: "2026-03-27T09:30:00-07:00",
+      },
+    });
   });
 });
 

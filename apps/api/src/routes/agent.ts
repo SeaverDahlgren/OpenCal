@@ -4,7 +4,7 @@ import { toUserFacingLlmErrorMessage, isRetryableLlmError } from "../../../../sr
 import { executeAgentTurn } from "../agent/execute-turn.js";
 import { jsonError, jsonRoute, readIdempotencyKey, readJsonBody } from "../server/http.js";
 import type { AuthedRouteContext } from "./types.js";
-import { buildChatHistoryRoutePayload, buildTaskStateRoutePayload } from "./utils.js";
+import { buildChatHistoryRoutePayload, buildTaskStateRoutePayload, resolveUserTimezone } from "./utils.js";
 import { buildIdempotencyExpiry } from "../idempotency/store.js";
 
 const agentTurnSchema = z
@@ -92,7 +92,7 @@ export async function handleAgentRoute(ctx: AuthedRouteContext) {
   }
 
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/agent/task-state") {
-    return await jsonRoute(ctx.res, 200, buildTaskStateRoutePayload(ctx.session));
+    return await jsonRoute(ctx.res, 200, buildTaskStateRoutePayload(ctx.session, resolveUserTimezone(ctx.profile)));
   }
 
   if (ctx.req.method === "GET" && ctx.url.pathname === "/api/v1/agent/history") {
