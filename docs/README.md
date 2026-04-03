@@ -24,17 +24,24 @@ read_when:
 - [skills/README.md](/Users/seaverdahlgren/Desktop/Coding/agenticPrograms/openCal/docs/skills/README.md)
   Planner-visible semantic skill manifests and their doc paths.
 
-## Repo Runtime Files
+## Runtime Storage
+
+- Hosted production state lives under `.opencal/`
+  Sessions, profiles, durable memory, recommendations, jobs, and logs.
+- `memory/YYYY-MM-DD.md`
+  CLI-only daily user/assistant transcript.
+- `.opencal/logs/YYYY-MM-DD.log`
+  Structured debug log for hosted and CLI execution.
+
+## Legacy CLI Prompt Files
 
 - `SOUL.md`
-  Assistant style and behavior.
+  CLI/system behavior context.
 - `USER.md`
-  User preferences like timezone and working hours.
+  Legacy CLI user-context file.
 - `TOOLS.md`
-  Tool index generated from the runtime registry.
+  CLI tool index generated from the runtime registry.
 - `Memory.md`
-  Distilled long-term chat-derived memory.
-- `memory/YYYY-MM-DD.md`
-  Daily user/assistant transcript.
-- `.opencal/logs/YYYY-MM-DD.log`
-  Structured debug log for LLM and tool execution.
+  Legacy CLI long-term memory file.
+
+Hosted mobile/web no longer use those markdown files as the source of truth for personalization or durable memory.

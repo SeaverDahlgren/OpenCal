@@ -35,9 +35,13 @@ read_when:
 - `apps/api/src/dto/settings.ts`
   Settings DTO mappers from persisted user profile state.
 - `apps/api/src/users/profile.ts`
-  User profile shape plus legacy `USER.md` render/seed helpers.
+  User profile shape plus legacy CLI export helpers.
 - `apps/api/src/users/store.ts`
   Per-user persisted profile storage for API settings and timezone reads.
+- `apps/api/src/memory/store.ts`
+  Hosted durable memory storage under `.opencal/production-memory.json`.
+- `apps/api/src/memory/context.ts`
+  Hosted profile-memory sync plus prompt-ready production memory formatting.
 - `apps/api/src/storage/types.ts`
   Repository interfaces that let the API swap file-backed storage for database-backed adapters without changing route code.
 - `apps/api/src/bootstrap/runtime.ts`
@@ -152,7 +156,13 @@ read_when:
 - The API can enforce a minimum supported mobile build via `MIN_SUPPORTED_APP_VERSION`.
 - DTO mapping is split by domain so adding Today/Calendar/Settings payload fields should happen in the matching DTO file, not in one growing catch-all mapper.
 - Settings reads and writes per-user profile state from the API profile store.
-- `USER.md` is now a legacy mirror/export path for compatibility, not the API source of truth.
+- Hosted mobile/web no longer read `USER.md` or `Memory.md` as the source of truth for prompt context.
+- Hosted agent turns now build prompt context from:
+  - internal system context
+  - API profile state
+  - durable production memory under `.opencal/`
+  - session/task-state context
+- `USER.md` and `Memory.md` remain legacy CLI compatibility files.
 - Health probes are available at:
   - `/api/v1/health/live`
   - `/api/v1/health/ready`

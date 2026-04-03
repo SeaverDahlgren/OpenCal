@@ -78,9 +78,11 @@ read_when:
 - API/mobile Google credentials are stored per user under encrypted API state files.
 - After workspace bootstrap, the CLI offers 4 optional personalization questions.
 - Skipped answers are ignored.
-- Work hours, timezone, and personalized notes are persisted in the API profile store.
-- `USER.md` is still updated as a legacy compatibility mirror.
-- Interests and broader assistant context are appended into `Memory.md`.
+- Hosted mobile/web personalization is persisted in production stores under `.opencal/`.
+- Hosted profile fields such as name, timezone, work hours, interests, and assistant notes live in the API profile store.
+- Hosted durable memory lives in `.opencal/production-memory.json`.
+- Hosted prompt context no longer depends on `USER.md` or `Memory.md`.
+- CLI personalization still updates legacy markdown files for CLI compatibility.
 - Personalization setup completion is tracked in `.opencal/setup-state.json`.
 
 ## Auth Refresh

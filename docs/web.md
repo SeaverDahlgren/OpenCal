@@ -52,6 +52,7 @@ read_when:
 
 - Sign in and sign out
 - Today overview
+- Today AI follow-up actions auto-send directly into chat
 - Calendar month/day browsing
 - Settings updates
 - AI chat with clarifications and confirmations
