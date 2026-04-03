@@ -63,9 +63,15 @@ export type AgentActionRequest =
   | { type: "confirm" }
   | { type: "cancel" };
 
+export type PendingToolCall = {
+  toolName: string;
+  arguments: Record<string, unknown>;
+};
+
 export type PendingConfirmation = {
   toolName: string;
   arguments: Record<string, unknown>;
+  queuedToolCalls?: PendingToolCall[];
 };
 
 export type StoredSessionState = {

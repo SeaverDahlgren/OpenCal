@@ -23,6 +23,7 @@ import type {
   AssistantTurnPayload,
   ConfirmationPrompt,
   PendingConfirmation,
+  PendingToolCall,
   StoredSessionState,
 } from "./session-types.js";
 import type { AppConfig } from "../config/env.js";
@@ -240,6 +241,17 @@ async function resolvePendingConfirmation(
     session.messages.push(createConversationMessage("tool", result.toolMessage, tool.name));
   }
 
+  const queuedOutcome = await continueQueuedToolCalls(
+    deps,
+    session,
+    pending.queuedToolCalls ?? [],
+    debugBase,
+    `Confirmed. I'll ${actionSummary}.`,
+  );
+  if (queuedOutcome) {
+    return queuedOutcome;
+  }
+
   if (hasPendingSubgoals(session.taskState)) {
     session.taskState = activateNextSubgoal(session.taskState);
   } else {
@@ -299,7 +311,8 @@ async function handleDecision(
     decision.toolCalls.map((toolCall) => toolCall.name),
   );
 
-  for (const toolCall of decision.toolCalls) {
+  for (let index = 0; index < decision.toolCalls.length; index += 1) {
+    const toolCall = decision.toolCalls[index];
     const tool = deps.tools.get(toolCall.name);
     if (!tool) {
       const reply = `Tool ${toolCall.name} is not registered.`;
@@ -317,9 +330,16 @@ async function handleDecision(
     }
 
     if (tool.protected) {
+      const queuedToolCalls = decision.toolCalls
+        .slice(index + 1)
+        .map((remainingToolCall) => ({
+          toolName: remainingToolCall.name,
+          arguments: remainingToolCall.arguments,
+        }));
       session.pendingConfirmation = {
         toolName: tool.name,
         arguments: parsedInput.data,
+        queuedToolCalls,
       };
       const actionSummary = summarizeConfirmationAction(tool.name, parsedInput.data);
       return {
@@ -329,7 +349,7 @@ async function handleDecision(
         response: buildTurnResponse(
           session,
           `Please confirm: should I ${actionSummary}?`,
-          buildConfirmationPrompt(tool.name, parsedInput.data),
+          buildConfirmationPrompt(tool.name, parsedInput.data, queuedToolCalls.length),
         ),
       };
     }
@@ -345,6 +365,71 @@ async function handleDecision(
 
   session.taskState = activateNextSubgoal(session.taskState);
   return { reply: "Working through the tool results.", continueLoop: true };
+}
+
+async function continueQueuedToolCalls(
+  deps: RuntimeDeps,
+  session: MutableSession,
+  queuedToolCalls: PendingToolCall[],
+  debugBase: Record<string, unknown>,
+  confirmedReply: string,
+) {
+  const remainingToolCalls = [...queuedToolCalls];
+
+  while (remainingToolCalls.length > 0) {
+    const queuedToolCall = remainingToolCalls.shift()!;
+    const tool = deps.tools.get(queuedToolCall.toolName);
+    if (!tool) {
+      const reply = `Tool ${queuedToolCall.toolName} is not registered.`;
+      session.messages.push(createConversationMessage("tool", reply, queuedToolCall.toolName));
+      session.taskState = applyToolResultToTaskState(
+        session.taskState ?? createTaskState(findLatestUserInput(session.messages)),
+        queuedToolCall.toolName,
+        null,
+        "error",
+        reply,
+      );
+      continue;
+    }
+
+    const parsedInput = tool.inputSchema.safeParse(queuedToolCall.arguments);
+    if (!parsedInput.success) {
+      const reply = `Invalid input for ${tool.name}: ${parsedInput.error.message}`;
+      session.messages.push(createConversationMessage("tool", reply, tool.name));
+      session.taskState = applyToolResultToTaskState(
+        session.taskState ?? createTaskState(findLatestUserInput(session.messages)),
+        tool.name,
+        null,
+        "error",
+        reply,
+      );
+      continue;
+    }
+
+    if (tool.protected) {
+      session.pendingConfirmation = {
+        toolName: tool.name,
+        arguments: parsedInput.data,
+        queuedToolCalls: remainingToolCalls,
+      };
+      return buildTurnResponse(
+        session,
+        `${confirmedReply}\n\nPlease confirm: should I ${summarizeConfirmationAction(tool.name, parsedInput.data)}?`,
+        buildConfirmationPrompt(tool.name, parsedInput.data, remainingToolCalls.length),
+      );
+    }
+
+    const result = await executeToolCall(deps, session, tool, parsedInput.data, debugBase);
+    if (result.response) {
+      result.response.assistant.message = `${confirmedReply}\n\n${result.response.assistant.message}`;
+      return result.response;
+    }
+    if (result.toolMessage) {
+      session.messages.push(createConversationMessage("tool", result.toolMessage, tool.name));
+    }
+  }
+
+  return null;
 }
 
 async function executeToolCall(
@@ -470,11 +555,16 @@ function buildClarificationPrompt(prompt: string, options: AppChoiceOption[]) {
   } as const;
 }
 
-function buildConfirmationPrompt(toolName: string, input: Record<string, unknown>): ConfirmationPrompt {
+function buildConfirmationPrompt(
+  toolName: string,
+  input: Record<string, unknown>,
+  remainingCount = 0,
+): ConfirmationPrompt {
   const actionSummary = summarizeConfirmationAction(toolName, input);
+  const queueSuffix = remainingCount > 0 ? ` ${remainingCount} more action${remainingCount === 1 ? "" : "s"} queued.` : "";
   return {
     type: "protected_action",
-    prompt: `Please confirm: should I ${actionSummary}?`,
+    prompt: `Please confirm: should I ${actionSummary}?${queueSuffix}`,
     actionLabel: "Confirm",
     cancelLabel: "Cancel",
     payloadPreview: {

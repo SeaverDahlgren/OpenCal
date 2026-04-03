@@ -187,6 +187,170 @@ describe("session runtime", () => {
     expect(confirmed.session.pendingConfirmation).toBeNull();
     expect(confirmed.session.taskState).toBeNull();
   });
+
+  it("queues additional protected tool calls and confirms them one by one", async () => {
+    const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "opencal-runtime-"));
+    tempDirs.push(rootDir);
+    await ensureWorkspace(rootDir);
+    const workspace = await loadWorkspaceFiles(rootDir, "2026-03-26");
+
+    const provider: LlmProvider = {
+      name: "test",
+      async generateDecision() {
+        return {
+          type: "tool",
+          reasoning: "Need two protected actions.",
+          toolCalls: [
+            {
+              name: "update_event",
+              arguments: {
+                title: "Talk to James",
+                start: "2026-03-27T14:00:00-07:00",
+              },
+            },
+            {
+              name: "create_event",
+              arguments: {
+                title: "Job-search session",
+                start: "2026-03-27T21:30:00-07:00",
+              },
+            },
+          ],
+        };
+      },
+      async summarizeConversation() {
+        return "";
+      },
+    };
+
+    const updateTool: ToolDefinition<any, unknown> = {
+      name: "update_event",
+      description: "Update an event.",
+      protected: true,
+      inputSchema: z.object({
+        title: z.string(),
+        start: z.string(),
+      }),
+      promptShape: {
+        name: "update_event",
+        description: "Update an event.",
+        protected: true,
+        inputShape: '{"title":"string","start":"string"}',
+      },
+      async execute() {
+        return {
+          ok: true,
+          data: {},
+          summary: "Updated event.",
+        };
+      },
+    };
+
+    const createTool: ToolDefinition<any, unknown> = {
+      name: "create_event",
+      description: "Create an event.",
+      protected: true,
+      inputSchema: z.object({
+        title: z.string(),
+        start: z.string(),
+      }),
+      promptShape: {
+        name: "create_event",
+        description: "Create an event.",
+        protected: true,
+        inputShape: '{"title":"string","start":"string"}',
+      },
+      async execute() {
+        return {
+          ok: true,
+          data: {},
+          summary: "Created event.",
+        };
+      },
+    };
+
+    const initial = await runAgentSessionTurn(
+      {
+        config: createConfig(rootDir),
+        provider,
+        tools: new Map([
+          [updateTool.name, updateTool],
+          [createTool.name, createTool],
+        ]),
+        debugLogPath: workspace.debugLogPath,
+        promptContext: {
+          kind: "workspace",
+          workspace,
+        },
+        skillManifests: [],
+        skillsCatalog: "",
+        timezone: "America/Los_Angeles",
+      },
+      createStoredSession(),
+      { type: "message", message: "Move James and add a job-search session." },
+    );
+
+    expect(initial.session.pendingConfirmation).toMatchObject({
+      toolName: "update_event",
+      queuedToolCalls: [
+        {
+          toolName: "create_event",
+        },
+      ],
+    });
+
+    const firstConfirm = await runAgentSessionTurn(
+      {
+        config: createConfig(rootDir),
+        provider,
+        tools: new Map([
+          [updateTool.name, updateTool],
+          [createTool.name, createTool],
+        ]),
+        debugLogPath: workspace.debugLogPath,
+        promptContext: {
+          kind: "workspace",
+          workspace,
+        },
+        skillManifests: [],
+        skillsCatalog: "",
+        timezone: "America/Los_Angeles",
+      },
+      initial.session,
+      { type: "confirm" },
+    );
+
+    expect(firstConfirm.response.assistant.message).toContain("Confirmed. I'll update");
+    expect(firstConfirm.response.confirmation?.prompt).toContain('create "Job-search session"');
+    expect(firstConfirm.session.pendingConfirmation).toMatchObject({
+      toolName: "create_event",
+    });
+    expect(firstConfirm.session.messages.some((message) => message.name === "update_event")).toBe(true);
+
+    const secondConfirm = await runAgentSessionTurn(
+      {
+        config: createConfig(rootDir),
+        provider,
+        tools: new Map([
+          [updateTool.name, updateTool],
+          [createTool.name, createTool],
+        ]),
+        debugLogPath: workspace.debugLogPath,
+        promptContext: {
+          kind: "workspace",
+          workspace,
+        },
+        skillManifests: [],
+        skillsCatalog: "",
+        timezone: "America/Los_Angeles",
+      },
+      firstConfirm.session,
+      { type: "confirm" },
+    );
+
+    expect(secondConfirm.session.pendingConfirmation).toBeNull();
+    expect(secondConfirm.session.messages.some((message) => message.name === "create_event")).toBe(true);
+  });
 });
 
 function createConfig(rootDir: string): AppConfig {
